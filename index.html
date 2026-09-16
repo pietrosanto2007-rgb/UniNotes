@@ -465,6 +465,23 @@ a{ color:inherit; text-decoration:none; }
   font-weight:650; color:var(--accent); font-size:14px; z-index:50; pointer-events:none;
 }
 .kbd-hint{ font-family:var(--mono); font-size:10.5px; background:var(--surface-2); border:1px solid var(--border); border-radius:4px; padding:1px 6px; color:var(--text-tertiary); }
+/* ---------- PDF Reader: text layer selezionabile/evidenziabile ---------- */
+.pdfr-textlayer{
+  position:absolute; text-align:initial;
+}
+.pdfr-textlayer span, .pdfr-textlayer br{
+  color:transparent; position:absolute; white-space:pre; cursor:text;
+  transform-origin:0% 0%;
+}
+.pdfr-textlayer ::selection{ background:rgba(52,87,213,0.35); }
+.pdfr-textlayer .pdfr-searchmatch{ background:rgba(255,214,0,0.55); color:transparent; border-radius:2px; }
+.pdfr-highlight{ background:rgba(255,214,0,0.55); border-radius:2px; }
+.pdfr-toolbar .icon-btn.active{ background:var(--accent-soft); color:var(--accent); }
+.pdfr-page{ transition:box-shadow 150ms var(--ease); }
+.pdfr-scroll{ scroll-behavior:smooth; }
+@media print{
+  body > *:not(.pdfr-print-frame){ display:none !important; }
+}
 </style>
 </head>
 <body>
@@ -545,6 +562,8 @@ const ICONS = {
   tag: '<path d="M20.6 12.6l-8.6 8.6a2 2 0 01-2.8 0L2 14V4h10l8.6 8.6a2 2 0 010 2.8z"/><path d="M7 7h.01"/>',
   zoomIn: '<circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/><path d="M11 8v6"/><path d="M8 11h6"/>',
   zoomOut: '<circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/><path d="M8 11h6"/>',
+  print: '<path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"/><path d="M6 14h12v8H6z"/>',
+  highlighter: '<path d="M9 11l6-6 4 4-6 6H9v-4z"/><path d="M8 15l-5 5"/><path d="M3 20h5"/>',
   fullscreen: '<path d="M8 3H5a2 2 0 00-2 2v3"/><path d="M21 8V5a2 2 0 00-2-2h-3"/><path d="M3 16v3a2 2 0 002 2h3"/><path d="M16 21h3a2 2 0 002-2v-3"/>',
   refresh: '<path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0115-6.7L21 8"/><path d="M3 22v-6h6"/><path d="M21 12a9 9 0 01-15 6.7L3 16"/>',
   clock: '<circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>',
@@ -967,6 +986,7 @@ const LibraryScanner = {
       notes: metaOverride.notes || '',
       pinned: !!metaOverride.pinned,
       order: metaOverride.order ?? null,
+      mainFilePages: (mainFile && metaOverride.mainFilePagesFor === mainFile.name) ? (metaOverride.mainFilePages ?? null) : null,
       files,
       subfolders,
       mainFile,
@@ -1010,12 +1030,38 @@ const LibraryScanner = {
   /** Imposta un file esistente della root come documento principale della lezione */
   async setMainFile(lesson, file){
     lesson.mainFile = file;
+    lesson.mainFilePages = null;
     lesson.otherRootFiles = lesson.otherRootFiles.filter(f => f.name !== file.name);
     const metaHandle = await FileSystemManager.getOrCreateFile(lesson.handle, '.lesson.json');
     let existing = {};
     try{ existing = JSON.parse(await FileSystemManager.readTextFile(metaHandle)); }catch(e){}
     existing.mainFile = file.name;
+    delete existing.mainFilePages;
+    delete existing.mainFilePagesFor;
     await FileSystemManager.writeTextFile(metaHandle, JSON.stringify(existing, null, 2));
+    // Se è un PDF, calcola subito il numero di pagine e mettilo in cache per le statistiche del corso.
+    if(file.kind === 'pdf'){
+      try{ await this.cacheMainFilePages(lesson, file); }catch(e){ console.warn('Conteggio pagine fallito', e); }
+    }
+  },
+
+  /** Calcola (via pdf.js) e mette in cache in .lesson.json il numero di pagine del documento principale */
+  async cacheMainFilePages(lesson, file){
+    file = file || lesson.mainFile;
+    if(!file || file.kind !== 'pdf') return null;
+    await ensurePdfJs();
+    const fileObj = await file.handle.getFile();
+    const buf = await fileObj.arrayBuffer();
+    const pdf = await window.pdfjsLib.getDocument({ data: buf }).promise;
+    const numPages = pdf.numPages;
+    lesson.mainFilePages = numPages;
+    const metaHandle = await FileSystemManager.getOrCreateFile(lesson.handle, '.lesson.json');
+    let existing = {};
+    try{ existing = JSON.parse(await FileSystemManager.readTextFile(metaHandle)); }catch(e){}
+    existing.mainFilePages = numPages;
+    existing.mainFilePagesFor = file.name;
+    await FileSystemManager.writeTextFile(metaHandle, JSON.stringify(existing, null, 2));
+    return numPages;
   },
 
   /** Attiva/disattiva il "preferito" di una lezione, persistendolo in .lesson.json */
@@ -1077,13 +1123,19 @@ function lessonStatusMeta(status){
 }
 function subjectStats(subject){
   const total = subject.lessons.length;
-  let complete = 0, progress = 0, missing = 0;
+  let complete = 0, progress = 0, missing = 0, totalPages = 0, pagesKnownFor = 0;
   subject.lessons.forEach(l => {
     const s = lessonStatus(l);
     if(s==='complete') complete++; else if(s==='progress') progress++; else missing++;
+    // Pagine totali del corso: contate SOLO sui documenti principali (PDF) di ogni lezione.
+    if(l.mainFile && l.mainFile.kind === 'pdf' && typeof l.mainFilePages === 'number'){
+      totalPages += l.mainFilePages;
+      pagesKnownFor++;
+    }
   });
   const pct = total ? Math.round((complete/total)*100) : 0;
-  return { total, complete, progress, missing, pct };
+  const mainPdfCount = subject.lessons.filter(l => l.mainFile && l.mainFile.kind === 'pdf').length;
+  return { total, complete, progress, missing, pct, totalPages, pagesKnownFor, mainPdfCount };
 }
 function libraryTotals(){
   let totalLessons=0, complete=0, progress=0, missing=0;
@@ -1846,6 +1898,7 @@ const SubjectPage = {
           <div class="stat-pill"><div class="stat-pill-num" style="color:var(--success)">${stats.complete}</div><div class="stat-pill-label">Complete</div></div>
           <div class="stat-pill"><div class="stat-pill-num" style="color:var(--warning)">${stats.progress}</div><div class="stat-pill-label">In lavorazione</div></div>
           <div class="stat-pill"><div class="stat-pill-num" style="color:var(--danger)">${stats.missing}</div><div class="stat-pill-label">Mancanti</div></div>
+          <div class="stat-pill" id="stat-total-pages"><div class="stat-pill-num">${stats.mainPdfCount ? (stats.pagesKnownFor < stats.mainPdfCount ? stats.totalPages+'+' : stats.totalPages) : '—'}</div><div class="stat-pill-label">Pagine totali (PDF)</div></div>
         </div>
 
         <div class="tabs">
@@ -1862,6 +1915,21 @@ const SubjectPage = {
     document.getElementById('btn-new-lesson').addEventListener('click', () => LessonFormModal.open(s.name));
     document.getElementById('btn-edit-subject').addEventListener('click', () => SubjectEditModal.open(s));
     this.renderTab(s);
+    this.ensurePageCounts(s);
+  },
+
+  /** Calcola in background (senza bloccare la UI) il numero di pagine dei mainFile PDF non ancora in cache,
+      poi aggiorna la card "Pagine totali" quando finisce. */
+  async ensurePageCounts(s){
+    const toCompute = s.lessons.filter(l => l.mainFile && l.mainFile.kind === 'pdf' && typeof l.mainFilePages !== 'number');
+    if(!toCompute.length) return;
+    for(const l of toCompute){
+      try{ await LibraryScanner.cacheMainFilePages(l); }catch(e){ /* file illeggibile: si salta, senza bloccare gli altri */ }
+      const pill = document.getElementById('stat-total-pages');
+      if(!pill) return; // pagina cambiata nel frattempo
+      const stats = subjectStats(s);
+      pill.querySelector('.stat-pill-num').textContent = stats.mainPdfCount ? (stats.pagesKnownFor < stats.mainPdfCount ? stats.totalPages+'+' : stats.totalPages) : '—';
+    }
   },
 
   renderTab(s){
@@ -1988,6 +2056,13 @@ const LessonFormModal = {
       Toast.error('Crea prima una materia.');
       return;
     }
+    const initialSubject = findSubject(preselectSubject) || subjects[0];
+    // Numero lezione proposto automaticamente (max numero esistente + 1 nella materia), ma resta modificabile a mano.
+    const suggestNumber = (s) => {
+      if(!s || !s.lessons.length) return 1;
+      const maxNum = s.lessons.reduce((mx,l) => Math.max(mx, l.number||0), 0);
+      return maxNum + 1;
+    };
     const m = ModalManager.open(`
       <div class="modal-header"><div class="modal-title">Nuova lezione</div><button class="icon-btn" id="m-close">${icon('x',16)}</button></div>
       <div class="modal-body">
@@ -1995,7 +2070,7 @@ const LessonFormModal = {
           <select id="f-subject">${subjects.map(s=>`<option value="${esc(s.name)}" ${s.name===preselectSubject?'selected':''}>${esc(s.name)}</option>`).join('')}</select>
         </div>
         <div class="field-row">
-          <div class="field"><label>Numero</label><input id="f-number" type="number" min="1" placeholder="Es. 4"></div>
+          <div class="field"><label>Numero <span class="muted" style="font-weight:500;">(automatico, modificabile)</span></label><input id="f-number" type="number" min="1" value="${suggestNumber(initialSubject)}"></div>
           <div class="field"><label>Data</label><input id="f-date" type="date" value="${new Date().toISOString().slice(0,10)}"></div>
         </div>
         <div class="field"><label>Titolo</label><input id="f-title" placeholder="Es. Derivate e applicazioni"></div>
@@ -2012,7 +2087,17 @@ const LessonFormModal = {
     `);
     m.querySelector('#m-close').onclick = () => ModalManager.close();
     m.querySelector('#m-cancel').onclick = () => ModalManager.close();
-    m.querySelector('#f-number').focus();
+    const subjectSel = m.querySelector('#f-subject');
+    const numberInput = m.querySelector('#f-number');
+    let numberTouchedManually = false;
+    numberInput.addEventListener('input', () => { numberTouchedManually = true; });
+    subjectSel.addEventListener('change', () => {
+      // Riaggiorna il numero suggerito solo se l'utente non lo ha già modificato a mano.
+      if(numberTouchedManually) return;
+      numberInput.value = suggestNumber(findSubject(subjectSel.value));
+    });
+    numberInput.focus();
+    numberInput.select();
     m.querySelector('#m-create').onclick = () => this.create(m);
   },
   async create(m){
@@ -2156,6 +2241,7 @@ const LessonPage = {
           </div>
           <button class="btn btn-sm" id="main-doc-edit">${icon('edit',13)} Modifica</button>
           <button class="btn btn-sm" id="main-doc-change">${icon('refresh',13)} Cambia file</button>
+          ${isPdf ? `<button class="btn btn-sm" id="main-doc-print">${icon('print',13)} Stampa</button>` : ''}
           <button class="icon-btn" id="main-doc-finder" title="Apri nel Finder">${icon('folder',15)}</button>
           <button class="icon-btn" id="main-doc-copypath" title="Copia percorso">${icon('copy',14)}</button>
           <button class="icon-btn" id="main-doc-fullscreen" title="Apri a schermo intero">${icon('fullscreen',15)}</button>
@@ -2171,10 +2257,16 @@ const LessonPage = {
       if(isPdf) PDFViewerModal.open(lesson, f);
       else FileViewer.open(lesson, f);
     });
+    const printBtn = document.getElementById('main-doc-print');
+    if(printBtn) printBtn.addEventListener('click', () => PDFPrint.print(f));
 
     const viewer = document.getElementById('main-doc-viewer');
     if(isPdf){
       await InlinePdfViewer.mount(viewer, f);
+      // Se il conteggio pagine non è ancora in cache per questo file, calcolalo ora in background.
+      if(typeof lesson.mainFilePages !== 'number'){
+        LibraryScanner.cacheMainFilePages(lesson, f).catch(()=>{});
+      }
     } else if(isDocx){
       viewer.innerHTML = `<div class="muted" style="align-self:center; padding:40px; text-align:center;">Anteprima rapida non disponibile per i documenti Word.<br>Usa "Modifica" per aprirlo nell'editor.</div>`;
     } else if(isTex){
@@ -2702,6 +2794,14 @@ const AudioViewerModal = {
 let pdfjsLoaded = false;
 function ensurePdfJs(){
   return new Promise((resolve, reject) => {
+    // CSS del text-layer/annotation-layer: serve per il testo selezionabile ed evidenziabile sopra il canvas.
+    if(!document.getElementById('pdfjs-textlayer-css')){
+      const link = document.createElement('link');
+      link.id = 'pdfjs-textlayer-css';
+      link.rel = 'stylesheet';
+      link.href = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf_viewer.min.css';
+      document.head.appendChild(link);
+    }
     if(window.pdfjsLib){ pdfjsLoaded = true; return resolve(); }
     const s = document.createElement('script');
     s.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
@@ -2715,76 +2815,40 @@ function ensurePdfJs(){
   });
 }
 
-const PDFViewerModal = {
-  state: { pdf:null, page:1, scale:1.2, url:null },
-  async open(lesson, file){
-    const m = ModalManager.open(`
-      <div class="modal-header"><div class="modal-title">${icon('pdf',16)} ${esc(file.name)}</div><button class="icon-btn" id="m-close">${icon('x',16)}</button></div>
-      <div class="modal-body" style="padding:0; display:flex; flex-direction:column; height:70vh;">
-        <div style="display:flex; align-items:center; gap:8px; padding:10px 16px; border-bottom:1px solid var(--border); flex-shrink:0;">
-          <button class="icon-btn" id="pdf-prev">${icon('chevronLeft',16)}</button>
-          <span style="font-size:12.5px;" id="pdf-pageinfo">— / —</span>
-          <button class="icon-btn" id="pdf-next">${icon('chevronRight',16)}</button>
-          <div style="width:1px; height:18px; background:var(--border); margin:0 4px;"></div>
-          <button class="icon-btn" id="pdf-zoomout">${icon('zoomOut',16)}</button>
-          <span style="font-size:12px; width:40px; text-align:center;" id="pdf-zoomlevel">120%</span>
-          <button class="icon-btn" id="pdf-zoomin">${icon('zoomIn',16)}</button>
-        </div>
-        <div style="flex:1; overflow:auto; display:flex; justify-content:center; background:var(--surface-2); padding:20px;">
-          <canvas id="pdf-canvas" style="box-shadow:var(--shadow-md); background:#fff;"></canvas>
-        </div>
-      </div>
-      <div class="modal-footer"><button class="btn" id="m-ok">Chiudi</button></div>
-    `, { wide:true });
-    m.querySelector('#m-close').onclick = () => ModalManager.close();
-    m.querySelector('#m-ok').onclick = () => ModalManager.close();
-
+/* ---------- Stampa di un PDF: apre il file in una scheda separata e lancia la finestra di stampa del browser ---------- */
+const PDFPrint = {
+  async print(file){
     try{
-      await ensurePdfJs();
       const fileObj = await file.handle.getFile();
-      const buf = await fileObj.arrayBuffer();
-      const pdf = await window.pdfjsLib.getDocument({ data: buf }).promise;
-      const savedScale = parseFloat(localStorage.getItem('uninotes.pdfZoom')) || 1.2;
-      this.state = { pdf, page:1, scale:savedScale };
-      m.querySelector('#pdf-prev').onclick = () => this.goPage(m, -1);
-      m.querySelector('#pdf-next').onclick = () => this.goPage(m, 1);
-      m.querySelector('#pdf-zoomin').onclick = () => this.zoom(m, 0.15);
-      m.querySelector('#pdf-zoomout').onclick = () => this.zoom(m, -0.15);
-      await this.renderPage(m);
+      const url = URL.createObjectURL(fileObj);
+      const w = window.open(url, '_blank');
+      if(!w){ Toast.error('Il browser ha bloccato la finestra di stampa (popup).'); URL.revokeObjectURL(url); return; }
+      const tryPrint = () => { try{ w.focus(); w.print(); }catch(e){} };
+      w.addEventListener('load', () => setTimeout(tryPrint, 300));
+      setTimeout(tryPrint, 1200); // fallback nel caso 'load' non scatti sul viewer nativo del PDF
+      setTimeout(() => URL.revokeObjectURL(url), 60000);
     }catch(err){
       console.error(err);
-      m.querySelector('.modal-body').innerHTML = `<div class="empty-state">${icon('alert',30)}<div class="empty-state-title">Impossibile aprire il PDF</div><div class="empty-state-sub">Il file potrebbe essere danneggiato o il visualizzatore non è riuscito a caricarsi.</div></div>`;
+      Toast.error('Impossibile preparare la stampa del PDF.');
     }
-  },
-  async renderPage(m){
-    const { pdf, page, scale } = this.state;
-    const p = await pdf.getPage(page);
-    const viewport = p.getViewport({ scale });
-    const canvas = m.querySelector('#pdf-canvas');
-    if(!canvas) return;
-    canvas.width = viewport.width; canvas.height = viewport.height;
-    const ctx = canvas.getContext('2d');
-    await p.render({ canvasContext: ctx, viewport }).promise;
-    m.querySelector('#pdf-pageinfo').textContent = `${page} / ${pdf.numPages}`;
-    m.querySelector('#pdf-zoomlevel').textContent = Math.round(scale/1.2*120)+'%';
-  },
-  goPage(m, delta){
-    const np = this.state.page + delta;
-    if(np < 1 || np > this.state.pdf.numPages) return;
-    this.state.page = np;
-    this.renderPage(m);
-  },
-  zoom(m, delta){
-    this.state.scale = Math.max(0.4, Math.min(3, this.state.scale + delta));
-    localStorage.setItem('uninotes.pdfZoom', this.state.scale);
-    this.renderPage(m);
   }
 };
 
-/* ---------- PDF Viewer INLINE (per il documento principale in pagina lezione) ---------- */
-const InlinePdfViewer = {
-  async mount(container, file){
-    container.innerHTML = `<div class="muted" style="align-self:center;">Caricamento PDF…</div>`;
+/* ============================================================
+   PDF READER — visualizzatore condiviso: scorrimento continuo,
+   testo selezionabile ed evidenziabile, ricerca, zoom, stampa.
+   Usato sia inline (documento principale in pagina lezione) sia
+   a schermo intero (modale).
+   ============================================================ */
+const PDFReader = {
+  /** Crea un'istanza di reader montata in `container`. Ritorna un handle con { destroy, print, setScale }. */
+  async mount(container, file, opts){
+    opts = opts || {};
+    const idPrefix = opts.idPrefix || 'pr';
+    const heightCss = opts.height || '70vh';
+    container.innerHTML = `<div class="muted" style="align-self:center; padding:40px;">${icon('pdf',26)}<div style="margin-top:10px;">Caricamento PDF…</div></div>`;
+    container.style.display = 'flex';
+
     let pdf;
     try{
       await ensurePdfJs();
@@ -2794,39 +2858,240 @@ const InlinePdfViewer = {
     }catch(err){
       console.error(err);
       container.innerHTML = `<div class="empty-state" style="align-self:center;">${icon('alert',28)}<div class="empty-state-title">Impossibile aprire il PDF</div><div class="empty-state-sub">Il file potrebbe essere danneggiato.</div></div>`;
-      return;
+      return { destroy(){}, print(){}, setScale(){} };
     }
-    const state = { page: 1, scale: 1.35 };
+
+    const savedScale = parseFloat(localStorage.getItem('uninotes.pdfZoom')) || (opts.defaultScale || 1.35);
+    const state = { page: 1, scale: savedScale, numPages: pdf.numPages, rendered: new Set(), observer: null, searchTerm: '', searchMatches: [], searchIdx: -1 };
+
     container.innerHTML = `
-      <div style="width:100%; display:flex; flex-direction:column; align-items:center; gap:14px;">
-        <div style="display:flex; align-items:center; gap:8px; position:sticky; top:0; background:var(--surface-2); padding:8px 14px; border-radius:20px; box-shadow:var(--shadow-sm); z-index:2;">
-          <button class="icon-btn" id="ipdf-prev">${icon('chevronLeft',16)}</button>
-          <span style="font-size:12.5px; min-width:60px; text-align:center;" id="ipdf-pageinfo">1 / ${pdf.numPages}</span>
-          <button class="icon-btn" id="ipdf-next">${icon('chevronRight',16)}</button>
+      <div class="pdfr-shell" style="width:100%; display:flex; flex-direction:column; height:100%;">
+        <div class="pdfr-toolbar" style="display:flex; align-items:center; gap:6px; flex-wrap:wrap; position:sticky; top:0; z-index:3; background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:7px 10px; box-shadow:var(--shadow-sm); margin-bottom:12px;">
+          <button class="icon-btn" id="${idPrefix}-prev" title="Pagina precedente">${icon('chevronLeft',16)}</button>
+          <input id="${idPrefix}-pagejump" type="number" min="1" max="${state.numPages}" value="1" style="width:44px; text-align:center; font-size:12.5px; border:1px solid var(--border); border-radius:6px; padding:3px 2px; background:var(--bg-elevated);">
+          <span class="muted" style="font-size:12.5px;">/ ${state.numPages}</span>
+          <button class="icon-btn" id="${idPrefix}-next" title="Pagina successiva">${icon('chevronRight',16)}</button>
           <div style="width:1px; height:18px; background:var(--border); margin:0 4px;"></div>
-          <button class="icon-btn" id="ipdf-zoomout">${icon('zoomOut',16)}</button>
-          <span style="font-size:12px; width:42px; text-align:center;" id="ipdf-zoomlevel">100%</span>
-          <button class="icon-btn" id="ipdf-zoomin">${icon('zoomIn',16)}</button>
+          <button class="icon-btn" id="${idPrefix}-zoomout" title="Riduci">${icon('zoomOut',16)}</button>
+          <span style="font-size:12px; width:42px; text-align:center;" id="${idPrefix}-zoomlevel">100%</span>
+          <button class="icon-btn" id="${idPrefix}-zoomin" title="Ingrandisci">${icon('zoomIn',16)}</button>
+          <div style="width:1px; height:18px; background:var(--border); margin:0 4px;"></div>
+          <button class="icon-btn ${localStorage.getItem('uninotes.pdfHighlightMode')==='1'?'active':''}" id="${idPrefix}-highlight" title="Modalità evidenziatore: seleziona il testo per evidenziarlo">${icon('highlighter',16)}</button>
+          <div style="flex:1; min-width:8px;"></div>
+          <div style="position:relative; display:flex; align-items:center;">
+            <input id="${idPrefix}-search" type="text" placeholder="Cerca nel testo…" style="font-size:12.5px; border:1px solid var(--border); border-radius:8px; padding:5px 10px; width:150px; background:var(--bg-elevated);">
+            <span class="muted" id="${idPrefix}-searchcount" style="font-size:11px; margin-left:6px; min-width:38px;"></span>
+          </div>
+          <button class="icon-btn" id="${idPrefix}-print" title="Stampa">${icon('print',16)}</button>
         </div>
-        <canvas id="ipdf-canvas" style="box-shadow:var(--shadow-md); background:#fff; max-width:100%;"></canvas>
+        <div class="pdfr-scroll" id="${idPrefix}-scroll" style="flex:1; overflow:auto; height:${heightCss}; display:flex; flex-direction:column; align-items:center; gap:18px; padding:6px 6px 30px; background:var(--surface-2); border-radius:10px;"></div>
       </div>
     `;
-    const render = async () => {
-      const p = await pdf.getPage(state.page);
+
+    const scrollEl = container.querySelector(`#${idPrefix}-scroll`);
+    const pageWrapEls = [];
+
+    // Crea i contenitori per tutte le pagine subito (placeholder), così lo scroll ha subito l'altezza corretta;
+    // il rendering effettivo (canvas + text layer) avviene "pigro" quando la pagina entra in viewport.
+    const firstPage = await pdf.getPage(1);
+    const baseViewport = firstPage.getViewport({ scale: state.scale });
+    for(let n = 1; n <= state.numPages; n++){
+      const wrap = document.createElement('div');
+      wrap.className = 'pdfr-page';
+      wrap.dataset.page = n;
+      wrap.style.cssText = `position:relative; background:#fff; box-shadow:var(--shadow-md); border-radius:4px; overflow:hidden; width:${baseViewport.width}px; min-height:${baseViewport.height}px;`;
+      wrap.innerHTML = `<div class="pdfr-pagelabel" style="position:absolute; top:8px; left:8px; background:rgba(28,28,30,0.55); color:#fff; font-size:10.5px; padding:2px 7px; border-radius:20px; z-index:2; pointer-events:none;">${n}</div>`;
+      scrollEl.appendChild(wrap);
+      pageWrapEls.push(wrap);
+    }
+
+    async function renderPageInto(wrap){
+      const n = parseInt(wrap.dataset.page, 10);
+      if(wrap.dataset.rendered === '1') return;
+      wrap.dataset.rendered = '1';
+      const p = await pdf.getPage(n);
       const viewport = p.getViewport({ scale: state.scale });
-      const canvas = container.querySelector('#ipdf-canvas');
-      if(!canvas) return;
+      wrap.style.width = viewport.width+'px';
+      wrap.style.minHeight = viewport.height+'px';
+
+      const canvas = document.createElement('canvas');
       canvas.width = viewport.width; canvas.height = viewport.height;
+      canvas.style.cssText = 'display:block; width:100%; height:100%;';
+      wrap.appendChild(canvas);
       const ctx = canvas.getContext('2d');
       await p.render({ canvasContext: ctx, viewport }).promise;
-      container.querySelector('#ipdf-pageinfo').textContent = `${state.page} / ${pdf.numPages}`;
-      container.querySelector('#ipdf-zoomlevel').textContent = Math.round(state.scale/1.35*100)+'%';
+
+      // Text layer: strato di testo invisibile ma selezionabile, posizionato esattamente sopra il canvas.
+      // È quello che permette di selezionare ed evidenziare il testo come in un vero lettore PDF.
+      try{
+        const textContent = await p.getTextContent();
+        const textLayerDiv = document.createElement('div');
+        textLayerDiv.className = 'pdfr-textlayer textLayer';
+        textLayerDiv.style.cssText = `position:absolute; left:0; top:0; right:0; bottom:0; width:${viewport.width}px; height:${viewport.height}px; overflow:hidden; opacity:1; line-height:1; z-index:1;`;
+        wrap.appendChild(textLayerDiv);
+        window.pdfjsLib.renderTextLayer({
+          textContent, container: textLayerDiv, viewport, textDivs: []
+        });
+      }catch(e){ /* Se il text layer non è disponibile per questo PDF, resta comunque visibile il canvas */ }
+    }
+
+    // IntersectionObserver: renderizza solo le pagine vicine allo schermo (performance con PDF lunghi),
+    // mantenendo però lo scorrimento continuo tipico di un lettore moderno.
+    state.observer = new IntersectionObserver((entries) => {
+      entries.forEach(en => { if(en.isIntersecting) renderPageInto(en.target); });
+    }, { root: scrollEl, rootMargin: '600px 0px 600px 0px' });
+    pageWrapEls.forEach(w => state.observer.observe(w));
+
+    // Aggiorna il numero pagina corrente in base allo scroll
+    let scrollTicking = false;
+    scrollEl.addEventListener('scroll', () => {
+      if(scrollTicking) return;
+      scrollTicking = true;
+      requestAnimationFrame(() => {
+        scrollTicking = false;
+        const scrollRect = scrollEl.getBoundingClientRect();
+        let closest = null, closestDist = Infinity;
+        pageWrapEls.forEach(w => {
+          const r = w.getBoundingClientRect();
+          const dist = Math.abs(r.top - scrollRect.top);
+          if(dist < closestDist){ closestDist = dist; closest = w; }
+        });
+        if(closest){
+          const n = parseInt(closest.dataset.page, 10);
+          if(n !== state.page){
+            state.page = n;
+            const jumpInput = container.querySelector(`#${idPrefix}-pagejump`);
+            if(jumpInput && document.activeElement !== jumpInput) jumpInput.value = n;
+          }
+        }
+      });
+    });
+
+    function goToPage(n){
+      n = Math.max(1, Math.min(state.numPages, n));
+      const wrap = pageWrapEls[n-1];
+      if(wrap) wrap.scrollIntoView({ block:'start', behavior:'smooth' });
+    }
+
+    async function rerenderAll(){
+      const firstP = await pdf.getPage(1);
+      const vp = firstP.getViewport({ scale: state.scale });
+      pageWrapEls.forEach(w => {
+        w.dataset.rendered = '0';
+        w.innerHTML = `<div class="pdfr-pagelabel" style="position:absolute; top:8px; left:8px; background:rgba(28,28,30,0.55); color:#fff; font-size:10.5px; padding:2px 7px; border-radius:20px; z-index:2; pointer-events:none;">${w.dataset.page}</div>`;
+        w.style.width = vp.width+'px';
+        w.style.minHeight = vp.height+'px';
+      });
+      // Ri-renderizza subito solo le pagine attualmente visibili
+      pageWrapEls.forEach(w => {
+        const r = w.getBoundingClientRect();
+        const sr = scrollEl.getBoundingClientRect();
+        if(r.bottom > sr.top - 600 && r.top < sr.bottom + 600) renderPageInto(w);
+      });
+    }
+
+    container.querySelector(`#${idPrefix}-prev`).onclick = () => goToPage(state.page - 1);
+    container.querySelector(`#${idPrefix}-next`).onclick = () => goToPage(state.page + 1);
+    const jumpInput = container.querySelector(`#${idPrefix}-pagejump`);
+    jumpInput.addEventListener('change', () => goToPage(parseInt(jumpInput.value,10) || 1));
+    jumpInput.addEventListener('keydown', (e) => { if(e.key === 'Enter') goToPage(parseInt(jumpInput.value,10) || 1); });
+
+    const zoomLevelEl = container.querySelector(`#${idPrefix}-zoomlevel`);
+    function updateZoomLabel(){ zoomLevelEl.textContent = Math.round(state.scale/1.35*100)+'%'; }
+    updateZoomLabel();
+    container.querySelector(`#${idPrefix}-zoomin`).onclick = async () => { state.scale = Math.min(3, state.scale+0.15); localStorage.setItem('uninotes.pdfZoom', state.scale); updateZoomLabel(); await rerenderAll(); };
+    container.querySelector(`#${idPrefix}-zoomout`).onclick = async () => { state.scale = Math.max(0.4, state.scale-0.15); localStorage.setItem('uninotes.pdfZoom', state.scale); updateZoomLabel(); await rerenderAll(); };
+
+    // Modalità evidenziatore: quando attiva, ogni selezione di testo viene trasformata in un <mark> evidenziato.
+    const highlightBtn = container.querySelector(`#${idPrefix}-highlight`);
+    function applyHighlight(){
+      const sel = window.getSelection();
+      if(!sel || sel.isCollapsed || sel.rangeCount === 0) return;
+      const range = sel.getRangeAt(0);
+      if(!scrollEl.contains(range.commonAncestorContainer)) return;
+      try{
+        const mark = document.createElement('mark');
+        mark.className = 'pdfr-highlight';
+        mark.style.cssText = 'background:rgba(255,214,0,0.55); border-radius:2px;';
+        range.surroundContents(mark);
+      }catch(e){
+        // Selezione che attraversa più nodi non uniformi: evidenzia i singoli frammenti di testo selezionati
+        const texts = range.cloneContents().querySelectorAll ? null : null;
+        try{
+          const frag = range.extractContents();
+          const mark = document.createElement('mark');
+          mark.className = 'pdfr-highlight';
+          mark.style.cssText = 'background:rgba(255,214,0,0.55); border-radius:2px;';
+          mark.appendChild(frag);
+          range.insertNode(mark);
+        }catch(e2){ /* rinuncia silenziosamente se il DOM non lo permette */ }
+      }
+      sel.removeAllRanges();
+    }
+    highlightBtn.onclick = () => {
+      const active = localStorage.getItem('uninotes.pdfHighlightMode') === '1';
+      localStorage.setItem('uninotes.pdfHighlightMode', active ? '0' : '1');
+      highlightBtn.classList.toggle('active', !active);
     };
-    container.querySelector('#ipdf-prev').onclick = () => { if(state.page>1){ state.page--; render(); } };
-    container.querySelector('#ipdf-next').onclick = () => { if(state.page<pdf.numPages){ state.page++; render(); } };
-    container.querySelector('#ipdf-zoomin').onclick = () => { state.scale = Math.min(3, state.scale+0.15); render(); };
-    container.querySelector('#ipdf-zoomout').onclick = () => { state.scale = Math.max(0.4, state.scale-0.15); render(); };
-    await render();
+    scrollEl.addEventListener('mouseup', () => {
+      if(localStorage.getItem('uninotes.pdfHighlightMode') === '1') applyHighlight();
+    });
+
+    // Ricerca testuale: scorre le pagine già renderizzate (e forza il render di quelle mancanti) e evidenzia i match.
+    const searchInput = container.querySelector(`#${idPrefix}-search`);
+    const searchCountEl = container.querySelector(`#${idPrefix}-searchcount`);
+    let searchDebounce = null;
+    searchInput.addEventListener('input', () => {
+      clearTimeout(searchDebounce);
+      searchDebounce = setTimeout(() => runSearch(searchInput.value.trim()), 350);
+    });
+    async function runSearch(term){
+      scrollEl.querySelectorAll('.pdfr-searchmatch').forEach(el => el.classList.remove('pdfr-searchmatch'));
+      if(!term){ searchCountEl.textContent = ''; return; }
+      searchCountEl.textContent = 'Ricerca…';
+      // Assicura che tutte le pagine abbiano il text layer renderizzato (necessario per cercare)
+      for(const w of pageWrapEls){ if(w.dataset.rendered !== '1') await renderPageInto(w); }
+      const lower = term.toLowerCase();
+      let count = 0, firstMatchEl = null;
+      scrollEl.querySelectorAll('.pdfr-textlayer span').forEach(span => {
+        if(span.textContent && span.textContent.toLowerCase().includes(lower)){
+          span.classList.add('pdfr-searchmatch');
+          count++;
+          if(!firstMatchEl) firstMatchEl = span;
+        }
+      });
+      searchCountEl.textContent = count ? `${count} risultati` : 'Nessun risultato';
+      if(firstMatchEl) firstMatchEl.scrollIntoView({ block:'center', behavior:'smooth' });
+    }
+
+    container.querySelector(`#${idPrefix}-print`).onclick = () => PDFPrint.print(file);
+
+    return {
+      destroy(){ if(state.observer) state.observer.disconnect(); },
+      print(){ PDFPrint.print(file); },
+      setScale(v){ state.scale = v; },
+      numPages: state.numPages
+    };
+  }
+};
+
+/* ---------- PDF Viewer a schermo intero (modale) ---------- */
+const PDFViewerModal = {
+  async open(lesson, file){
+    const m = ModalManager.open(`
+      <div class="modal-header"><div class="modal-title">${icon('pdf',16)} ${esc(file.name)}</div><button class="icon-btn" id="m-close">${icon('x',16)}</button></div>
+      <div class="modal-body" style="padding:14px; display:flex; flex-direction:column; height:82vh;" id="pdfmodal-container"></div>
+    `, { wide:true });
+    m.querySelector('#m-close').onclick = () => { if(this._instance) this._instance.destroy(); ModalManager.close(); };
+    const container = m.querySelector('#pdfmodal-container');
+    this._instance = await PDFReader.mount(container, file, { idPrefix:'pdfm', height:'100%', defaultScale:1.5 });
+  }
+};
+
+/* ---------- PDF Viewer INLINE (per il documento principale in pagina lezione) ---------- */
+const InlinePdfViewer = {
+  async mount(container, file){
+    return await PDFReader.mount(container, file, { idPrefix:'ipdf', height:'76vh', defaultScale:1.35 });
   }
 };
 
