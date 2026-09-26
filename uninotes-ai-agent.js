@@ -49,15 +49,19 @@ const OllamaManager = {
 
   /**
    * Invia una chat a Ollama. Se onToken è passato, usa lo streaming NDJSON
-   * e richiama onToken per ogni frammento di testo ricevuto.
-   * Ritorna sempre il messaggio finale { role, content, tool_calls }.
+   * e richiama onToken per ogni frammento di testo della risposta finale.
+   * Se onThinking è passato, richiede al modello (quando supportato, es.
+   * gpt-oss) anche il "thinking"/ragionamento e lo trasmette in streaming
+   * separatamente tramite onThinking, senza mescolarlo alla risposta finale.
+   * Ritorna sempre il messaggio finale { role, content, thinking, tool_calls }.
    */
-  async chat({ messages, tools, signal, onToken }){
+  async chat({ messages, tools, signal, onToken, onThinking }){
     const model = this.getModel();
     if(!model) throw new Error('Nessun modello Ollama selezionato.');
-    const stream = !!onToken;
+    const stream = !!onToken || !!onThinking;
     const body = { model, messages, stream };
     if(tools && tools.length) body.tools = tools;
+    if(onThinking) body.think = true;
     let res;
     try{
       res = await fetch(this.baseUrl + '/api/chat', {
@@ -81,7 +85,7 @@ const OllamaManager = {
     const reader = res.body.getReader();
     const decoder = new TextDecoder();
     let buf = '';
-    const finalMsg = { role:'assistant', content:'', tool_calls: undefined };
+    const finalMsg = { role:'assistant', content:'', thinking:'', tool_calls: undefined };
     while(true){
       const { done, value } = await reader.read();
       if(done) break;
@@ -93,7 +97,8 @@ const OllamaManager = {
         let obj;
         try{ obj = JSON.parse(line); }catch(e){ continue; }
         if(obj.message){
-          if(obj.message.content){ finalMsg.content += obj.message.content; onToken(obj.message.content); }
+          if(obj.message.thinking){ finalMsg.thinking += obj.message.thinking; if(onThinking) onThinking(obj.message.thinking); }
+          if(obj.message.content){ finalMsg.content += obj.message.content; if(onToken) onToken(obj.message.content); }
           if(obj.message.tool_calls) finalMsg.tool_calls = obj.message.tool_calls;
         }
       }
@@ -757,7 +762,7 @@ const AIAgent = {
     return null;
   },
 
-  async run(conversationMessages, { onToken, onStep, maxSteps=12 } = {}){
+  async run(conversationMessages, { onToken, onThinking, onStep, maxSteps=12 } = {}){
     this.running = true;
     this.controller = new AbortController();
     const tools = getOllamaToolsSchema();
@@ -768,7 +773,7 @@ const AIAgent = {
         steps++;
         let assistantMsg;
         try{
-          assistantMsg = await OllamaManager.chat({ messages, tools, signal: this.controller.signal, onToken });
+          assistantMsg = await OllamaManager.chat({ messages, tools, signal: this.controller.signal, onToken, onThinking });
         }catch(err){
           if(err.name === 'AbortError') return { aborted:true, messages };
           throw err;
@@ -843,6 +848,82 @@ const AI_STEP_LABELS = {
   prepare_latex:'Preparo il materiale'
 };
 
+/* ============================================================
+   MINI MARKDOWN RENDERER — per mostrare correttamente le risposte
+   dell'AI (tabelle, elenchi, grassetto/corsivo, codice, titoli)
+   invece del testo grezzo con i simboli markdown.
+   ============================================================ */
+function mdSplitRow(line){
+  return line.trim().replace(/^\||\|$/g,'').split('|').map(c=>c.trim());
+}
+function mdRenderTables(text){
+  const lines = text.split('\n');
+  const out = [];
+  let i = 0;
+  const sepRe = /^\s*\|?\s*:?-{2,}:?\s*(\|\s*:?-{2,}:?\s*)+\|?\s*$/;
+  const rowRe = /^\s*\|.*\|\s*$/;
+  while(i < lines.length){
+    if(rowRe.test(lines[i]) && i+1 < lines.length && sepRe.test(lines[i+1])){
+      const headerCells = mdSplitRow(lines[i]);
+      i += 2;
+      const rows = [];
+      while(i < lines.length && rowRe.test(lines[i])){ rows.push(mdSplitRow(lines[i])); i++; }
+      let html = '<table style="border-collapse:collapse; width:100%; margin:8px 0; font-size:12.5px;">';
+      html += '<thead><tr>' + headerCells.map(c=>`<th style="border:1px solid var(--border); padding:5px 8px; background:var(--surface-2); text-align:left;">${c}</th>`).join('') + '</tr></thead>';
+      html += '<tbody>' + rows.map(r=>'<tr>'+r.map(c=>`<td style="border:1px solid var(--border); padding:5px 8px;">${c}</td>`).join('')+'</tr>').join('') + '</tbody></table>';
+      out.push(html);
+    } else { out.push(lines[i]); i++; }
+  }
+  return out.join('\n');
+}
+function mdRenderLists(text){
+  const lines = text.split('\n');
+  const out = [];
+  let i = 0;
+  while(i < lines.length){
+    if(/^\s*[-*]\s+/.test(lines[i]) && !/^\s*\*\*/.test(lines[i])){
+      const items = [];
+      while(i < lines.length && /^\s*[-*]\s+/.test(lines[i]) && !/^\s*\*\*/.test(lines[i])){ items.push(lines[i].replace(/^\s*[-*]\s+/,'')); i++; }
+      out.push('<ul style="margin:4px 0; padding-left:20px;">' + items.map(it=>`<li>${it}</li>`).join('') + '</ul>');
+    } else if(/^\s*\d+\.\s+/.test(lines[i])){
+      const items = [];
+      while(i < lines.length && /^\s*\d+\.\s+/.test(lines[i])){ items.push(lines[i].replace(/^\s*\d+\.\s+/,'')); i++; }
+      out.push('<ol style="margin:4px 0; padding-left:20px;">' + items.map(it=>`<li>${it}</li>`).join('') + '</ol>');
+    } else { out.push(lines[i]); i++; }
+  }
+  return out.join('\n');
+}
+function renderMarkdown(src){
+  if(!src) return '';
+  let text = esc(src);
+  const codeBlocks = [];
+  text = text.replace(/```([a-zA-Z0-9_+-]*)\n?([\s\S]*?)```/g, (m, lang, code) => {
+    const idx = codeBlocks.length;
+    codeBlocks.push(`<pre style="background:var(--surface-2); border:1px solid var(--border); border-radius:8px; padding:10px 12px; overflow-x:auto; font-family:var(--mono); font-size:12px; margin:8px 0;"><code>${code}</code></pre>`);
+    return '\u0000CODEBLOCK' + idx + '\u0000';
+  });
+  text = text.replace(/`([^`\n]+)`/g, '<code style="background:var(--surface-2); padding:1px 5px; border-radius:4px; font-family:var(--mono); font-size:0.92em;">$1</code>');
+  text = mdRenderTables(text);
+  text = text.replace(/^#### (.*)$/gm,'<h4 style="margin:8px 0 4px; font-size:13px;">$1</h4>');
+  text = text.replace(/^### (.*)$/gm,'<h4 style="margin:10px 0 4px; font-size:13.5px;">$1</h4>');
+  text = text.replace(/^## (.*)$/gm,'<h3 style="margin:12px 0 4px; font-size:14.5px;">$1</h3>');
+  text = text.replace(/^# (.*)$/gm,'<h2 style="margin:14px 0 6px; font-size:15.5px;">$1</h2>');
+  text = text.replace(/\*\*\*(.+?)\*\*\*/g,'<b><i>$1</i></b>');
+  text = text.replace(/\*\*(.+?)\*\*/g,'<b>$1</b>');
+  text = text.replace(/(^|[^*])\*([^*\n]+)\*(?!\*)/g,'$1<i>$2</i>');
+  text = text.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g,'<a href="$2" target="_blank" rel="noopener" style="color:var(--accent); text-decoration:underline;">$1</a>');
+  text = text.replace(/^&gt; ?(.*)$/gm,'<blockquote style="border-left:3px solid var(--border-strong); margin:6px 0; padding:2px 10px; color:var(--text-secondary);">$1</blockquote>');
+  text = mdRenderLists(text);
+  text = text.split(/\n{2,}/).map(block=>{
+    const t = block.trim();
+    if(!t) return '';
+    if(/<(h2|h3|h4|ul|ol|blockquote|table)/.test(t) || t.includes('\u0000CODEBLOCK')) return t;
+    return '<p style="margin:4px 0;">' + t.replace(/\n/g,'<br>') + '</p>';
+  }).join('\n');
+  text = text.replace(/\u0000CODEBLOCK(\d+)\u0000/g, (m, idx) => codeBlocks[Number(idx)]);
+  return text;
+}
+
 const AIPanel = {
   isOpen: false,
   currentChat: null,
@@ -911,14 +992,23 @@ const AIPanel = {
   renderMessages(){
     const el = document.getElementById('ai-messages');
     if(!el) return;
-    el.innerHTML = this.currentChat.messages.map(m => this.renderMsg(m)).join('');
-    el.scrollTop = el.scrollHeight;
+    const wasNearBottom = (el.scrollHeight - el.scrollTop - el.clientHeight) < 60;
+    el.innerHTML = this.currentChat.messages.map((m,idx) => this.renderMsg(m, idx)).join('');
+    if(wasNearBottom) el.scrollTop = el.scrollHeight;
     this.bindCitations(el);
+    this.bindThinkingToggles(el);
   },
-  renderMsg(m){
+  renderMsg(m, idx){
     if(m.role === 'user') return `<div class="ai-msg user">${esc(m.content)}</div>`;
-    if(m.role === 'assistant') return `<div class="ai-msg assistant">${esc(m.content)||'<span class=\"muted\">…</span>'}${(m.citations||[]).map(c=>this.renderCitation(c)).join('')}</div>`;
+    if(m.role === 'assistant') return `<div class="ai-msg assistant">${renderMarkdown(m.content)||'<span class=\"muted\">…</span>'}${(m.citations||[]).map(c=>this.renderCitation(c)).join('')}</div>`;
     if(m.role === 'activity') return `<div class="ai-activity">${(m.steps||[]).map(s=>`<div class="ai-activity-step">${s.status==='cancelled'?icon('x',12):s.status==='done'?icon('check',12):icon('clock',12)} ${esc(s.label)}</div>`).join('')}</div>`;
+    if(m.role === 'thinking'){
+      const open = !m.collapsed;
+      return `<div class="ai-thinking">
+        <div class="ai-thinking-head" data-thinking-toggle="${idx}">${icon(open?'chevronDown':'chevronRight',12)}<span>Ragionamento del modello</span></div>
+        ${open ? `<div class="ai-thinking-body">${esc(m.content)||'<span class=\"muted\">…</span>'}</div>` : ''}
+      </div>`;
+    }
     return '';
   },
   renderCitation(c){
@@ -929,6 +1019,15 @@ const AIPanel = {
       elm.addEventListener('click', () => {
         const c = JSON.parse(elm.dataset.cite);
         if(c.fileName) UniNotesAPI.ui.openFile(c.subjectName, c.lessonId, c.fileName, c.page);
+      });
+    });
+  },
+  bindThinkingToggles(el){
+    el.querySelectorAll('[data-thinking-toggle]').forEach(elm=>{
+      elm.addEventListener('click', () => {
+        const idx = Number(elm.dataset.thinkingToggle);
+        const m = this.currentChat.messages[idx];
+        if(m){ m.collapsed = !m.collapsed; this.renderMessages(); }
       });
     });
   },
@@ -955,6 +1054,7 @@ const AIPanel = {
     const assistantPlaceholder = { role:'assistant', content:'', citations:[] };
     this.currentChat.messages.push(assistantPlaceholder);
     this.renderMessages();
+    let thinkingMsg = null;
 
     const convoForModel = [
       { role:'system', content: AI_SYSTEM_PROMPT },
@@ -969,6 +1069,15 @@ const AIPanel = {
     try{
       const result = await AIAgent.run(convoForModel, {
         onToken: (tok) => { assistantPlaceholder.content += tok; this.renderMessages(); },
+        onThinking: (tok) => {
+          if(!thinkingMsg){
+            thinkingMsg = { role:'thinking', content:'', collapsed:false };
+            const idx = this.currentChat.messages.indexOf(assistantPlaceholder);
+            this.currentChat.messages.splice(Math.max(0, idx), 0, thinkingMsg);
+          }
+          thinkingMsg.content += tok;
+          this.renderMessages();
+        },
         onStep: (step) => {
           activityMsg.steps.push({ name: step.name, status: step.status || 'running', label: this.activityLabel(step) });
           if(step.result && step.result.ok && step.result.data){
@@ -992,6 +1101,7 @@ const AIPanel = {
       console.error(err);
       assistantPlaceholder.content = 'Errore: ' + (err.message || err);
     }finally{
+      if(thinkingMsg) thinkingMsg.collapsed = true;
       if(sendBtn){ sendBtn.innerHTML = icon('send',15); sendBtn.onclick = () => this.send(); }
       this.currentChat.updatedAt = Date.now();
       if(this.currentChat.title === 'Nuova conversazione' && text) this.currentChat.title = text.slice(0,40);
@@ -1056,6 +1166,12 @@ AI_STYLE.textContent = `
 .ai-activity{ align-self:flex-start; max-width:92%; background:var(--surface-2); border:1px solid var(--border); border-radius:10px; padding:8px 10px; font-size:11.5px; color:var(--text-secondary); }
 .ai-activity-step{ display:flex; align-items:center; gap:6px; padding:2px 0; }
 .ai-citation{ display:block; margin-top:6px; padding:7px 9px; border-radius:8px; background:var(--accent-soft); color:var(--accent); font-size:11.5px; cursor:pointer; }
+.ai-thinking{ align-self:flex-start; max-width:92%; background:var(--surface-2); border:1px dashed var(--border-strong); border-radius:10px; padding:6px 10px; font-size:11.5px; color:var(--text-secondary); }
+.ai-thinking-head{ display:flex; align-items:center; gap:5px; cursor:pointer; font-weight:600; user-select:none; }
+.ai-thinking-body{ margin-top:6px; white-space:pre-wrap; font-style:italic; line-height:1.5; max-height:220px; overflow-y:auto; }
+.ai-msg.assistant table{ font-size:12px; }
+.ai-msg.assistant p:first-child{ margin-top:0; }
+.ai-msg.assistant p:last-child{ margin-bottom:0; }
 .ai-inputbar{ border-top:1px solid var(--border); padding:10px; display:flex; gap:8px; flex-shrink:0; }
 .ai-inputbar textarea{ flex:1; resize:none; border:1px solid var(--border); border-radius:10px; background:var(--surface-2); padding:8px 10px; font-size:13px; max-height:110px; }
 `;
