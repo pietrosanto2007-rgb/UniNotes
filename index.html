@@ -290,6 +290,29 @@ a{ color:inherit; text-decoration:none; }
 .file-chip.on{ background:var(--success-soft); color:var(--success); }
 .file-chip.off{ background:var(--surface-2); color:var(--text-tertiary); opacity:0.5; }
 
+.lesson-paper-actions{
+  display:flex; align-items:center; gap:6px; flex-shrink:0;
+}
+.paper-status-btn{
+  display:inline-flex; align-items:center; gap:5px; min-height:28px;
+  padding:4px 8px; border:1px solid var(--border); border-radius:7px;
+  background:var(--surface-2); color:var(--text-secondary);
+  font-size:11px; font-weight:650; cursor:pointer; white-space:nowrap;
+  transition:background 120ms var(--ease), border-color 120ms var(--ease), color 120ms var(--ease), transform 80ms var(--ease);
+}
+.paper-status-btn svg{ width:13px; height:13px; flex-shrink:0; }
+.paper-status-btn:hover{ border-color:var(--border-strong); background:var(--surface); color:var(--text); }
+.paper-status-btn:active{ transform:scale(0.97); }
+.paper-status-btn.is-done{ background:var(--success-soft); border-color:transparent; color:var(--success); }
+.paper-status-btn.is-done:hover{ background:var(--success-soft); border-color:rgba(30,142,90,0.20); color:var(--success); }
+
+.lesson-paper-actions.detail{
+  margin-top:12px; gap:8px;
+}
+.lesson-paper-actions.detail .paper-status-btn{
+  min-height:32px; padding:6px 10px; font-size:12px;
+}
+
 /* ---------- Status pills ---------- */
 .status-pill{
   display:inline-flex; align-items:center; gap:5px; font-size:11px; font-weight:650;
@@ -986,6 +1009,8 @@ const LibraryScanner = {
       tags: metaOverride.tags || [],
       notes: metaOverride.notes || '',
       pinned: !!metaOverride.pinned,
+      highlightedOnPaper: !!metaOverride.highlightedOnPaper,
+      printed: !!metaOverride.printed,
       order: metaOverride.order ?? null,
       mainFilePages: (mainFile && metaOverride.mainFilePagesFor === mainFile.name) ? (metaOverride.mainFilePages ?? null) : null,
       files,
@@ -1074,6 +1099,19 @@ const LibraryScanner = {
     existing.pinned = lesson.pinned;
     await FileSystemManager.writeTextFile(metaHandle, JSON.stringify(existing, null, 2));
     return lesson.pinned;
+  },
+
+  /** Segna/desegnal una lezione come già evidenziata/stampata sui fogli cartacei. */
+  async togglePaperStatus(lesson, key){
+    const allowed = ['highlightedOnPaper', 'printed'];
+    if(!allowed.includes(key)) throw new Error('Stato lezione non valido');
+    lesson[key] = !lesson[key];
+    const metaHandle = await FileSystemManager.getOrCreateFile(lesson.handle, '.lesson.json');
+    let existing = {};
+    try{ existing = JSON.parse(await FileSystemManager.readTextFile(metaHandle)); }catch(e){}
+    existing[key] = !!lesson[key];
+    await FileSystemManager.writeTextFile(metaHandle, JSON.stringify(existing, null, 2));
+    return lesson[key];
   },
 
   /** Salva l'ordine manuale (drag & drop) di una lezione dentro la sua materia. */
@@ -1655,6 +1693,14 @@ const LessonRow = {
           <div class="lesson-title">${esc(l.title || l.folderName)} <span class="muted" style="font-weight:500;">— ${esc(l.subjectName)}</span></div>
           <div class="lesson-date">${l.date ? fmtDateShort(l.date)+' · '+fmtRelative(l.date) : 'Data non impostata'} · ${fileCount} file</div>
         </div>
+        <div class="lesson-paper-actions">
+          <button class="paper-status-btn ${l.highlightedOnPaper?'is-done':''}" data-toggle-paper="${esc(l.subjectName)}::${esc(l.id)}::highlightedOnPaper" aria-pressed="${!!l.highlightedOnPaper}" title="${l.highlightedOnPaper?'Segna come non evidenziata sui fogli':'Segna come già evidenziata sui fogli'}">
+            ${icon(l.highlightedOnPaper?'check':'highlighter',13)}<span>${l.highlightedOnPaper?'Già evidenziata':'Segna evidenziata'}</span>
+          </button>
+          <button class="paper-status-btn ${l.printed?'is-done':''}" data-toggle-paper="${esc(l.subjectName)}::${esc(l.id)}::printed" aria-pressed="${!!l.printed}" title="${l.printed?'Segna come non stampata':'Segna come già stampata'}">
+            ${icon(l.printed?'check':'print',13)}<span>${l.printed?'Già stampata':'Segna stampata'}</span>
+          </button>
+        </div>
         <div class="lesson-files">
           ${REQUIRED_STEPS.map(s => `<div class="file-chip ${lessonStepDone(l,s.key)?'on':'off'}" title="${s.label}">${icon(s.icon,12)}</div>`).join('')}
         </div>
@@ -1679,6 +1725,22 @@ const LessonRow = {
           await LibraryScanner.togglePinned(lesson);
           Router.render();
         }catch(err){ console.error(err); Toast.error('Impossibile aggiornare i preferiti.'); }
+      });
+    });
+    container.querySelectorAll('[data-toggle-paper]').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const [subjectName, lessonId, key] = btn.dataset.togglePaper.split('::');
+        const lesson = findLesson(subjectName, lessonId);
+        if(!lesson) return;
+        try{
+          const isDone = await LibraryScanner.togglePaperStatus(lesson, key);
+          const label = key === 'highlightedOnPaper'
+            ? (isDone ? 'Lezione segnata come già evidenziata sui fogli.' : 'Segnalazione "già evidenziata" rimossa.')
+            : (isDone ? 'Lezione segnata come già stampata.' : 'Segnalazione "già stampata" rimossa.');
+          Toast.success(label);
+          Router.render();
+        }catch(err){ console.error(err); Toast.error('Impossibile aggiornare lo stato cartaceo della lezione.'); }
       });
     });
   }
@@ -2161,6 +2223,14 @@ const LessonPage = {
           <div>
             <div class="section-title">Lezione ${lesson.number ?? '—'}${lesson.title ? ' — '+esc(lesson.title) : ''}</div>
             <div class="section-sub">${lesson.date ? fmtDate(lesson.date) : 'Data non impostata'} · <span class="status-pill ${meta.cls}" style="margin-left:4px;">${icon(meta.icon,10)} ${meta.label}</span></div>
+            <div class="lesson-paper-actions detail">
+              <button class="paper-status-btn ${lesson.highlightedOnPaper?'is-done':''}" id="btn-toggle-highlighted-paper" aria-pressed="${!!lesson.highlightedOnPaper}" title="${lesson.highlightedOnPaper?'Segna come non evidenziata sui fogli':'Segna come già evidenziata sui fogli'}">
+                ${icon(lesson.highlightedOnPaper?'check':'highlighter',13)}<span>${lesson.highlightedOnPaper?'Già evidenziata sui fogli':'Segna già evidenziata'}</span>
+              </button>
+              <button class="paper-status-btn ${lesson.printed?'is-done':''}" id="btn-toggle-printed" aria-pressed="${!!lesson.printed}" title="${lesson.printed?'Segna come non stampata':'Segna come già stampata'}">
+                ${icon(lesson.printed?'check':'print',13)}<span>${lesson.printed?'Già stampata':'Segna già stampata'}</span>
+              </button>
+            </div>
           </div>
           <div style="display:flex; gap:8px;">
             <button class="icon-btn" id="btn-toggle-pin" title="${lesson.pinned?'Rimuovi dai preferiti':'Aggiungi ai preferiti'}" style="color:${lesson.pinned?'var(--warning)':'var(--text-tertiary)'};">${icon('star',16)}</button>
@@ -2193,6 +2263,20 @@ const LessonPage = {
     document.getElementById('btn-toggle-pin').addEventListener('click', async () => {
       try{ await LibraryScanner.togglePinned(lesson); this.render(params); }
       catch(err){ console.error(err); Toast.error('Impossibile aggiornare i preferiti.'); }
+    });
+    document.getElementById('btn-toggle-highlighted-paper').addEventListener('click', async () => {
+      try{
+        const isDone = await LibraryScanner.togglePaperStatus(lesson, 'highlightedOnPaper');
+        Toast.success(isDone ? 'Segnata come già evidenziata sui fogli.' : 'Segnalazione "già evidenziata" rimossa.');
+        this.render(params);
+      }catch(err){ console.error(err); Toast.error('Impossibile aggiornare lo stato "già evidenziata".'); }
+    });
+    document.getElementById('btn-toggle-printed').addEventListener('click', async () => {
+      try{
+        const isDone = await LibraryScanner.togglePaperStatus(lesson, 'printed');
+        Toast.success(isDone ? 'Segnata come già stampata.' : 'Segnalazione "già stampata" rimossa.');
+        this.render(params);
+      }catch(err){ console.error(err); Toast.error('Impossibile aggiornare lo stato "già stampata".'); }
     });
     document.getElementById('btn-copy-ref').addEventListener('click', () => {
       const ref = `${lesson.subjectName} — Lezione ${lesson.number??''}${lesson.title?' — '+lesson.title:''}`;
