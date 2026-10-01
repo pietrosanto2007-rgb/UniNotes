@@ -1034,12 +1034,22 @@ const LibraryScanner = {
     } else {
       title = folderName;
     }
+    // .lesson.json è un file nascosto e listEntries() lo esclude intenzionalmente.
+    // Leggilo direttamente dal handle della lezione, così gli stati cartacei
+    // (stampata/evidenziata) e gli altri metadati persistono anche dopo un refresh.
+    let metaOverride = {};
+    try{
+      const metaHandle = await handle.getFileHandle('.lesson.json');
+      metaOverride = JSON.parse(await FileSystemManager.readTextFile(metaHandle));
+    }catch(e){
+      // File non ancora creato: è normale per le lezioni vecchie/prive di metadati.
+    }
+
     const entries = await FileSystemManager.listEntries(handle);
     const files = {};        // materiale grezzo, per ruolo
     const rootFiles = [];    // file sciolti nella root della lezione (candidati a documento principale)
     const subfolders = [];   // sottocartelle DENTRO "Materiale grezzo" — { name, handle, role|null }
     let rawFolderHandle = null;
-    let metaOverride = {};
 
     for(const e of entries){
       if(e.kind === 'directory'){
@@ -1060,10 +1070,6 @@ const LibraryScanner = {
           files[effectiveRole] = files[effectiveRole] || [];
           files[effectiveRole].push({ name: fe.name, handle: fe.handle, kind, folder: e.name });
         }
-        continue;
-      }
-      if(e.name === '.lesson.json'){
-        try{ metaOverride = JSON.parse(await FileSystemManager.readTextFile(e.handle)); }catch(err){}
         continue;
       }
       const kind = kindOf(e.name);
