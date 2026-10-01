@@ -616,6 +616,7 @@ const ICONS = {
   search: '<circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/>',
   calendar: '<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h18"/>',
   activity: '<path d="M22 12h-4l-3 9-6-18-3 9H2"/>',
+  statistics: '<path d="M4 19V5"/><path d="M4 19h17"/><path d="M8 17v-5"/><path d="M13 17V8"/><path d="M18 17V4"/>',
   settings: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009.17 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9.17a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9c.26.604.852 1 1.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/>',
   chevronLeft: '<path d="M15 18l-6-6 6-6"/>',
   chevronRight: '<path d="M9 18l6-6-6-6"/>',
@@ -802,8 +803,12 @@ const AppState = {
     this.applyTheme();
   },
   savePrintSettings(next){
-    this.printSettings = { ...this.printSettings, ...next, paperPrice: 0.01 };
+    const rawFacePrice = Number(next && next.facePrice);
+    const facePrice = Number.isFinite(rawFacePrice) ? Math.max(0, rawFacePrice) : this.printSettings.facePrice;
+    const duplex = typeof next?.duplex === 'boolean' ? next.duplex : this.printSettings.duplex;
+    this.printSettings = { ...this.printSettings, facePrice, duplex, paperPrice: 0.01 };
     localStorage.setItem('uninotes.printSettings', JSON.stringify(this.printSettings));
+    window.dispatchEvent(new CustomEvent('uninotes:print-settings-changed'));
   },
   setRootAbsolutePath(p){
     this.rootAbsolutePath = (p || '').trim();
@@ -1654,7 +1659,8 @@ const SidebarView = {
       { page:'search', label:'Ricerca', icon:'search' },
       { page:'tags', label:'Tag', icon:'tag' },
       { page:'calendar', label:'Calendario', icon:'calendar' },
-      { page:'activity', label:'Attività', icon:'activity' }
+      { page:'activity', label:'Attività', icon:'activity' },
+      { page:'statistics', label:'Statistiche', icon:'statistics' }
     ]},
     { section: null, items: [ { page:'settings', label:'Impostazioni', icon:'settings' } ] }
   ],
@@ -1789,11 +1795,125 @@ const Router = {
       'tags': TagsPage,
       'calendar': CalendarPage,
       'activity': ActivityPage,
+      'statistics': StatisticsPage,
       'settings': SettingsPage,
       'editor': EditorPage
     };
     const view = pages[page] || DashboardPage;
     view.render(AppState.route.params);
+  }
+};
+
+/* ============================================================
+   STATISTICS PAGE — grafici e statistiche complete
+   ============================================================ */
+const StatisticsPage = {
+  render(){
+    TopbarView.render(`<b>Statistiche</b>`, `<button class="btn btn-sm" id="stats-refresh">${icon('refresh',14)} Aggiorna</button>`);
+    const lessons = allLessonsFlat();
+    const st = statisticsForLessons(lessons);
+    const content = document.getElementById('content');
+    const subjectRows = AppState.library.subjects.map(subject => ({ subject, ss: statisticsForSubject(subject) }))
+      .sort((a,b) => b.ss.totalPrintCost - a.ss.totalPrintCost || b.ss.lessons - a.ss.lessons);
+    const fileItems = Object.entries(st.filesByKind).map(([k,v])=>({label:fileKindLabel(k),value:v}))
+      .sort((a,b)=>b.value-a.value).slice(0,10);
+    const subjectItems = AppState.library.subjects.map(subject => ({label:subject.name,value:subject.lessons.length,color:subject.color}))
+      .sort((a,b)=>b.value-a.value).slice(0,10);
+    const subjectCostItems = subjectRows.filter(x=>x.ss.totalPrintCost>0).slice(0,10)
+      .map(x=>({label:x.subject.name,value:x.ss.totalPrintCost,color:x.subject.color}));
+
+    content.innerHTML = `
+      <div class="page">
+        <div class="section-head" style="align-items:flex-start; margin-bottom:18px;">
+          <div>
+            <div class="section-title">Statistiche complete</div>
+            <div class="section-sub">Analisi di lezioni, file, PDF, stato cartaceo e costi di stampa dell'intera libreria.</div>
+          </div>
+          <div class="paper-state-badge">Prezzo ${fmtMoney(AppState.printSettings.facePrice)} / facciata · ${AppState.printSettings.duplex ? 'fronte-retro' : 'solo fronte'}</div>
+        </div>
+
+        ${lessons.length === 0 ? `
+          <div class="empty-state card">${icon('statistics',38)}<div class="empty-state-title">Nessun dato da analizzare</div><div class="empty-state-sub">Aggiungi almeno una lezione alla libreria per visualizzare grafici e statistiche.</div></div>
+        ` : `
+          <div class="grid grid-stats" style="margin-bottom:18px;">
+            <div class="stat-pill"><div class="stat-pill-num">${fmtNumber(st.lessons)}</div><div class="stat-pill-label">Lezioni</div></div>
+            <div class="stat-pill"><div class="stat-pill-num">${fmtNumber(AppState.library.subjects.length)}</div><div class="stat-pill-label">Materie</div></div>
+            <div class="stat-pill"><div class="stat-pill-num" style="color:var(--success)">${fmtNumber(st.complete)}</div><div class="stat-pill-label">Complete</div></div>
+            <div class="stat-pill"><div class="stat-pill-num" style="color:var(--warning)">${fmtNumber(st.progress)}</div><div class="stat-pill-label">In lavorazione</div></div>
+            <div class="stat-pill"><div class="stat-pill-num" style="color:var(--accent)">${fmtNumber(st.highlighted)}</div><div class="stat-pill-label">Evidenziate</div></div>
+            <div class="stat-pill"><div class="stat-pill-num" style="color:var(--success)">${fmtNumber(st.printed)}</div><div class="stat-pill-label">Stampate</div></div>
+            <div class="stat-pill"><div class="stat-pill-num">${st.sheetsKnown ? fmtNumber(st.sheets) : '—'}</div><div class="stat-pill-label">Fogli usati</div></div>
+            <div class="stat-pill"><div class="stat-pill-num">${fmtNumber(st.files)}</div><div class="stat-pill-label">File</div></div>
+            <div class="stat-pill"><div class="stat-pill-num">${st.pagesKnownFor ? fmtNumber(st.pages) : '—'}</div><div class="stat-pill-label">Pagine PDF</div></div>
+            <div class="stat-pill"><div class="stat-pill-num" style="color:var(--accent)">${st.printed===0 || st.printedLessonsWithKnownPages>0 ? fmtMoney(st.totalPrintCost) : '—'}</div><div class="stat-pill-label">Costo totale stampa</div></div>
+          </div>
+
+          <div class="stats-dashboard-grid">
+            <div class="stats-card stats-span-4"><div class="stats-card-head"><div><div class="stats-card-title">Stato delle lezioni</div><div class="stats-card-sub">Distribuzione del materiale presente.</div></div></div>
+              ${StatisticsView.donut('Stato delle lezioni', [
+                {label:'Complete',value:st.complete,color:'var(--success)'},
+                {label:'In lavorazione',value:st.progress,color:'var(--warning)'},
+                {label:'Materiale mancante',value:st.missing,color:'var(--danger)'}
+              ], st.completePct+'%', 'complete')}
+            </div>
+            <div class="stats-span-8">${StatisticsView.printingCard(st)}</div>
+
+            <div class="stats-card stats-span-6"><div class="stats-card-head"><div><div class="stats-card-title">File per formato</div><div class="stats-card-sub">Composizione del materiale disponibile.</div></div><span class="paper-state-badge">${fmtNumber(st.files)} file</span></div>${StatisticsView.bars(fileItems)}</div>
+            <div class="stats-card stats-span-6"><div class="stats-card-head"><div><div class="stats-card-title">Lezioni per materia</div><div class="stats-card-sub">Distribuzione del carico didattico.</div></div></div>${StatisticsView.bars(subjectItems)}</div>
+
+            <div class="stats-card stats-span-6"><div class="stats-card-head"><div><div class="stats-card-title">Stato su carta</div><div class="stats-card-sub">Evidenziata e stampata sulle copie cartacee.</div></div></div>
+              ${StatisticsView.donut('Stato della carta', [
+                {label:'Evidenziate',value:st.highlighted,color:'var(--accent)'},
+                {label:'Stampate',value:st.printed,color:'var(--success)'},
+                {label:'Non ancora segnate',value:Math.max(0,st.lessons-Math.max(st.highlighted,st.printed)),color:'var(--text-tertiary)'}
+              ], Math.max(st.highlighted,st.printed)+'', 'lezioni attive')}
+            </div>
+            <div class="stats-card stats-span-6"><div class="stats-card-head"><div><div class="stats-card-title">Costo di stampa per materia</div><div class="stats-card-sub">Solo lezioni segnate come stampate.</div></div></div>${StatisticsView.bars(subjectCostItems, null, ' €')}</div>
+
+            <div class="stats-card stats-span-7"><div class="stats-card-head"><div><div class="stats-card-title">Volumi di studio</div><div class="stats-card-sub">Dimensioni e medie del materiale.</div></div></div>
+              <div class="metric-row">
+                <div class="metric-mini"><div class="metric-mini-value">${st.pagesKnownFor ? fmtNumber(Math.round(st.avgPagesPerLesson)) : '—'}</div><div class="metric-mini-label">Pagine PDF medie / lezione</div></div>
+                <div class="metric-mini"><div class="metric-mini-value">${st.lessons ? st.fileAvg.toFixed(1).replace('.', ',') : '0'}</div><div class="metric-mini-label">File medi / lezione</div></div>
+                <div class="metric-mini"><div class="metric-mini-value">${fmtNumber(st.audioFiles)}</div><div class="metric-mini-label">Registrazioni</div></div>
+                <div class="metric-mini"><div class="metric-mini-value">${fmtNumber(st.docxFiles)}</div><div class="metric-mini-label">Documenti Word</div></div>
+                <div class="metric-mini"><div class="metric-mini-value">${fmtNumber(st.pdfFiles)}</div><div class="metric-mini-label">PDF</div></div>
+              </div>
+            </div>
+            <div class="stats-card stats-span-5"><div class="stats-card-head"><div><div class="stats-card-title">Efficienza di stampa</div><div class="stats-card-sub">Impatto della modalità fronte-retro.</div></div></div>
+              <div class="metric-row">
+                <div class="metric-mini"><div class="metric-mini-value">${st.printedPages ? fmtNumber(st.printedPages) : '—'}</div><div class="metric-mini-label">Facciate stampate</div></div>
+                <div class="metric-mini"><div class="metric-mini-value">${st.sheetsKnown ? fmtNumber(st.sheets) : '—'}</div><div class="metric-mini-label">Fogli effettivi</div></div>
+                <div class="metric-mini"><div class="metric-mini-value">${AppState.printSettings.duplex && st.sheetsKnown ? fmtNumber(st.sheetsSavedByDuplex) : '0'}</div><div class="metric-mini-label">Fogli risparmiati</div></div>
+                <div class="metric-mini"><div class="metric-mini-value">${st.printedLessonsWithKnownPages ? fmtMoney(st.avgPrintCost) : '—'}</div><div class="metric-mini-label">Costo medio / lezione</div></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="stats-card" style="margin-top:4px;"><div class="stats-card-head"><div><div class="stats-card-title">Dettaglio per materia</div><div class="stats-card-sub">Volume, stato cartaceo e costo di stampa.</div></div></div>
+            <div style="overflow:auto;"><table style="width:100%;border-collapse:collapse;font-size:11.5px;min-width:760px;">
+              <thead><tr style="text-align:left;color:var(--text-tertiary);border-bottom:1px solid var(--border);">
+                <th style="padding:8px 7px;font-weight:650;">Materia</th><th style="padding:8px 7px;font-weight:650;">Lezioni</th><th style="padding:8px 7px;font-weight:650;">Complete</th><th style="padding:8px 7px;font-weight:650;">Evidenziate</th><th style="padding:8px 7px;font-weight:650;">Stampate</th><th style="padding:8px 7px;font-weight:650;">Pagine</th><th style="padding:8px 7px;font-weight:650;">Fogli</th><th style="padding:8px 7px;font-weight:650;text-align:right;">Costo</th>
+              </tr></thead>
+              <tbody>${subjectRows.map(({subject,ss})=>`<tr data-open-subject="${esc(subject.name)}" style="border-bottom:1px solid var(--border);cursor:pointer;">
+                <td style="padding:10px 7px;font-weight:650;"><span class="subject-dot" style="display:inline-block;width:8px;height:8px;margin:0 7px 0 0;vertical-align:middle;background:${subject.color}"></span>${esc(subject.name)}</td>
+                <td style="padding:10px 7px;">${fmtNumber(ss.lessons)}</td><td style="padding:10px 7px;">${fmtNumber(ss.complete)}</td><td style="padding:10px 7px;">${fmtNumber(ss.highlighted)}</td><td style="padding:10px 7px;">${fmtNumber(ss.printed)}</td><td style="padding:10px 7px;">${ss.pagesKnown ? fmtNumber(ss.pages) : '—'}</td><td style="padding:10px 7px;">${ss.sheetsKnown ? fmtNumber(ss.sheets) : '—'}</td><td style="padding:10px 7px;text-align:right;font-weight:700;">${ss.printed===0 || ss.printedLessonsWithKnownPages>0 ? fmtMoney(ss.totalPrintCost) : '—'}</td>
+              </tr>`).join('') || `<tr><td colspan="8" style="padding:16px;color:var(--text-tertiary);">Nessuna materia.</td></tr>`}</tbody>
+            </table></div>
+          </div>
+        `}
+      </div>`;
+
+    content.querySelector('#stats-refresh')?.addEventListener('click', () => this.refresh());
+    content.querySelectorAll('[data-open-subject]').forEach(row => row.addEventListener('click', () => Router.go('subject',{subjectName:row.dataset.openSubject})));
+    this._ensureCounts(lessons);
+  },
+  async _ensureCounts(lessons){
+    await ensureStatsPageCounts(lessons, () => { if(AppState.route.page === 'statistics') this.render(); });
+  },
+  async refresh(){
+    if(AppState.route.page !== 'statistics') return;
+    if(AppState.dirHandle){ try{ AppState.library = await LibraryScanner.scan(AppState.dirHandle); }catch(e){ console.warn('Aggiornamento statistiche fallito', e); } }
+    this.render();
   }
 };
 
@@ -1805,7 +1925,6 @@ const DashboardPage = {
     TopbarView.render(`<b>Dashboard</b>`, `<button class="btn btn-primary btn-sm" id="db-new-lesson">${icon('plus',14)} Nuova lezione</button>`);
     const lessons = allLessonsFlat();
     const t = libraryTotals();
-    const st = statisticsForLessons(lessons);
     const hour = new Date().getHours();
     const saluto = hour < 6 ? 'Buonanotte' : hour < 12 ? 'Buongiorno' : hour < 18 ? 'Buon pomeriggio' : 'Buonasera';
     const nextEvent = CalendarStore.events
@@ -1816,37 +1935,25 @@ const DashboardPage = {
       .sort((a,b) => (b.l.date?.getTime()||0) - (a.l.date?.getTime()||0)).slice(0,5);
     const pinnedLessons = lessons.filter(l => l.pinned);
     const recentLessons = lessons.slice().sort((a,b) => (b.date?.getTime()||0) - (a.date?.getTime()||0)).slice(0,6);
-    const fileItems = Object.entries(st.filesByKind).map(([k,v])=>({ label:fileKindLabel(k), value:v }))
-      .sort((a,b)=>b.value-a.value).slice(0,8);
-    const subjectItems = Object.entries(st.lessonsBySubject).map(([label,value])=>({label,value}))
-      .sort((a,b)=>b.value-a.value).slice(0,8);
-    const subjectCostItems = AppState.library.subjects.map(s=>{
-      const ss = statisticsForSubject(s); return { label:s.name, value:ss.totalPrintCost, color:s.color };
-    }).filter(x=>x.value>0).sort((a,b)=>b.value-a.value).slice(0,8);
     const content = document.getElementById('content');
     content.innerHTML = `
       <div class="page">
         <div class="section-title">${saluto}, Pietro.</div>
         <div class="section-sub" style="text-transform:capitalize; margin-bottom:22px;">${fmtDate(new Date())}</div>
 
-        <div class="grid grid-stats" style="margin-bottom:18px;">
-          <div class="stat-pill"><div class="stat-pill-num">${t.subjects}</div><div class="stat-pill-label">Materie</div></div>
-          <div class="stat-pill"><div class="stat-pill-num">${t.totalLessons}</div><div class="stat-pill-label">Lezioni</div></div>
-          <div class="stat-pill"><div class="stat-pill-num" style="color:var(--success)">${t.complete}</div><div class="stat-pill-label">Complete</div></div>
-          <div class="stat-pill"><div class="stat-pill-num" style="color:var(--accent)">${st.highlighted}</div><div class="stat-pill-label">Evidenziate su carta</div></div>
-          <div class="stat-pill"><div class="stat-pill-num" style="color:var(--warning)">${st.printed}</div><div class="stat-pill-label">Stampate</div></div>
-          <div class="stat-pill"><div class="stat-pill-num">${st.sheetsKnownFor ? fmtNumber(st.sheets) : '—'}</div><div class="stat-pill-label">Fogli usati</div></div>
-          <div class="stat-pill"><div class="stat-pill-num">${fmtNumber(st.files)}</div><div class="stat-pill-label">File</div></div>
-          <div class="stat-pill"><div class="stat-pill-num">${fmtNumber(st.pdfFiles)}</div><div class="stat-pill-label">PDF</div></div>
-          <div class="stat-pill"><div class="stat-pill-num">${st.pagesKnownFor ? fmtNumber(st.pages) : '—'}</div><div class="stat-pill-label">Pagine PDF</div></div>
-          <div class="stat-pill"><div class="stat-pill-num" style="color:var(--accent)">${st.printed===0 || st.printedLessonsWithKnownPages>0 ? fmtMoney(st.totalPrintCost) : '—'}</div><div class="stat-pill-label">Costo stampa</div></div>
+        <div class="card card-hover" data-nav="statistics" style="display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:22px;cursor:pointer;">
+          <div style="display:flex;align-items:center;gap:12px;min-width:0;">
+            <div class="sidebar-logo" style="width:38px;height:38px;border-radius:11px;flex:0 0 38px;">${icon('statistics',18)}</div>
+            <div style="min-width:0;"><div style="font-size:14.5px;font-weight:700;">Statistiche e costi</div><div class="muted" style="font-size:12px;margin-top:2px;">Grafici, statistiche dettagliate, file, PDF, stampa e costi sono raccolti in una schermata dedicata.</div></div>
+          </div>
+          <button class="btn btn-sm" id="db-open-statistics">Apri statistiche ${icon('chevronRight',13)}</button>
         </div>
 
         ${t.totalLessons === 0 ? `
           <div class="empty-state card">
             ${icon('lesson',38)}
             <div class="empty-state-title">Nessuna lezione ancora</div>
-            <div class="empty-state-sub">Quando creerai la tua prima lezione, appariranno anche tutte le statistiche su file, PDF, carta e costi di stampa.</div>
+            <div class="empty-state-sub">Quando creerai la tua prima lezione, potrai consultare tutti i dettagli nella sezione Statistiche.</div>
             <button class="btn btn-primary" id="db-empty-new-lesson" style="margin-top:6px;">${icon('plus',14)} Nuova lezione</button>
           </div>
         ` : `
@@ -1854,52 +1961,6 @@ const DashboardPage = {
             ${icon('calendar',22)}<div style="min-width:0;"><div style="font-size:11.5px; color:var(--text-tertiary); font-weight:600; text-transform:uppercase;">Prossimo evento</div><div style="font-size:14.5px; font-weight:650; margin-top:2px;">${esc(nextEvent.summary||'Evento')} — ${fmtDate(nextEvent.start)}</div></div>
           </div>` : ''}
 
-          <div class="stats-dashboard-grid">
-            <div class="stats-card stats-span-4">
-              <div class="stats-card-head"><div><div class="stats-card-title">Stato delle lezioni</div><div class="stats-card-sub">Distribuzione del materiale presente nella libreria.</div></div></div>
-              ${StatisticsView.donut('Stato delle lezioni', [
-                {label:'Complete',value:st.complete,color:'var(--success)'},
-                {label:'In lavorazione',value:st.progress,color:'var(--warning)'},
-                {label:'Materiale mancante',value:st.missing,color:'var(--danger)'}
-              ], st.completePct+'%', 'complete')}
-            </div>
-
-            <div class="stats-span-8">${StatisticsView.printingCard(st)}</div>
-
-            <div class="stats-card stats-span-6">
-              <div class="stats-card-head"><div><div class="stats-card-title">File nella libreria</div><div class="stats-card-sub">Quanti file sono presenti per formato.</div></div><span class="paper-state-badge">${fmtNumber(st.files)} totali</span></div>
-              ${StatisticsView.bars(fileItems)}
-            </div>
-
-            <div class="stats-card stats-span-6">
-              <div class="stats-card-head"><div><div class="stats-card-title">Lezioni per materia</div><div class="stats-card-sub">Distribuzione del carico didattico.</div></div></div>
-              ${StatisticsView.bars(subjectItems)}
-            </div>
-
-            <div class="stats-card stats-span-6">
-              <div class="stats-card-head"><div><div class="stats-card-title">Stato della carta</div><div class="stats-card-sub">Avanzamento manuale su fogli stampati.</div></div></div>
-              ${StatisticsView.donut('Stato della carta', [
-                {label:'Evidenziate',value:st.highlighted,color:'var(--accent)'},
-                {label:'Stampate',value:st.printed,color:'var(--success)'},
-                {label:'Non ancora segnate',value:Math.max(0,st.lessons-Math.max(st.highlighted,st.printed)),color:'var(--text-tertiary)'}
-              ], Math.max(st.highlighted,st.printed)+'', 'lezioni attive')}
-            </div>
-
-            <div class="stats-card stats-span-6">
-              <div class="stats-card-head"><div><div class="stats-card-title">Costo di stampa per materia</div><div class="stats-card-sub">Solo le lezioni già segnate come stampate.</div></div></div>
-              ${StatisticsView.bars(subjectCostItems, null, ' €')}
-            </div>
-
-            <div class="stats-card stats-span-6">
-              <div class="stats-card-head"><div><div class="stats-card-title">Volumi di studio</div><div class="stats-card-sub">Indicatori medi e composizione del materiale.</div></div></div>
-              <div class="metric-row">
-                <div class="metric-mini"><div class="metric-mini-value">${st.pagesKnownFor ? fmtNumber(Math.round(st.avgPagesPerLesson)) : '—'}</div><div class="metric-mini-label">Pagine PDF medie / lezione</div></div>
-                <div class="metric-mini"><div class="metric-mini-value">${st.lessons ? st.fileAvg.toFixed(1).replace('.', ',') : '0'}</div><div class="metric-mini-label">File medi / lezione</div></div>
-                <div class="metric-mini"><div class="metric-mini-value">${fmtNumber(st.audioFiles)}</div><div class="metric-mini-label">Registrazioni</div></div>
-                <div class="metric-mini"><div class="metric-mini-value">${fmtNumber(st.docxFiles)}</div><div class="metric-mini-label">Documenti Word</div></div>
-              </div>
-            </div>
-          </div>
 
           <div class="section-head" style="margin-top:8px;"><div><div style="font-size:16px; font-weight:700;">Continua da dove hai lasciato</div></div></div>
           ${inProgress.length === 0 ? `<div class="card muted" style="margin-bottom:30px;">Nessuna lezione in lavorazione. Ottimo lavoro!</div>` : `<div style="margin-bottom:30px;">${inProgress.map(({l,status}) => this.progressCard(l,status)).join('')}</div>`}
@@ -1911,16 +1972,13 @@ const DashboardPage = {
         `}
       </div>
     `;
-    content.querySelectorAll('[data-nav]').forEach(a => a.addEventListener('click', e=>{ e.preventDefault(); Router.go(a.dataset.nav); }));
+    content.querySelectorAll('[data-nav]').forEach(a => a.addEventListener('click', e=>{ e.preventDefault(); if(e.target.closest('button')) return; Router.go(a.dataset.nav); }));
+    document.getElementById('db-open-statistics')?.addEventListener('click', e => { e.stopPropagation(); Router.go('statistics'); });
     LessonRow.bind(content);
     const newBtn = document.getElementById('db-new-lesson');
     if(newBtn) newBtn.addEventListener('click', () => LessonFormModal.open());
     const emptyBtn = document.getElementById('db-empty-new-lesson');
     if(emptyBtn) emptyBtn.addEventListener('click', () => LessonFormModal.open());
-    ensureStatsPageCounts(lessons, () => {
-      if(AppState.route.page !== 'dashboard') return;
-      this.render();
-    });
   },
   progressCard(l, status){
     const meta = lessonStatusMeta(status);
@@ -2192,8 +2250,7 @@ const SubjectPage = {
   render(params){
     const s = findSubject(params.subjectName);
     if(!s){ Router.go('subjects'); return; }
-    this.activeTab = this.activeTab || 'lezioni';
-    const stats = subjectStats(s);
+    this.activeTab = ['lezioni','prompt','file'].includes(this.activeTab) ? this.activeTab : 'lezioni';
     TopbarView.render(
       `<a href="#" data-nav="subjects" style="color:var(--text-secondary)">Materie</a><span class="sep">/</span><b>${esc(s.name)}</b>`,
       `<button class="btn btn-sm" id="btn-edit-subject">${icon('edit',14)} Modifica</button> <button class="btn btn-primary btn-sm" id="btn-new-lesson">${icon('plus',14)} Nuova lezione</button>`
@@ -2207,48 +2264,12 @@ const SubjectPage = {
         </div>
         <div class="section-sub">${[s.docente && 'Docente: '+s.docente, s.codice && 'Codice: '+s.codice, s.aula && 'Aula: '+s.aula].filter(Boolean).join(' · ') || 'Nessun dettaglio aggiuntivo'}</div>
 
-        <div class="grid grid-stats" style="margin:20px 0 18px;">
-          <div class="stat-pill"><div class="stat-pill-num">${stats.total}</div><div class="stat-pill-label">Lezioni</div></div>
-          <div class="stat-pill"><div class="stat-pill-num" style="color:var(--success)">${stats.complete}</div><div class="stat-pill-label">Complete</div></div>
-          <div class="stat-pill"><div class="stat-pill-num" style="color:var(--warning)">${stats.progress}</div><div class="stat-pill-label">In lavorazione</div></div>
-          <div class="stat-pill"><div class="stat-pill-num" style="color:var(--danger)">${stats.missing}</div><div class="stat-pill-label">Mancanti</div></div>
-          <div class="stat-pill" id="stat-total-pages"><div class="stat-pill-num">${stats.mainPdfCount ? (stats.pagesKnownFor < stats.mainPdfCount ? stats.totalPages+'+' : stats.totalPages) : '—'}</div><div class="stat-pill-label">Pagine PDF</div></div>
-          <div class="stat-pill"><div class="stat-pill-num">${fmtNumber(statisticsForSubject(s).files)}</div><div class="stat-pill-label">File</div></div>
-          <div class="stat-pill"><div class="stat-pill-num" style="color:var(--accent)">${fmtNumber(statisticsForSubject(s).highlighted)}</div><div class="stat-pill-label">Evidenziate</div></div>
-          <div class="stat-pill"><div class="stat-pill-num" style="color:var(--success)">${fmtNumber(statisticsForSubject(s).printed)}</div><div class="stat-pill-label">Stampate</div></div>
-          <div class="stat-pill"><div class="stat-pill-num">${statisticsForSubject(s).sheetsKnownFor ? fmtNumber(statisticsForSubject(s).sheets) : '—'}</div><div class="stat-pill-label">Fogli</div></div>
-          <div class="stat-pill"><div class="stat-pill-num" style="color:var(--accent)">${statisticsForSubject(s).printed===0 || statisticsForSubject(s).printedLessonsWithKnownPages>0 ? fmtMoney(statisticsForSubject(s).totalPrintCost) : '—'}</div><div class="stat-pill-label">Costo stampa</div></div>
-        </div>
-
-        <div class="stats-dashboard-grid">
-          <div class="stats-span-8">${StatisticsView.printingCard(statisticsForSubject(s))}</div>
-          <div class="stats-card stats-span-4">
-            <div class="stats-card-head"><div><div class="stats-card-title">Progresso</div><div class="stats-card-sub">Stato delle ${stats.total} lezioni della materia.</div></div></div>
-            ${StatisticsView.donut('Progresso materia', [
-              {label:'Complete',value:stats.complete,color:'var(--success)'},
-              {label:'In lavorazione',value:stats.progress,color:'var(--warning)'},
-              {label:'Mancanti',value:stats.missing,color:'var(--danger)'}
-            ], stats.pct+'%', 'complete')}
-          </div>
-          <div class="stats-card stats-span-6">
-            <div class="stats-card-head"><div><div class="stats-card-title">File per formato</div><div class="stats-card-sub">Composizione del materiale della materia.</div></div></div>
-            ${StatisticsView.bars(Object.entries(statisticsForSubject(s).filesByKind).map(([k,v])=>({label:fileKindLabel(k),value:v})).sort((a,b)=>b.value-a.value))}
-          </div>
-          <div class="stats-card stats-span-6">
-            <div class="stats-card-head"><div><div class="stats-card-title">Stato su carta</div><div class="stats-card-sub">Evidenziata e stampata per ciascuna lezione.</div></div></div>
-            ${StatisticsView.donut('Stato su carta', [
-              {label:'Evidenziate',value:statisticsForSubject(s).highlighted,color:'var(--accent)'},
-              {label:'Stampate',value:statisticsForSubject(s).printed,color:'var(--success)'},
-              {label:'Non segnate',value:Math.max(0,stats.total-Math.max(statisticsForSubject(s).highlighted,statisticsForSubject(s).printed)),color:'var(--text-tertiary)'}
-            ], Math.max(statisticsForSubject(s).highlighted, statisticsForSubject(s).printed)+'', 'lezioni')}
-          </div>
-        </div>
+        <div style="margin:20px 0 18px;">${StatisticsView.printingCard(statisticsForSubject(s), true)}</div>
 
         <div class="tabs">
           <div class="tab ${this.activeTab==='lezioni'?'active':''}" data-tab="lezioni">Lezioni</div>
           <div class="tab ${this.activeTab==='prompt'?'active':''}" data-tab="prompt">Prompt</div>
           <div class="tab ${this.activeTab==='file'?'active':''}" data-tab="file">File</div>
-          <div class="tab ${this.activeTab==='progressi'?'active':''}" data-tab="progressi">Progressi</div>
         </div>
         <div id="subject-tab-content"></div>
       </div>
@@ -2323,23 +2344,7 @@ const SubjectPage = {
         const f = Object.values(lesson.files).flat().find(x=>x.name===fileName);
         if(f) FileViewer.open(lesson, f);
       }));
-    } else if(this.activeTab === 'progressi'){
-      const stats = subjectStats(s);
-      el.innerHTML = `
-        <div class="stats-dashboard-grid">
-        <div class="stats-card stats-span-7">
-          <div class="stats-card-head"><div><div class="stats-card-title">Completamento complessivo</div><div class="stats-card-sub">Avanzamento della materia rispetto alle lezioni presenti.</div></div><span class="stat-pulse">${stats.pct}%</span></div>
-          <div class="progress-track" style="height:10px; margin:8px 0 12px;"><div class="progress-fill" style="width:${stats.pct}%; background:${s.color}; height:10px;"></div></div>
-          <div class="metric-row">
-            <div class="metric-mini"><div class="metric-mini-value">${stats.complete}</div><div class="metric-mini-label">Complete</div></div>
-            <div class="metric-mini"><div class="metric-mini-value">${stats.progress}</div><div class="metric-mini-label">In lavorazione</div></div>
-            <div class="metric-mini"><div class="metric-mini-value">${stats.missing}</div><div class="metric-mini-label">Mancanti</div></div>
-            <div class="metric-mini"><div class="metric-mini-value">${fmtNumber(statisticsForSubject(s).files)}</div><div class="metric-mini-label">File complessivi</div></div>
-          </div>
-        </div>
-        <div class="stats-span-5">${StatisticsView.printingCard(statisticsForSubject(s), true)}</div>
-      </div>
-      `;
+
     }
   },
 
@@ -2524,21 +2529,7 @@ const LessonPage = {
 
         ${lesson.tags && lesson.tags.length ? `<div style="display:flex; gap:6px; margin-top:10px;">${lesson.tags.map(t=>`<span class="status-pill status-ready" data-goto-tag="${esc(t)}" style="cursor:pointer;">${icon('tag',10)} ${esc(t)}</span>`).join('')}</div>` : ''}
 
-        <div class="stats-dashboard-grid" style="margin-top:20px;">
-          <div class="stats-span-8">${StatisticsView.printingCard(statisticsForLesson(lesson))}</div>
-          <div class="stats-card stats-span-4">
-            <div class="stats-card-head"><div><div class="stats-card-title">Statistiche della lezione</div><div class="stats-card-sub">Materiale e stato cartaceo della singola lezione.</div></div></div>
-            <div class="metric-row">
-              <div class="metric-mini"><div class="metric-mini-value">${fmtNumber(statisticsForLesson(lesson).files)}</div><div class="metric-mini-label">File</div></div>
-              <div class="metric-mini"><div class="metric-mini-value">${lessonPageCount(lesson)==null?'—':fmtNumber(lessonPageCount(lesson))}</div><div class="metric-mini-label">Pagine PDF</div></div>
-              <div class="metric-mini"><div class="metric-mini-value">${printingForLesson(lesson).sheets==null?'—':fmtNumber(printingForLesson(lesson).sheets)}</div><div class="metric-mini-label">Fogli</div></div>
-            </div>
-            <div style="display:flex; flex-wrap:wrap; gap:7px; margin-top:12px;">
-              <span class="paper-state-badge ${lesson.highlightedOnPaper?'done':''}">${icon(lesson.highlightedOnPaper?'check':'highlighter',11)} ${lesson.highlightedOnPaper?'Già evidenziata':'Non evidenziata'}</span>
-              <span class="paper-state-badge ${lesson.printed?'done':''}">${icon(lesson.printed?'check':'print',11)} ${lesson.printed?'Già stampata':'Non stampata'}</span>
-            </div>
-          </div>
-        </div>
+        <div style="margin-top:20px;">${StatisticsView.printingCard(statisticsForLesson(lesson), true)}</div>
 
         <div id="lesson-main-doc" style="margin-top:4px;"></div>
 
@@ -4831,7 +4822,6 @@ const SettingsPage = {
       const duplex = !!content.querySelector('#set-duplex').checked;
       AppState.savePrintSettings({ facePrice, duplex });
       Toast.success(`Impostazioni stampa salvate: ${fmtMoney(facePrice)} per facciata · ${duplex ? 'fronte-retro' : 'solo fronte'}.`);
-      this.render();
     });
     content.querySelectorAll('[data-theme]').forEach(b => b.addEventListener('click', () => { AppState.setTheme(b.dataset.theme); this.render(); }));
     content.querySelector('#set-install-pwa').addEventListener('click', () => {
@@ -4871,6 +4861,7 @@ const CommandPalette = {
       { label:'Vai a Calendario', icon:'calendar', action:()=>Router.go('calendar') },
       { label:'Vai a Prompt', icon:'prompt', action:()=>Router.go('prompts') },
       { label:'Vai ad Attività', icon:'activity', action:()=>Router.go('activity') },
+      { label:'Vai a Statistiche', icon:'statistics', action:()=>Router.go('statistics') },
       { label:'Vai a Lezioni preferite', icon:'star', action:()=>Router.go('lessons-pinned') },
       { label:'Vai a Impostazioni', icon:'settings', action:()=>Router.go('settings') },
       { label:'Sincronizza libreria', icon:'refresh', action:()=>Router.resync() }
@@ -4990,6 +4981,7 @@ function setupPWA(){
 async function boot(){
   AppState.init();
   CalendarStore.init();
+  window.addEventListener('uninotes:print-settings-changed', () => { Router.render(); });
   setupPWA();
   SetupScreen.render();
 
