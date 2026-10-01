@@ -359,6 +359,84 @@ a{ color:inherit; text-decoration:none; }
 .cost-breakdown > div{ padding:11px 12px; border-radius:10px; background:var(--surface-2); border:1px solid var(--border); }
 .cost-breakdown-label{ font-size:10px; color:var(--text-tertiary); }
 .cost-breakdown-value{ font-size:15px; font-weight:700; margin-top:3px; }
+
+/* ---------- Mobile navigation / responsive shell ---------- */
+.mobile-menu-btn{ display:none; }
+.mobile-nav-backdrop{ display:none; }
+.mobile-source-note{ margin-top:10px; padding:10px 12px; border-radius:10px; background:var(--accent-soft); color:var(--accent); font-size:11px; line-height:1.45; }
+.mobile-only{ display:none !important; }
+
+@media (max-width: 700px){
+  :root{ --sidebar-w: min(84vw, 320px); }
+  html,body{ min-width:0; width:100%; height:100%; overflow:hidden; }
+  body{ font-size:14px; }
+  #app{ display:flex; width:100%; min-width:0; height:100dvh; }
+  #sidebar{
+    position:fixed; left:0; top:0; bottom:0; width:var(--sidebar-w); height:100dvh;
+    z-index:1000; transform:translateX(-105%); transition:transform 220ms var(--ease);
+    box-shadow:var(--shadow-lg); padding-top:env(safe-area-inset-top);
+  }
+  #sidebar.mobile-open{ transform:translateX(0); }
+  #sidebar.collapsed{ width:var(--sidebar-w); }
+  #sidebar.collapsed .sidebar-title, #sidebar.collapsed .nav-label, #sidebar.collapsed .nav-section-title, #sidebar.collapsed .sidebar-folder{ display:block; }
+  #sidebar.collapsed .nav-item{ justify-content:flex-start; padding:7px 10px; }
+  #sidebar.collapsed .sidebar-collapse-btn{ display:flex; }
+  .mobile-nav-backdrop{
+    position:fixed; inset:0; z-index:999; background:rgba(0,0,0,.38); backdrop-filter:blur(2px);
+    opacity:0; pointer-events:none; transition:opacity 180ms var(--ease);
+  }
+  .mobile-nav-backdrop.show{ opacity:1; pointer-events:auto; }
+  #main{ width:100%; min-width:0; height:100dvh; }
+  #topbar{
+    height:56px; min-height:56px; padding:0 12px; gap:6px;
+    padding-top:env(safe-area-inset-top); box-sizing:content-box;
+  }
+  .mobile-menu-btn{ display:flex; flex:0 0 34px; width:34px; height:34px; }
+  .topbar-search{ width:34px; padding:0; justify-content:center; gap:0; flex:0 0 34px; }
+  .topbar-search span, .topbar-search kbd{ display:none; }
+  .topbar-crumbs{ font-size:12px; gap:4px; }
+  #topbar-sync-btn{ display:none; }
+  #content{ overflow-y:auto; -webkit-overflow-scrolling:touch; }
+  .page{ padding:18px 14px 48px; max-width:none; width:auto; }
+  .section-title{ font-size:20px; }
+  .section-head{ align-items:flex-start; flex-direction:column; gap:10px; margin-bottom:16px; }
+  .grid-subjects,.grid-stats{ grid-template-columns:1fr; }
+  .card{ padding:15px; border-radius:14px; }
+  .lesson-row{ gap:10px; padding:11px 9px; align-items:flex-start; flex-wrap:wrap; }
+  .lesson-info{ min-width:calc(100% - 38px); }
+  .lesson-files{ width:100%; margin-left:36px; }
+  .filecard{ align-items:flex-start; flex-wrap:wrap; padding:12px; }
+  .filecard-body{ min-width:calc(100% - 52px); }
+  .filecard-actions{ width:100%; justify-content:flex-end; }
+  .workflow{ gap:3px; margin:16px 0 20px; }
+  .workflow-label{ font-size:9px; }
+  .editor-panes{ flex-direction:column; }
+  .editor-pane + .editor-pane{ border-left:0; border-top:1px solid var(--border); }
+  .editor-toolbar{ overflow-x:auto; }
+  .chart-bar-row{ grid-template-columns:minmax(72px, .9fr) minmax(60px, 1.4fr) auto; gap:7px; }
+  .stats-grid{ grid-template-columns:repeat(2,minmax(0,1fr)) !important; }
+  .stats-span-3,.stats-span-4,.stats-span-5,.stats-span-6,.stats-span-7,.stats-span-8,.stats-span-12{ grid-column:span 12 !important; }
+  .cost-breakdown{ grid-template-columns:1fr; }
+  .donut-box{ flex-direction:column; align-items:center; }
+  .setup-title{ font-size:25px; }
+  .setup-sub{ max-width:330px; }
+  .setup-actions{ width:100%; max-width:320px; }
+  .setup-actions .btn{ width:100%; justify-content:center; }
+  .mobile-only{ display:block !important; }
+  .desktop-only{ display:none !important; }
+  .lesson-paper-actions{ width:100%; flex-wrap:wrap; }
+  .lesson-paper-actions .paper-status-btn{ flex:1 1 150px; justify-content:center; }
+  .topbar-spacer{ min-width:4px; }
+}
+
+@media (max-width: 390px){
+  .stats-grid{ grid-template-columns:1fr !important; }
+  .chart-bar-row{ grid-template-columns:68px minmax(55px,1fr) auto; }
+  .topbar-crumbs b{ max-width:150px; overflow:hidden; text-overflow:ellipsis; }
+}
+
+@media (min-width: 701px){ .mobile-nav-backdrop{ display:none !important; } }
+
 @media (max-width: 980px){
   .stats-span-3,.stats-span-4,.stats-span-5,.stats-span-6,.stats-span-7,.stats-span-8{ grid-column:span 12; }
 }
@@ -585,6 +663,7 @@ a{ color:inherit; text-decoration:none; }
     <div id="content"></div>
   </div>
 </div>
+<div class="mobile-nav-backdrop" id="mobile-nav-backdrop"></div>
 
 <div id="modal-root"></div>
 <div id="cmdk-backdrop">
@@ -651,7 +730,8 @@ const ICONS = {
   layers: '<path d="M12 2l9 4.5-9 4.5-9-4.5L12 2z"/><path d="M3 11.5l9 4.5 9-4.5"/>',
   arrowLeft: '<path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/>',
   cmd: '<path d="M9 3a3 3 0 00-3 3 3 3 0 003 3h9a3 3 0 003-3 3 3 0 00-3-3 3 3 0 00-3 3v9a3 3 0 003 3 3 3 0 003-3 3 3 0 00-3-3H9a3 3 0 00-3 3 3 3 0 003 3 3 3 0 003-3V9a3 3 0 00-3-3z"/>',
-  star: '<path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>'
+  star: '<path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>',
+  menu: '<path d="M4 6h16M4 12h16M4 18h16"/>'
 };
 function icon(name, size){
   size = size || 17;
@@ -781,6 +861,8 @@ const ModalManager = {
 const AppState = {
   dirHandle: null,
   dirName: null,
+  isMobileFolder: false,
+  mobileRootKey: '',
   library: { subjects: [] }, // scanned in-memory tree
   theme: 'system', // light | dark | system
   sidebarCollapsed: false,
@@ -789,7 +871,7 @@ const AppState = {
   sidebarSectionsOpen: {},
   audioObjectUrls: new Map(),
   rootAbsolutePath: '', // percorso POSIX assoluto reale della cartella collegata (per "Apri nel Finder")
-  printSettings: { facePriceCents: 5, duplex: false, paperPriceCents: 1 },
+  printSettings: { facePrice: 0.05, facePriceRaw: '0.05', facePriceCents: 5, duplex: false, paperPriceCents: 1 },
   printSettingsRevision: 0,
 
   init(){
@@ -802,37 +884,49 @@ const AppState = {
   },
 
   loadPrintSettings(){
-    let cents = Number(localStorage.getItem('uninotes.print.priceCents'));
+    let price = null;
     let duplex = localStorage.getItem('uninotes.print.duplex') === '1';
+    const savedRaw = localStorage.getItem('uninotes.print.price');
+    if(savedRaw != null && String(savedRaw).trim() !== '') {
+      price = this.normalizePrintPrice(savedRaw, null);
+    }
     try{
       const raw = JSON.parse(localStorage.getItem('uninotes.printSettings') || 'null');
-      if(Number.isFinite(cents) && cents >= 0){
-        // Prefer the dedicated canonical key.
-      } else if(raw && Object.prototype.hasOwnProperty.call(raw, 'facePrice')) {
-        cents = this.eurosToCents(raw.facePrice, 5);
-      } else if(raw && Number.isFinite(Number(raw.facePriceCents))){
-        cents = Math.max(0, Math.round(Number(raw.facePriceCents)));
-      } else {
-        cents = 5;
-      }
+      if(price == null && raw && raw.facePriceRaw != null) price = this.normalizePrintPrice(raw.facePriceRaw, null);
+      if(price == null && raw && raw.facePrice != null) price = this.normalizePrintPrice(raw.facePrice, null);
+      if(price == null && raw && Number.isFinite(Number(raw.facePriceCents))) price = Number(raw.facePriceCents) / 100;
       if(localStorage.getItem('uninotes.print.duplex') === null && raw) duplex = raw.duplex === true || raw.duplex === 'true' || raw.duplex === 1;
-    }catch(e){ if(!Number.isFinite(cents) || cents < 0) cents = 5; }
-    cents = Math.max(0, Math.round(cents));
-    const settings = { schemaVersion: 3, facePriceCents: cents, facePrice: cents/100, duplex: !!duplex, paperPriceCents: 1, paperPrice: 0.01 };
-    localStorage.setItem('uninotes.print.priceCents', String(cents));
+    }catch(e){}
+    if(price == null) {
+      const legacyCents = Number(localStorage.getItem('uninotes.print.priceCents'));
+      price = Number.isFinite(legacyCents) && legacyCents >= 0 ? legacyCents / 100 : 0.05;
+    }
+    price = this.normalizePrintPrice(price, 0.05);
+    const rawPrice = this.formatStoredPrintPrice(price);
+    const settings = { schemaVersion: 4, facePrice: price, facePriceRaw: rawPrice, facePriceCents: Math.round(price * 100), duplex: !!duplex, paperPriceCents: 1, paperPrice: 0.01 };
+    localStorage.setItem('uninotes.print.price', rawPrice);
     localStorage.setItem('uninotes.print.duplex', settings.duplex ? '1' : '0');
     localStorage.setItem('uninotes.printSettings', JSON.stringify(settings));
     return settings;
   },
 
   normalizePrintPrice(value, fallback=0.05){
-    if(typeof value === 'number' && Number.isFinite(value) && value >= 0) return value;
-    let raw = String(value ?? '').trim().replace(/€/g,'').replace(/\s/g,'');
-    if(!raw) return fallback;
+    if(value == null || (typeof value === 'string' && value.trim() === '')) return fallback == null ? null : fallback;
+    if(typeof value === 'number') return Number.isFinite(value) && value >= 0 ? value : fallback;
+    let raw = String(value).trim().replace(/€/g,'').replace(/\s/g,'');
+    if(!raw) return fallback == null ? null : fallback;
     if(raw.includes(',') && raw.includes('.')) raw = raw.replace(/\./g,'').replace(',','.');
     else raw = raw.replace(',','.');
+    if(!/^\+?(?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?$/i.test(raw)) return fallback == null ? null : fallback;
     const n = Number(raw);
-    return Number.isFinite(n) && n >= 0 ? n : fallback;
+    return Number.isFinite(n) && n >= 0 ? n : (fallback == null ? null : fallback);
+  },
+
+  formatStoredPrintPrice(value){
+    const n = this.normalizePrintPrice(value, 0);
+    if(n === 0) return '0';
+    // Preserve meaningful precision without scientific notation for normal UI values.
+    return Number(n).toLocaleString('en-US', { useGrouping:false, maximumFractionDigits: 15 });
   },
 
   eurosToCents(value, fallbackCents=5){
@@ -846,15 +940,15 @@ const AppState = {
 
   savePrintSettings(next){
     const current = this.getLivePrintSettings();
-    const cents = next && Number.isFinite(Number(next.facePriceCents))
-      ? Math.max(0, Math.round(Number(next.facePriceCents)))
-      : this.eurosToCents(next && next.facePrice, current.facePriceCents);
+    const price = this.normalizePrintPrice(next && (next.facePriceRaw ?? next.facePrice), current.facePrice);
     const duplex = typeof next?.duplex === 'boolean' ? next.duplex : current.duplex;
-    const settings = { schemaVersion: 3, facePriceCents: cents, facePrice: cents/100, duplex: !!duplex, paperPriceCents: 1, paperPrice: 0.01 };
+    const rawPrice = this.formatStoredPrintPrice(price);
+    const settings = { schemaVersion: 4, facePrice: price, facePriceRaw: rawPrice, facePriceCents: Math.round(price * 100), duplex: !!duplex, paperPriceCents: 1, paperPrice: 0.01 };
     this.printSettings = settings;
     this.printSettingsRevision++;
-    // Two canonical primitive keys + compatibility object.
-    localStorage.setItem('uninotes.print.priceCents', String(cents));
+    localStorage.setItem('uninotes.print.price', rawPrice);
+    // Keep legacy keys for compatibility, but never use them as the canonical precision source.
+    localStorage.setItem('uninotes.print.priceCents', String(settings.facePriceCents));
     localStorage.setItem('uninotes.print.duplex', duplex ? '1' : '0');
     localStorage.setItem('uninotes.printSettings', JSON.stringify(settings));
     window.dispatchEvent(new CustomEvent('uninotes:print-settings-changed', { detail: { ...settings } }));
@@ -888,8 +982,119 @@ window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', ()=
 /* ============================================================
    FILESYSTEM MANAGER — wraps File System Access API
    ============================================================ */
+class MobileVirtualFileHandle {
+  constructor(name, file, parent, rootKey){
+    this.kind = 'file'; this.name = name; this.parent = parent; this.rootKey = rootKey;
+    this._file = file || null; this._content = null;
+  }
+  _storageKey(){ return `uninotes.mobile.meta.${this.rootKey}.${this.parent.path ? this.parent.path + '/' : ''}${this.name}`; }
+  async getFile(){
+    if(this._content != null){
+      return new File([this._content], this.name, { type:this._file?.type || 'application/json', lastModified:Date.now() });
+    }
+    return this._file || new File([''], this.name, { type:'application/octet-stream' });
+  }
+  async createWritable(){
+    let next = '';
+    return {
+      write: async (data) => { next = typeof data === 'string' ? data : await new Blob([data]).text(); },
+      close: async () => {
+        this._content = next;
+        try{ localStorage.setItem(this._storageKey(), next); }catch(e){ console.warn('Salvataggio locale mobile fallito', e); }
+      }
+    };
+  }
+  async queryPermission(){ return 'granted'; }
+  async requestPermission(){ return 'granted'; }
+}
+
+class MobileVirtualDirectoryHandle {
+  constructor(name, parent=null, rootKey='', path=''){
+    this.kind = 'directory'; this.name = name; this.parent = parent; this.rootKey = rootKey; this.path = path;
+    this.children = new Map();
+  }
+  async *entries(){
+    const arr = [...this.children.entries()].sort((a,b)=>a[0].localeCompare(b[0],'it',{numeric:true}));
+    for(const pair of arr) yield pair;
+  }
+  async getDirectoryHandle(name, opts={}){
+    const current = this.children.get(name);
+    if(current?.kind === 'directory') return current;
+    if(current) throw new DOMException('Esiste un file con questo nome','TypeMismatchError');
+    if(opts.create){
+      const path = this.path ? `${this.path}/${name}` : name;
+      const dir = new MobileVirtualDirectoryHandle(name, this, this.rootKey, path);
+      this.children.set(name, dir); return dir;
+    }
+    throw new DOMException('Cartella non trovata','NotFoundError');
+  }
+  async getFileHandle(name, opts={}){
+    const current = this.children.get(name);
+    if(current?.kind === 'file') return current;
+    if(current) throw new DOMException('Esiste una cartella con questo nome','TypeMismatchError');
+    if(opts.create){
+      const file = new MobileVirtualFileHandle(name, null, this, this.rootKey);
+      const stored = localStorage.getItem(file._storageKey());
+      if(stored != null) file._content = stored;
+      this.children.set(name, file); return file;
+    }
+    throw new DOMException('File non trovato','NotFoundError');
+  }
+  async removeEntry(name){ if(!this.children.has(name)) throw new DOMException('Elemento non trovato','NotFoundError'); this.children.delete(name); }
+  async queryPermission(){ return 'granted'; }
+  async requestPermission(){ return 'granted'; }
+}
+
+const MobileFolderBridge = {
+  supported(){ return typeof HTMLInputElement !== 'undefined' && 'webkitdirectory' in document.createElement('input'); },
+  isMobile(){ return /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent || ''); },
+  fingerprintFromDirectories(files){
+    const dirs = new Set();
+    for(const file of files){
+      const path = String(file.webkitRelativePath || file.name);
+      const parts = path.split('/');
+      for(let i=1;i<parts.length;i++) dirs.add(parts.slice(0,i).join('/'));
+    }
+    const base = [...dirs].sort().join('|');
+    let h = 2166136261;
+    for(let i=0;i<base.length;i++){ h ^= base.charCodeAt(i); h = Math.imul(h,16777619); }
+    return `${(h>>>0).toString(36)}`;
+  },
+  buildTree(fileList){
+    const files = [...fileList];
+    if(!files.length) throw new Error('Nessun file selezionato.');
+    const first = String(files[0].webkitRelativePath || files[0].name);
+    const rootName = first.includes('/') ? first.split('/')[0] : 'Uni Notes';
+    const rootKey = this.fingerprintFromDirectories(files);
+    const root = new MobileVirtualDirectoryHandle(rootName, null, rootKey, '');
+    for(const file of files){
+      const raw = String(file.webkitRelativePath || file.name);
+      const parts = raw.includes('/') ? raw.split('/').slice(1) : [raw];
+      if(!parts.length) continue;
+      let dir = root;
+      for(let i=0;i<parts.length-1;i++){
+        const name = parts[i];
+        let child = dir.children.get(name);
+        if(!child){
+          const path = dir.path ? `${dir.path}/${name}` : name;
+          child = new MobileVirtualDirectoryHandle(name, dir, rootKey, path);
+          dir.children.set(name, child);
+        }
+        dir = child;
+      }
+      const name = parts[parts.length-1];
+      const fh = new MobileVirtualFileHandle(name, file, dir, rootKey);
+      const stored = localStorage.getItem(fh._storageKey());
+      if(stored != null) fh._content = stored;
+      dir.children.set(name, fh);
+    }
+    return { root, rootName, rootKey, fileCount: files.length };
+  }
+};
+
 const FileSystemManager = {
   supported(){ return 'showDirectoryPicker' in window; },
+  mobileSupported(){ return MobileFolderBridge.supported(); },
 
   async pickDirectory(){
     if(!this.supported()) throw new Error('unsupported');
@@ -1349,7 +1554,7 @@ function allLessonsFlat(){
    ============================================================ */
 function fmtMoney(value){
   if(value == null || !isFinite(value)) return '—';
-  return new Intl.NumberFormat('it-IT', { style:'currency', currency:'EUR', minimumFractionDigits:2, maximumFractionDigits:2 }).format(value);
+  return new Intl.NumberFormat('it-IT', { style:'currency', currency:'EUR', minimumFractionDigits:2, maximumFractionDigits:12, useGrouping:false }).format(value);
 }
 function fmtNumber(value){
   if(value == null || !isFinite(value)) return '—';
@@ -1486,11 +1691,13 @@ async function inflatePdfBytes(bytes){
 function lessonPageCount(lesson){
   return (lesson && lesson.mainFile && lesson.mainFile.kind === 'pdf' && typeof lesson.mainFilePages === 'number' && isFinite(lesson.mainFilePages)) ? lesson.mainFilePages : null;
 }
+function getCanonicalPrintPrice(){
+  const raw = localStorage.getItem('uninotes.print.price');
+  const n = AppState.normalizePrintPrice(raw, null);
+  return n == null ? AppState.getLivePrintSettings().facePrice : n;
+}
 function getCanonicalPrintPriceCents(){
-  const raw = localStorage.getItem('uninotes.print.priceCents');
-  const n = Number(raw);
-  if(Number.isFinite(n) && n >= 0) return Math.round(n);
-  return AppState.getLivePrintSettings().facePriceCents;
+  return Math.round(getCanonicalPrintPrice() * 100);
 }
 function getCanonicalDuplex(){
   return localStorage.getItem('uninotes.print.duplex') === '1';
@@ -1500,42 +1707,45 @@ function calculatePrintCost(pages, settingsOverride=null){
   const p = Number.isFinite(Number(pages)) ? Math.max(0, Math.round(Number(pages))) : null;
   if(p == null) return null;
   const settings = settingsOverride || PrintCostEngine.getSettings();
-  const facePriceCents = Math.max(0, Math.round(Number(settings.facePriceCents) || 0));
-  const paperPriceCents = Math.max(0, Math.round(Number(settings.paperPriceCents) || 1));
+  const facePrice = Math.max(0, Number(settings.facePrice));
+  const paperPrice = Math.max(0, Number(settings.paperPrice ?? 0.01));
   const duplex = !!settings.duplex;
-  // IMPORTANTE: i fogli vengono calcolati PER SINGOLA LEZIONE.
-  // Esempio: due lezioni da 11 pagine in fronte-retro = 6 + 6 = 12 fogli.
   const sheets = duplex ? Math.ceil(p / 2) : p;
-  const faceCostCents = p * facePriceCents;
-  const paperCostCents = sheets * paperPriceCents;
-  const totalCostCents = faceCostCents + paperCostCents;
-  return { pages:p, sheets, facePriceCents, paperPriceCents, faceCostCents, paperCostCents, totalCostCents, faceCost:faceCostCents/100, paperCost:paperCostCents/100, totalCost:totalCostCents/100 };
+  const faceCost = p * facePrice;
+  const paperCost = sheets * paperPrice;
+  const totalCost = faceCost + paperCost;
+  return { pages:p, sheets, facePrice, paperPrice, faceCost, paperCost, totalCost,
+    facePriceCents: facePrice * 100, paperPriceCents: paperPrice * 100,
+    faceCostCents: faceCost * 100, paperCostCents: paperCost * 100, totalCostCents: totalCost * 100 };
 }
 
 const PrintCostEngine = {
   getSettings(){
-    const cents = getCanonicalPrintPriceCents();
+    const price = getCanonicalPrintPrice();
     const duplex = getCanonicalDuplex();
-    return { facePriceCents:cents, facePrice:cents/100, duplex, paperPriceCents:1, paperPrice:0.01 };
+    return { facePrice:price, facePriceRaw:AppState.formatStoredPrintPrice(price), facePriceCents:price*100, duplex, paperPriceCents:1, paperPrice:0.01 };
   },
   lesson(lesson, settingsOverride=null){
     const pages = lessonPageCount(lesson);
     const printed = !!lesson && (lesson.printed === true || lesson.printed === 'true' || lesson.printed === 1);
-    if(!printed) return { printed:false, known:pages != null, pages, sheets:0, faceCostCents:0, paperCostCents:0, totalCostCents:0, faceCost:0, paperCost:0, totalCost:0 };
-    if(pages == null) return { printed:true, known:false, pages:null, sheets:null, faceCostCents:null, paperCostCents:null, totalCostCents:null, faceCost:null, paperCost:null, totalCost:null };
+    if(!printed) return { printed:false, known:pages != null, pages, sheets:0, faceCost:0, paperCost:0, totalCost:0, faceCostCents:0, paperCostCents:0, totalCostCents:0 };
+    if(pages == null) return { printed:true, known:false, pages:null, sheets:null, faceCost:null, paperCost:null, totalCost:null, faceCostCents:null, paperCostCents:null, totalCostCents:null };
     return { printed:true, known:true, ...calculatePrintCost(pages, settingsOverride) };
   },
   total(lessons, settingsOverride=null){
-    let printed=0, knownPrinted=0, missing=0, pages=0, sheets=0, faceCostCents=0, paperCostCents=0, totalCostCents=0;
+    let printed=0, knownPrinted=0, missing=0, pages=0, sheets=0, faceCost=0, paperCost=0, totalCost=0;
     for(const lesson of (lessons||[])){
       const result = this.lesson(lesson, settingsOverride);
       if(!result.printed) continue;
       printed++;
       if(!result.known){ missing++; continue; }
-      knownPrinted++; pages += result.pages; sheets += result.sheets; faceCostCents += result.faceCostCents; paperCostCents += result.paperCostCents; totalCostCents += result.totalCostCents;
+      knownPrinted++; pages += result.pages; sheets += result.sheets; faceCost += result.faceCost; paperCost += result.paperCost; totalCost += result.totalCost;
     }
-    const settings = this.getSettings();
-    return { settings, printed, knownPrinted, missing, pages, sheets, faceCostCents, paperCostCents, totalCostCents, faceCost:faceCostCents/100, paperCost:paperCostCents/100, totalCost:totalCostCents/100 };
+    const settings = settingsOverride ? { ...settingsOverride } : this.getSettings();
+    return { settings, printed, knownPrinted, missing, pages, sheets, faceCost, paperCost, totalCost,
+      printingFaceCost:faceCost, paperCost, totalPrintCost:totalCost, totalCost,
+      printingFaceCostCents:faceCost*100, paperCostCents:paperCost*100, totalPrintCostCents:totalCost*100,
+      faceCost, paperCost };
   }
 };
 
@@ -1695,25 +1905,31 @@ async function ensureStatsPageCounts(lessons, onChange){
 const SetupScreen = {
   render(){
     const el = document.getElementById('setup-screen');
-    if(!FileSystemManager.supported()){
+    const direct = FileSystemManager.supported();
+    const mobile = FileSystemManager.mobileSupported();
+    if(!direct && !mobile){
       el.innerHTML = `
         <div class="setup-logo">U</div>
         <div class="setup-title">Uni Notes</div>
-        <div class="setup-sub">Questo browser non supporta l'accesso diretto alle cartelle (File System Access API). Apri l'app con Chrome, Edge o un browser basato su Chromium per usare Uni Notes al meglio.</div>
-        <div class="setup-note">Su macOS puoi usare Chrome o Edge per accedere alla cartella Università.</div>
+        <div class="setup-sub">Questo browser non supporta il collegamento a una cartella. Usa Safari/Chrome aggiornato su mobile oppure Chrome/Edge su desktop.</div>
       `;
       return;
     }
+    const mobileHint = mobile ? `<button class="btn ${direct?'btn-ghost':''}" id="btn-pick-mobile-folder" style="padding:9px 16px; font-size:13px;">${icon('folder',15)} Importa cartella da mobile</button>` : '';
     el.innerHTML = `
       <div class="setup-logo">U</div>
       <div class="setup-title">Benvenuto in Uni Notes</div>
-      <div class="setup-sub">Collega la cartella che contiene le tue lezioni e iniziamo.</div>
+      <div class="setup-sub">${MobileFolderBridge.isMobile() ? 'Seleziona la cartella delle tue lezioni dal dispositivo.' : 'Collega la cartella che contiene le tue lezioni e iniziamo.'}</div>
       <div class="setup-actions">
-        <button class="btn btn-primary" id="btn-pick-folder" style="padding:10px 20px; font-size:14px;">${icon('folder',16)} Seleziona cartella</button>
+        ${direct ? `<button class="btn btn-primary" id="btn-pick-folder" style="padding:10px 20px; font-size:14px;">${icon('folder',16)} Seleziona cartella</button>` : ''}
+        ${mobileHint}
       </div>
-      <div class="setup-note">I tuoi file restano sul tuo computer. Uni Notes non carica nulla online.</div>
+      ${mobile && !direct ? `<div class="mobile-source-note">Su iPhone/iPad il browser può importare una cartella, ma non può mantenere un collegamento read/write permanente alla cartella originale. Gli stati di Uni Notes vengono comunque salvati sul dispositivo.</div>` : ''}
+      <div class="setup-note">I file vengono letti localmente. Nulla viene caricato online da questa modalità.</div>
+      <input type="file" id="mobile-folder-input" webkitdirectory multiple style="display:none;" />
     `;
-    el.querySelector('#btn-pick-folder').addEventListener('click', () => this.pickFolder());
+    el.querySelector('#btn-pick-folder')?.addEventListener('click', () => this.pickFolder());
+    el.querySelector('#btn-pick-mobile-folder')?.addEventListener('click', () => this.pickMobileFolder());
   },
 
   async pickFolder(){
@@ -1729,6 +1945,39 @@ const SetupScreen = {
     }
   },
 
+  async pickMobileFolder(){
+    const input = document.getElementById('mobile-folder-input');
+    if(!input){ Toast.error('Selettore cartella mobile non disponibile.'); return; }
+    input.value = '';
+    input.onchange = async () => {
+      try{
+        const result = MobileFolderBridge.buildTree(input.files);
+        await this.completeMobileSetup(result);
+      }catch(err){ console.error(err); Toast.error(err.message || 'Impossibile importare la cartella.'); }
+    };
+    input.click();
+  },
+
+  async completeMobileSetup(result){
+    AppState.isMobileFolder = true;
+    AppState.mobileRootKey = result.rootKey;
+    AppState.dirHandle = result.root;
+    AppState.dirName = result.rootName;
+    document.getElementById('setup-screen').innerHTML = `
+      <div class="setup-logo">U</div>
+      <div class="setup-title" style="font-size:18px;">Importazione della libreria…</div>
+      <div class="setup-sub">Sto individuando materie, lezioni e file sul dispositivo.</div>
+    `;
+    try{
+      await SettingsManager.rememberMobileFolder(result.rootName, result.rootKey);
+      const lib = await LibraryScanner.scan(result.root);
+      AppState.library = lib;
+      finishBoot();
+      const totalLessons = lib.subjects.reduce((n,s)=>n+s.lessons.length,0);
+      Toast.success(`Cartella mobile collegata: ${lib.subjects.length} materie e ${totalLessons} lezioni.`);
+    }catch(err){ console.error(err); Toast.error('Errore durante la lettura della cartella mobile.'); }
+  },
+
   async completeSetup(handle){
     AppState.dirHandle = handle;
     AppState.dirName = handle.name;
@@ -1738,7 +1987,7 @@ const SetupScreen = {
       <div class="setup-sub">Sto individuando materie, lezioni e file.</div>
     `;
     try{
-      await SettingsManager.rememberFolder(handle);
+      if(!AppState.isMobileFolder) await SettingsManager.rememberFolder(handle);
       const lib = await LibraryScanner.scan(handle);
       AppState.library = lib;
       const totalLessons = lib.subjects.reduce((n,s)=>n+s.lessons.length,0);
@@ -1791,12 +2040,22 @@ const SettingsManager = {
       });
     }catch(e){ return null; }
   },
+  async rememberMobileFolder(name, rootKey=''){
+    localStorage.setItem('uninotes.mobileFolderName', name || 'Cartella');
+    localStorage.setItem('uninotes.mobileFolderKey', rootKey || '');
+  },
+  recallMobileFolder(){
+    const name = localStorage.getItem('uninotes.mobileFolderName');
+    return name ? { name, rootKey: localStorage.getItem('uninotes.mobileFolderKey') || '' } : null;
+  },
   async forgetFolder(){
     try{
       const db = await this.db();
       const tx = db.transaction('handles','readwrite');
       tx.objectStore('handles').delete('root');
     }catch(e){}
+    localStorage.removeItem('uninotes.mobileFolderName');
+    localStorage.removeItem('uninotes.mobileFolderKey');
   }
 };
 
@@ -1952,6 +2211,7 @@ const SidebarView = {
       <div class="sidebar-folder" id="sidebar-folder-btn" title="${esc(AppState.dirName||'')}">
         ${icon('folder',14)}<span class="sidebar-folder-name">${esc(AppState.dirName || 'Cartella')}</span>
       </div>
+      ${AppState.isMobileFolder ? `<div class="mobile-source-note" style="margin:6px 0 0;">${icon('monitor',11)} Sorgente mobile · lettura locale</div>` : ''}
     `;
     footer.querySelector('#sidebar-folder-btn').addEventListener('click', () => Router.go('settings'));
 
@@ -1964,12 +2224,34 @@ const SidebarView = {
 };
 
 /* ============================================================
+   MOBILE NAVIGATION
+   ============================================================ */
+const MobileNav = {
+  open(){
+    if(window.innerWidth > 700) return;
+    document.getElementById('sidebar')?.classList.add('mobile-open');
+    document.getElementById('mobile-nav-backdrop')?.classList.add('show');
+    document.body.classList.add('mobile-nav-active');
+  },
+  close(){
+    document.getElementById('sidebar')?.classList.remove('mobile-open');
+    document.getElementById('mobile-nav-backdrop')?.classList.remove('show');
+    document.body.classList.remove('mobile-nav-active');
+  },
+  toggle(){
+    const open = document.getElementById('sidebar')?.classList.contains('mobile-open');
+    open ? this.close() : this.open();
+  }
+};
+
+/* ============================================================
    TOPBAR
    ============================================================ */
 const TopbarView = {
   render(crumbs, actionsHtml){
     const el = document.getElementById('topbar');
     el.innerHTML = `
+      <button class="icon-btn mobile-menu-btn" id="mobile-menu-btn" aria-label="Apri menu" title="Menu">${icon('menu',19)}</button>
       <div class="topbar-crumbs">${crumbs}</div>
       <div class="topbar-spacer"></div>
       <div class="topbar-search" id="topbar-search-btn">
@@ -1979,6 +2261,7 @@ const TopbarView = {
       <button class="icon-btn" id="topbar-theme-btn" title="Cambia tema">${icon(AppState.theme==='dark'?'moon':AppState.theme==='light'?'sun':'monitor',17)}</button>
       ${actionsHtml||''}
     `;
+    el.querySelector('#mobile-menu-btn')?.addEventListener('click', () => MobileNav.toggle());
     el.querySelector('#topbar-search-btn').addEventListener('click', () => CommandPalette.open(''));
     el.querySelector('#topbar-sync-btn').addEventListener('click', () => Router.resync());
     el.querySelector('#topbar-theme-btn').addEventListener('click', (e) => ThemeMenu.toggle(e.currentTarget));
@@ -2018,9 +2301,14 @@ const ThemeMenu = {
 const Router = {
   go(page, params={}){
     AppState.route = { page, params };
+    MobileNav.close();
     this.render();
   },
   async resync(){
+    if(AppState.isMobileFolder){
+      SetupScreen.pickMobileFolder();
+      return;
+    }
     if(!AppState.dirHandle) return;
     Toast.info('Sincronizzazione in corso…');
     try{
@@ -5017,9 +5305,9 @@ const SettingsPage = {
 
         <div class="card" style="margin-top:14px;">
           <div style="font-size:13px; font-weight:650; margin-bottom:4px;">Stampa e costi</div>
-          <div class="muted" style="font-size:12.5px; line-height:1.65; margin-bottom:14px;">Imposta quanto paghi per ogni facciata stampata. La carta viene calcolata separatamente a <b>0,01 € per foglio</b>. Per la stampa fronte-retro un foglio contiene due facciate: 10 pagine = 5 fogli, 11 pagine = 6 fogli.</div>
+          <div class="muted" style="font-size:12.5px; line-height:1.65; margin-bottom:14px;">Imposta quanto paghi per ogni facciata stampata. Puoi inserire anche importi molto piccoli, fino a 15 cifre decimali (es. 0,000123456789). La carta viene calcolata separatamente a <b>0,01 € per foglio</b>. Per la stampa fronte-retro un foglio contiene due facciate: 10 pagine = 5 fogli, 11 pagine = 6 fogli.</div>
           <div class="field-row">
-            <div class="field"><label>Prezzo per facciata (€)</label><input id="set-face-price" type="text" inputmode="decimal" autocomplete="off" value="${AppState.getLivePrintSettings().facePrice.toFixed(2)}"></div>
+            <div class="field"><label>Prezzo per facciata (€)</label><input id="set-face-price" type="text" inputmode="decimal" autocomplete="off" value="${esc(AppState.getLivePrintSettings().facePriceRaw)}"></div>
             <div class="field"><label>Costo carta per foglio (€)</label><input type="text" value="0,01" disabled></div>
           </div>
           <label style="display:flex; align-items:center; gap:9px; cursor:pointer; font-size:12.5px; color:var(--text-secondary); margin-top:1px;">
@@ -5089,8 +5377,10 @@ const SettingsPage = {
       const duplex = !!printDuplexInput?.checked;
       const allLessons = allLessonsFlat();
       const previewSettings = {
-        facePriceCents: AppState.eurosToCents(facePrice, AppState.getLivePrintSettings().facePriceCents),
+        facePrice,
+        facePriceRaw: AppState.formatStoredPrintPrice(facePrice),
         duplex,
+        paperPrice: 0.01,
         paperPriceCents: 1
       };
       // Anche l'anteprima applica il fronte-retro LEZIONE PER LEZIONE.
@@ -5104,9 +5394,8 @@ const SettingsPage = {
     renderPrintPreview();
     content.querySelector('#set-save-print-settings').addEventListener('click', () => {
       const facePrice = parsePrintPrice(printPriceInput?.value);
-      const facePriceCents = AppState.eurosToCents(facePrice, AppState.getLivePrintSettings().facePriceCents);
       const duplex = !!printDuplexInput?.checked;
-      AppState.savePrintSettings({ facePriceCents, duplex });
+      AppState.savePrintSettings({ facePrice, facePriceRaw: AppState.formatStoredPrintPrice(facePrice), duplex });
       AppState.printSettings = AppState.getLivePrintSettings();
       renderPrintPreview();
       Router.render();
@@ -5283,6 +5572,7 @@ async function boot(){
   document.getElementById('cmdk-backdrop').addEventListener('click', (e) => {
     if(e.target.id === 'cmdk-backdrop') CommandPalette.close();
   });
+  document.getElementById('mobile-nav-backdrop')?.addEventListener('click', () => MobileNav.close());
 
   // Sync when tab becomes active again (compatible mechanism)
   document.addEventListener('visibilitychange', () => {
@@ -5290,6 +5580,15 @@ async function boot(){
       // Silent light resync could be added here; kept manual via button to avoid surprise UI shifts.
     }
   });
+
+  // Su mobile, se era stata importata una cartella, mostriamo un reconnect rapido.
+  if(MobileFolderBridge.isMobile() && MobileFolderBridge.supported()){
+    const mobileRecall = SettingsManager.recallMobileFolder();
+    if(mobileRecall && !FileSystemManager.supported()){
+      SetupScreenReconnect.renderMobile(mobileRecall.name);
+      return;
+    }
+  }
 
   // Try to recall previously connected folder
   try{
@@ -5312,6 +5611,20 @@ async function boot(){
 }
 
 const SetupScreenReconnect = {
+  renderMobile(folderName){
+    const el = document.getElementById('setup-screen');
+    el.innerHTML = `
+      <div class="setup-logo">U</div>
+      <div class="setup-title">Cartella mobile precedente</div>
+      <div class="setup-sub">Hai usato <b>${esc(folderName || 'questa cartella')}</b>. Selezionala di nuovo per aggiornarne i contenuti.</div>
+      <div class="setup-actions">
+        <button class="btn btn-primary" id="btn-mobile-reconnect" style="padding:10px 20px; font-size:14px;">${icon('folder',16)} Seleziona di nuovo</button>
+      </div>
+      <div class="mobile-source-note">Su iPhone/iPad il browser non mantiene un handle permanente della cartella. Gli stati personali di Uni Notes restano invece salvati sul dispositivo.</div>
+      <input type="file" id="mobile-folder-input" webkitdirectory multiple style="display:none;" />
+    `;
+    el.querySelector('#btn-mobile-reconnect').addEventListener('click', () => SetupScreen.pickMobileFolder());
+  },
   render(handle){
     const el = document.getElementById('setup-screen');
     el.innerHTML = `
