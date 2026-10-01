@@ -1172,6 +1172,23 @@ a{ color:inherit; text-decoration:none; }
 @media (max-width:700px){.semester-hero{padding:15px;border-radius:18px;align-items:flex-start}.semester-hero-title{font-size:18px}.semester-hero-sub{font-size:11px}.semester-hero-badge{align-self:flex-start}.semester-section-head{align-items:flex-start}.semester-section-sub{max-width:260px}.semester-subject-card .subject-meta{white-space:normal}}
 @media (min-width:701px){.semester-hero{padding:20px 22px}.semester-hero-title{font-size:22px}.semester-section{margin-top:22px}.semester-subject-card{min-height:176px}}
 
+
+/* ---------- Semester printing forecast ---------- */
+.semester-forecast-card{background:linear-gradient(135deg,var(--surface),var(--surface-2));border:1px solid var(--border);border-radius:18px;padding:20px;box-shadow:var(--shadow-sm)}
+.semester-forecast-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:16px}
+.semester-forecast-title{font-size:15px;font-weight:760;letter-spacing:-.015em}.semester-forecast-sub{font-size:11.5px;color:var(--text-secondary);margin-top:3px;line-height:1.5}
+.semester-forecast-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:16px}
+.semester-forecast-metric{padding:12px 13px;border-radius:12px;background:rgba(255,255,255,.58);border:1px solid var(--border)}
+.semester-forecast-value{font-size:20px;font-weight:780;letter-spacing:-.02em}.semester-forecast-label{font-size:10.5px;color:var(--text-tertiary);margin-top:2px}
+.semester-forecast-table{width:100%;border-collapse:collapse;font-size:11.5px}
+.semester-forecast-table th{padding:8px 7px;text-align:left;color:var(--text-tertiary);font-weight:650;border-bottom:1px solid var(--border)}
+.semester-forecast-table td{padding:11px 7px;border-bottom:1px solid var(--border);vertical-align:middle}
+.semester-forecast-table tr:last-child td{border-bottom:none}.semester-forecast-name{font-weight:700;max-width:230px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.semester-forecast-progress{height:6px;border-radius:8px;background:var(--surface-2);overflow:hidden;margin-top:5px;min-width:85px}.semester-forecast-progress>span{display:block;height:100%;border-radius:8px;background:var(--accent)}
+.semester-forecast-cost{font-size:14px;font-weight:760;text-align:right;white-space:nowrap}.semester-forecast-delta{font-size:10.5px;color:var(--text-tertiary);margin-top:2px;text-align:right}
+.semester-forecast-note{font-size:10.5px;color:var(--text-tertiary);line-height:1.5;margin-top:12px}
+@media (max-width:700px){.semester-forecast-card{padding:16px;border-radius:16px}.semester-forecast-head{gap:10px}.semester-forecast-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.semester-forecast-table{min-width:690px}.semester-forecast-table-wrap{overflow:auto;margin:0 -2px}.semester-forecast-name{max-width:180px}.semester-forecast-cost{font-size:13px}}
+
 </style>
 </head>
 <body>
@@ -2359,6 +2376,69 @@ function statisticsForSubject(subject){
   return statisticsForLessons(subject ? subject.lessons : []);
 }
 
+function clamp01(n){ return Math.max(0, Math.min(1, Number(n) || 0)); }
+function addDaysLocal(date, days){ const d=new Date(date.getFullYear(),date.getMonth(),date.getDate()); d.setDate(d.getDate()+days); return d; }
+function diffDaysLocal(a,b){ return Math.max(0, Math.round((new Date(b.getFullYear(),b.getMonth(),b.getDate()).getTime()-new Date(a.getFullYear(),a.getMonth(),a.getDate()).getTime())/86400000)); }
+function semesterPrintForecastForSubject(subject, asOf=new Date()){
+  if(!subject) return null;
+  ensureSubjectSemester(subject);
+  const ctx = getCurrentSemesterContext(asOf);
+  if(subject.academicYear !== ctx.academicYear || subject.semester !== ctx.semester) return null;
+
+  const range = ctx.range;
+  const start = parseISODateLocal(range.start);
+  const end = parseISODateLocal(range.teachingEnd);
+  const todayRaw = asOf instanceof Date ? asOf : new Date(asOf);
+  const today = new Date(todayRaw.getFullYear(), todayRaw.getMonth(), todayRaw.getDate());
+  const totalDays = Math.max(1, diffDaysLocal(start,end));
+  const elapsedDays = clamp01(diffDaysLocal(start, today) / totalDays) * totalDays;
+  const progress = clamp01(elapsedDays / totalDays);
+
+  const lessons = (subject.lessons || []).filter(l=>{
+    const d=parseISODateLocal(l?.date);
+    return d && d >= start && d <= end && d <= today;
+  });
+  const knownPageLessons = lessons.filter(l=>lessonPageCount(l)!=null);
+  const knownPages = knownPageLessons.reduce((sum,l)=>sum + lessonPageCount(l),0);
+  const averagePages = knownPageLessons.length ? knownPages / knownPageLessons.length : 0;
+  const currentSettings = PrintCostEngine.getSettings();
+  const knownSheetLessons = knownPageLessons.map(l=>calculatePrintCost(lessonPageCount(l), currentSettings)?.sheets).filter(Number.isFinite);
+  const knownSheets = knownSheetLessons.reduce((sum,n)=>sum+n,0);
+  const averageSheets = knownSheetLessons.length ? knownSheets / knownSheetLessons.length : 0;
+  const unknownCurrent = Math.max(0, lessons.length-knownPageLessons.length);
+
+  if(!lessons.length || !knownPageLessons.length || progress <= 0){
+    return {available:false, reason:!lessons.length?'no-lessons':!knownPageLessons.length?'no-pages':'too-early', subject, ctx, progress, teachingEnd:end, observedLessons:lessons.length, knownPageLessons:knownPageLessons.length};
+  }
+
+  const remainingDays = Math.max(0, totalDays-elapsedDays);
+  const elapsedWeeks = Math.max(1/7, elapsedDays/7);
+  const lessonsPerWeek = lessons.length / elapsedWeeks;
+  const projectedRemainingLessons = Math.max(0, Math.ceil(lessonsPerWeek * (remainingDays/7)));
+  const projectedTotalLessons = lessons.length + projectedRemainingLessons;
+  const pagesStillUnknown = unknownCurrent + projectedRemainingLessons;
+  const projectedTotalPages = knownPages + averagePages * pagesStillUnknown;
+  const projectedTotalSheets = knownSheets + averageSheets * pagesStillUnknown;
+  const projectedCost = projectedTotalPages * currentSettings.facePrice + projectedTotalSheets * currentSettings.paperPrice;
+  const actual = statisticsForSubject(subject);
+  const currentSpent = actual.totalPrintCost || 0;
+  const remainingPotentialCost = Math.max(0, projectedCost-currentSpent);
+  const confidence = lessons.length >= 6 ? 'Buona base' : lessons.length >= 3 ? 'Base iniziale' : 'Stima preliminare';
+
+  return {
+    available:true, subject, ctx, teachingEnd:end, progress,
+    observedLessons:lessons.length, projectedRemainingLessons, projectedTotalLessons,
+    knownPageLessons:knownPageLessons.length, averagePages, projectedTotalPages,
+    knownSheets, averageSheets, projectedTotalSheets,
+    currentSpent, projectedCost, remainingPotentialCost, confidence,
+    pricePerFace:currentSettings.facePrice, duplex:currentSettings.duplex,
+    unknownCurrent, remainingDays
+  };
+}
+function semesterPrintForecastForCurrentSubjects(subjects, asOf=new Date()){
+  return (subjects || []).map(s=>semesterPrintForecastForSubject(s,asOf)).filter(Boolean);
+}
+
 function currentLibraryPrintStats(){
   return statisticsForLessons(allLessonsFlat());
 }
@@ -2983,6 +3063,41 @@ const StatisticsPage = {
               ], Math.max(st.highlighted,st.printed)+'', 'lezioni attive')}
             </div>
             <div class="stats-card stats-span-6"><div class="stats-card-head"><div><div class="stats-card-title">Costo di stampa per materia</div><div class="stats-card-sub">Solo lezioni segnate come stampate.</div></div></div>${StatisticsView.bars(subjectCostItems, null, ' €')}</div>
+
+            ${(() => {
+              const forecasts = semesterPrintForecastForCurrentSubjects(AppState.library.subjects, new Date()).filter(f=>f.available);
+              const ctx = getCurrentSemesterContext();
+              const forecastTotal = forecasts.reduce((sum,f)=>sum+f.projectedCost,0);
+              const forecastAdditional = forecasts.reduce((sum,f)=>sum+f.remainingPotentialCost,0);
+              const forecastLessons = forecasts.reduce((sum,f)=>sum+f.projectedTotalLessons,0);
+              const forecastBars = forecasts.slice().sort((a,b)=>b.projectedCost-a.projectedCost).slice(0,10).map(f=>({label:f.subject.name,value:f.projectedCost,color:f.subject.color}));
+              return `<div class="stats-card stats-span-12 semester-forecast-card">
+                <div class="semester-forecast-head">
+                  <div><div class="semester-forecast-title">Stima costo a fine semestre</div><div class="semester-forecast-sub">Proiezione per le materie del ${semesterLabel(ctx.semester)} dell'A.A. ${esc(ctx.academicYear)}, fino alla fine delle lezioni (${esc(new Intl.DateTimeFormat('it-IT',{day:'2-digit',month:'2-digit',year:'numeric'}).format(parseISODateLocal(ctx.range.teachingEnd)))}). La stima assume che le lezioni future vengano stampate con lo stesso ritmo e la stessa media di pagine osservati finora.</div></div>
+                  <span class="paper-state-badge">${forecasts.length} ${forecasts.length===1?'materia':'materie'}</span>
+                </div>
+                ${forecasts.length ? `<div class="semester-forecast-grid">
+                  <div class="semester-forecast-metric"><div class="semester-forecast-value">${fmtStatsMoney(forecastTotal)}</div><div class="semester-forecast-label">Costo stimato a fine lezioni</div></div>
+                  <div class="semester-forecast-metric"><div class="semester-forecast-value">${fmtStatsMoney(forecastAdditional)}</div><div class="semester-forecast-label">Potenziale ancora da stampare</div></div>
+                  <div class="semester-forecast-metric"><div class="semester-forecast-value">${fmtNumber(forecastLessons)}</div><div class="semester-forecast-label">Lezioni previste</div></div>
+                  <div class="semester-forecast-metric"><div class="semester-forecast-value">${fmtStatsMoney(AppState.getLivePrintSettings().facePrice)}</div><div class="semester-forecast-label">Prezzo / facciata</div></div>
+                </div>
+                <div class="stats-card" style="padding:14px;margin:0 0 12px;background:var(--surface);border-color:var(--border);"><div class="stats-card-head" style="margin-bottom:10px;"><div><div class="stats-card-title">Proiezione per materia</div><div class="stats-card-sub">Costo complessivo ipotizzato a fine lezioni.</div></div></div>${StatisticsView.bars(forecastBars, null, ' €')}</div>
+                <div class="semester-forecast-table-wrap"><table class="semester-forecast-table">
+                  <thead><tr><th>Materia</th><th>Lezioni</th><th>Pagine stimate</th><th>Fogli stimati</th><th>Costo attuale</th><th style="text-align:right">Stima fine lezioni</th></tr></thead>
+                  <tbody>${forecasts.slice().sort((a,b)=>b.projectedCost-a.projectedCost).map(f=>`<tr data-open-subject="${esc(f.subject.name)}">
+                    <td><div class="semester-forecast-name">${esc(f.subject.name)}</div><div class="semester-forecast-progress"><span style="width:${Math.round(f.progress*100)}%"></span></div><div style="font-size:9.5px;color:var(--text-tertiary);margin-top:3px;">${Math.round(f.progress*100)}% del periodo didattico</div></td>
+                    <td>${fmtNumber(f.observedLessons)} → <b>${fmtNumber(f.projectedTotalLessons)}</b></td>
+                    <td>${fmtNumber(Math.round(f.projectedTotalPages))}</td>
+                    <td>${fmtNumber(Math.round(f.projectedTotalSheets))}</td>
+                    <td>${fmtStatsMoney(f.currentSpent)}</td>
+                    <td><div class="semester-forecast-cost">${fmtStatsMoney(f.projectedCost)}</div><div class="semester-forecast-delta">+ ${fmtStatsMoney(f.remainingPotentialCost)} potenziale</div></td>
+                  </tr>`).join('')}</tbody>
+                </table></div>
+                <div class="semester-forecast-note">Stima indicativa, non previsione dell'orario ufficiale: usa il ritmo delle lezioni già presenti nella libreria e la media delle pagine rilevate. Il fronte-retro viene calcolato per singola lezione, quindi una lezione da 11 pagine vale 6 fogli.</div>`
+                : `<div class="empty-state" style="padding:36px 20px;background:rgba(255,255,255,.48);border-radius:14px;">${icon('activity',30)}<div class="empty-state-title">Servono più dati per stimare il semestre</div><div class="empty-state-sub">La stima compare quando una materia del semestre corrente ha almeno una lezione con numero di pagine PDF determinabile.</div></div>`}
+              </div>`;
+            })()}
 
             <div class="stats-card stats-span-7"><div class="stats-card-head"><div><div class="stats-card-title">Volumi di studio</div><div class="stats-card-sub">Dimensioni e medie del materiale.</div></div></div>
               <div class="metric-row">
