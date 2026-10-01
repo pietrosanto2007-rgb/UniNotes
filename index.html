@@ -313,6 +313,61 @@ a{ color:inherit; text-decoration:none; }
   min-height:32px; padding:6px 10px; font-size:12px;
 }
 
+/* ---------- Statistics / charts ---------- */
+.stats-dashboard-grid{ display:grid; grid-template-columns:repeat(12,minmax(0,1fr)); gap:14px; margin:0 0 28px; }
+.stats-span-3{ grid-column:span 3; }
+.stats-span-4{ grid-column:span 4; }
+.stats-span-5{ grid-column:span 5; }
+.stats-span-6{ grid-column:span 6; }
+.stats-span-7{ grid-column:span 7; }
+.stats-span-8{ grid-column:span 8; }
+.stats-span-12{ grid-column:span 12; }
+.stats-card{ background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-lg); padding:18px; min-width:0; }
+.stats-card-head{ display:flex; align-items:flex-start; justify-content:space-between; gap:12px; margin-bottom:14px; }
+.stats-card-title{ font-size:13px; font-weight:700; }
+.stats-card-sub{ font-size:11.5px; color:var(--text-tertiary); margin-top:2px; line-height:1.45; }
+.metric-row{ display:flex; flex-wrap:wrap; gap:10px; }
+.metric-mini{ flex:1 1 120px; min-width:120px; padding:12px 13px; border:1px solid var(--border); background:var(--surface-2); border-radius:10px; }
+.metric-mini-value{ font-size:20px; font-weight:750; letter-spacing:-0.02em; }
+.metric-mini-label{ font-size:10.5px; color:var(--text-tertiary); margin-top:2px; }
+.print-cost-total{ font-size:30px; font-weight:780; letter-spacing:-0.035em; margin-top:1px; }
+.print-cost-meta{ display:flex; flex-wrap:wrap; gap:7px; margin-top:8px; }
+.print-cost-chip{ padding:4px 8px; border-radius:999px; background:var(--surface-2); border:1px solid var(--border); font-size:10.5px; color:var(--text-secondary); }
+.print-cost-chip b{ color:var(--text); }
+.chart-wrap{ width:100%; overflow:hidden; }
+.chart-svg{ width:100%; height:auto; display:block; }
+.chart-legend{ display:flex; flex-wrap:wrap; gap:8px 14px; margin-top:10px; }
+.chart-legend-item{ display:flex; align-items:center; gap:6px; font-size:11px; color:var(--text-secondary); }
+.chart-legend-dot{ width:8px; height:8px; border-radius:50%; flex:0 0 auto; }
+.chart-bars{ display:flex; flex-direction:column; gap:9px; }
+.chart-bar-row{ display:grid; grid-template-columns:minmax(80px, 1.2fr) minmax(90px, 2fr) auto; align-items:center; gap:9px; }
+.chart-bar-label{ font-size:11.5px; color:var(--text-secondary); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.chart-bar-track{ height:8px; border-radius:8px; background:var(--surface-2); overflow:hidden; }
+.chart-bar-fill{ height:100%; border-radius:8px; background:var(--accent); transition:width 350ms var(--ease); }
+.chart-bar-value{ font-family:var(--mono); font-size:10.5px; color:var(--text-tertiary); min-width:30px; text-align:right; }
+.donut-box{ display:flex; align-items:center; gap:18px; min-height:160px; }
+.donut-legend{ display:flex; flex-direction:column; gap:9px; min-width:0; }
+.donut-legend-row{ display:flex; align-items:center; justify-content:space-between; gap:12px; font-size:11.5px; }
+.donut-legend-main{ display:flex; align-items:center; gap:7px; min-width:0; }
+.donut-legend-main span:last-child{ white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.donut-legend-value{ font-family:var(--mono); font-size:10.5px; color:var(--text-tertiary); }
+.chart-empty{ min-height:130px; display:flex; align-items:center; justify-content:center; text-align:center; color:var(--text-tertiary); font-size:12px; border:1px dashed var(--border-strong); border-radius:12px; }
+.stat-pulse{ display:inline-flex; align-items:center; gap:5px; padding:4px 8px; border-radius:999px; background:var(--accent-soft); color:var(--accent); font-size:10.5px; font-weight:650; }
+.paper-state-badge{ display:inline-flex; align-items:center; gap:5px; padding:4px 8px; border-radius:999px; background:var(--surface-2); color:var(--text-secondary); border:1px solid var(--border); font-size:10.5px; font-weight:650; }
+.paper-state-badge.done{ background:var(--success-soft); border-color:transparent; color:var(--success); }
+.cost-breakdown{ display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; margin-top:14px; }
+.cost-breakdown > div{ padding:11px 12px; border-radius:10px; background:var(--surface-2); border:1px solid var(--border); }
+.cost-breakdown-label{ font-size:10px; color:var(--text-tertiary); }
+.cost-breakdown-value{ font-size:15px; font-weight:700; margin-top:3px; }
+@media (max-width: 980px){
+  .stats-span-3,.stats-span-4,.stats-span-5,.stats-span-6,.stats-span-7,.stats-span-8{ grid-column:span 12; }
+}
+@media (max-width: 700px){
+  .chart-bar-row{ grid-template-columns:80px minmax(70px,1fr) auto; }
+  .donut-box{ flex-direction:column; align-items:stretch; }
+  .cost-breakdown{ grid-template-columns:1fr; }
+}
+
 /* ---------- Status pills ---------- */
 .status-pill{
   display:inline-flex; align-items:center; gap:5px; font-size:11px; font-weight:650;
@@ -733,13 +788,22 @@ const AppState = {
   sidebarSectionsOpen: {},
   audioObjectUrls: new Map(),
   rootAbsolutePath: '', // percorso POSIX assoluto reale della cartella collegata (per "Apri nel Finder")
+  printSettings: { facePrice: 0.05, duplex: false, paperPrice: 0.01 },
 
   init(){
     this.theme = localStorage.getItem('uninotes.theme') || 'system';
     this.sidebarCollapsed = localStorage.getItem('uninotes.sidebarCollapsed') === '1';
     this.activity = JSON.parse(localStorage.getItem('uninotes.activity') || '[]');
     this.rootAbsolutePath = localStorage.getItem('uninotes.rootAbsolutePath') || '';
+    try{
+      const raw = JSON.parse(localStorage.getItem('uninotes.printSettings') || 'null');
+      if(raw && typeof raw === 'object') this.printSettings = { ...this.printSettings, ...raw, paperPrice: 0.01 };
+    }catch(e){}
     this.applyTheme();
+  },
+  savePrintSettings(next){
+    this.printSettings = { ...this.printSettings, ...next, paperPrice: 0.01 };
+    localStorage.setItem('uninotes.printSettings', JSON.stringify(this.printSettings));
   },
   setRootAbsolutePath(p){
     this.rootAbsolutePath = (p || '').trim();
@@ -1200,6 +1264,168 @@ function allLessonsFlat(){
 }
 
 /* ============================================================
+   STATISTICS ENGINE — lezioni, file e costi di stampa
+   ============================================================ */
+function fmtMoney(value){
+  if(value == null || !isFinite(value)) return '—';
+  return new Intl.NumberFormat('it-IT', { style:'currency', currency:'EUR', minimumFractionDigits:2, maximumFractionDigits:2 }).format(value);
+}
+function fmtNumber(value){
+  if(value == null || !isFinite(value)) return '—';
+  return new Intl.NumberFormat('it-IT').format(value);
+}
+function plural(n, one, many){ return n === 1 ? one : many; }
+function lessonPageCount(lesson){
+  return (lesson && lesson.mainFile && lesson.mainFile.kind === 'pdf' && typeof lesson.mainFilePages === 'number' && isFinite(lesson.mainFilePages)) ? lesson.mainFilePages : null;
+}
+function printingForLesson(lesson){
+  const pages = lessonPageCount(lesson);
+  if(!lesson || !lesson.printed || pages == null){
+    return { printed: !!(lesson && lesson.printed), pages, sheets: null, faceCost: null, paperCost: null, totalCost: null, known: pages != null };
+  }
+  const sheets = AppState.printSettings.duplex ? Math.ceil(pages / 2) : pages;
+  const faceCost = pages * Number(AppState.printSettings.facePrice || 0);
+  const paperCost = sheets * Number(AppState.printSettings.paperPrice || 0.01);
+  return { printed:true, pages, sheets, faceCost, paperCost, totalCost:faceCost + paperCost, known:true };
+}
+function fileKindLabel(kind){
+  const map = { audio:'Audio', pdf:'PDF', docx:'Word', text:'Testo', code:'Codice', other:'Altro' };
+  return map[kind] || kind || 'Altro';
+}
+function lessonFileEntries(lesson){
+  const byName = new Map();
+  Object.values(lesson.files || {}).flat().forEach(f => { if(f && f.name) byName.set(f.folder ? f.folder+'/'+f.name : f.name, f); });
+  (lesson.otherRootFiles || []).forEach(f => { if(f && f.name) byName.set('root/'+f.name, f); });
+  if(lesson.mainFile && lesson.mainFile.name) byName.set('main/'+lesson.mainFile.name, lesson.mainFile);
+  return [...byName.values()];
+}
+function statisticsForLessons(lessons){
+  const rows = lessons || [];
+  const st = {
+    lessons: rows.length, complete:0, progress:0, missing:0, highlighted:0, printed:0,
+    files:0, pdfFiles:0, audioFiles:0, docxFiles:0, textFiles:0, codeFiles:0, otherFiles:0,
+    pages:0, pagesKnownFor:0, printedPages:0, printedLessonsWithKnownPages:0,
+    sheets:0, sheetsKnownFor:0, printingFaceCost:0, paperCost:0, totalPrintCost:0,
+    estimatedCostMissingPages:0, sizeBytes:0, filesByKind:{}, lessonsBySubject:{}
+  };
+  rows.forEach(l => {
+    const status = lessonStatus(l);
+    if(status==='complete') st.complete++; else if(status==='progress') st.progress++; else st.missing++;
+    if(l.highlightedOnPaper) st.highlighted++;
+    const files = lessonFileEntries(l);
+    st.files += files.length;
+    files.forEach(f => {
+      const k = f.kind || 'other';
+      st.filesByKind[k] = (st.filesByKind[k]||0) + 1;
+      if(k==='pdf') st.pdfFiles++; else if(k==='audio') st.audioFiles++; else if(k==='docx') st.docxFiles++; else if(k==='text') st.textFiles++; else if(k==='code') st.codeFiles++; else st.otherFiles++;
+    });
+    const pages = lessonPageCount(l);
+    if(pages != null){ st.pages += pages; st.pagesKnownFor++; }
+    const p = printingForLesson(l);
+    if(l.printed){
+      st.printed++;
+      if(p.known){
+        st.printedLessonsWithKnownPages++;
+        st.printedPages += p.pages;
+        st.sheets += p.sheets;
+        st.sheetsKnownFor++;
+        st.printingFaceCost += p.faceCost;
+        st.paperCost += p.paperCost;
+        st.totalPrintCost += p.totalCost;
+      } else {
+        st.estimatedCostMissingPages++;
+      }
+    }
+    const subject = l.subjectName || 'Senza materia';
+    st.lessonsBySubject[subject] = (st.lessonsBySubject[subject]||0) + 1;
+  });
+  st.completePct = st.lessons ? Math.round(st.complete / st.lessons * 100) : 0;
+  st.printedPct = st.lessons ? Math.round(st.printed / st.lessons * 100) : 0;
+  st.highlightedPct = st.lessons ? Math.round(st.highlighted / st.lessons * 100) : 0;
+  st.fileAvg = st.lessons ? st.files / st.lessons : 0;
+  st.avgPagesPerLesson = st.pagesKnownFor ? st.pages / st.pagesKnownFor : 0;
+  st.avgPrintCost = st.printedLessonsWithKnownPages ? st.totalPrintCost / st.printedLessonsWithKnownPages : 0;
+  st.simplexSheetsEquivalent = st.printedPages;
+  st.sheetsSavedByDuplex = AppState.printSettings.duplex ? Math.max(0, st.simplexSheetsEquivalent - st.sheets) : 0;
+  st.sheetsKnown = st.sheetsKnownFor === st.printed;
+  st.pagesKnown = st.pagesKnownFor === rows.length;
+  return st;
+}
+function statisticsForLesson(lesson){
+  return statisticsForLessons(lesson ? [lesson] : []);
+}
+function statisticsForSubject(subject){
+  return statisticsForLessons(subject ? subject.lessons : []);
+}
+
+const StatisticsView = {
+  donut(title, parts, centerText, centerSub){
+    const values = parts.map(p=>Math.max(0, Number(p.value)||0));
+    const total = values.reduce((a,b)=>a+b,0);
+    if(!total) return `<div class="chart-empty">Nessun dato disponibile.</div>`;
+    const size=160, c=80, r=55, circ=2*Math.PI*r;
+    let offset=0;
+    const circles = parts.map(p=>{
+      const val=Math.max(0, Number(p.value)||0);
+      const dash=(val/total)*circ;
+      const out=`<circle cx="${c}" cy="${c}" r="${r}" fill="none" stroke="${p.color}" stroke-width="18" stroke-linecap="butt" stroke-dasharray="${dash} ${circ-dash}" stroke-dashoffset="${-offset}" transform="rotate(-90 80 80)"></circle>`;
+      offset += dash;
+      return out;
+    }).join('');
+    return `<div class="donut-box" aria-label="${esc(title)}">
+      <div style="width:160px; flex:0 0 160px; position:relative;">
+        <svg class="chart-svg" viewBox="0 0 160 160">
+          <circle cx="80" cy="80" r="55" fill="none" stroke="var(--surface-2)" stroke-width="18"></circle>${circles}
+        </svg>
+        <div style="position:absolute; inset:0; display:flex; flex-direction:column; justify-content:center; align-items:center; text-align:center;">
+          <div style="font-size:22px; font-weight:780; letter-spacing:-.03em;">${esc(centerText)}</div>
+          <div class="muted" style="font-size:9.5px; margin-top:1px;">${esc(centerSub||'')}</div>
+        </div>
+      </div>
+      <div class="donut-legend">${parts.map(p=>`<div class="donut-legend-row"><div class="donut-legend-main"><span class="chart-legend-dot" style="background:${p.color}"></span><span>${esc(p.label)}</span></div><span class="donut-legend-value">${fmtNumber(p.value)}</span></div>`).join('')}</div>
+    </div>`;
+  },
+  bars(items, max, suffix=''){
+    if(!items.length) return `<div class="chart-empty">Nessun dato disponibile.</div>`;
+    const peak = max || Math.max(1, ...items.map(x=>Number(x.value)||0));
+    return `<div class="chart-bars">${items.map(x=>`
+      <div class="chart-bar-row">
+        <div class="chart-bar-label" title="${esc(x.label)}">${esc(x.label)}</div>
+        <div class="chart-bar-track"><div class="chart-bar-fill" style="width:${Math.max(0,Math.min(100,(Number(x.value)||0)/peak*100))}%;${x.color?`background:${x.color};`:''}"></div></div>
+        <div class="chart-bar-value">${fmtNumber(x.value)}${suffix}</div>
+      </div>`).join('')}</div>`;
+  },
+  printingCard(stats, compact=false){
+    const known = stats.printedLessonsWithKnownPages > 0 || stats.printed === 0;
+    const pages = stats.printedPages;
+    const cost = stats.totalPrintCost;
+    return `<div class="stats-card" id="${compact?'':'printing-card'}">
+      <div class="stats-card-head"><div><div class="stats-card-title">Costo di stampa</div><div class="stats-card-sub">${AppState.printSettings.duplex ? 'Fronte-retro attivo' : 'Stampa solo fronte'} · carta ${fmtMoney(AppState.printSettings.paperPrice)} / foglio</div></div><span class="stat-pulse">${icon('print',12)} ${fmtNumber(stats.printed)} stampat${stats.printed===1?'a':'e'}</span></div>
+      <div class="print-cost-total">${known ? fmtMoney(cost) : '—'}</div>
+      <div class="print-cost-meta">
+        <span class="print-cost-chip"><b>${fmtNumber(pages)}</b> facciate</span>
+        <span class="print-cost-chip"><b>${stats.sheetsKnownFor ? fmtNumber(stats.sheets) : '—'}</b> fogli</span>
+        <span class="print-cost-chip"><b>${fmtMoney(stats.printingFaceCost)}</b> stampa</span>
+        <span class="print-cost-chip"><b>${fmtMoney(stats.paperCost)}</b> carta</span>
+        <span class="print-cost-chip"><b>${stats.printedLessonsWithKnownPages ? fmtMoney(stats.avgPrintCost) : '—'}</b> media / lezione</span>
+        ${AppState.printSettings.duplex ? `<span class="print-cost-chip"><b>${stats.sheetsKnownFor ? fmtNumber(stats.sheetsSavedByDuplex) : '—'}</b> fogli risparmiati vs solo fronte</span>` : ''}
+      </div>
+      ${stats.estimatedCostMissingPages ? `<div class="muted" style="font-size:10.5px; margin-top:9px;">${icon('alert',11)} ${stats.estimatedCostMissingPages} ${plural(stats.estimatedCostMissingPages,'lezione stampata','lezioni stampate')} senza conteggio pagine PDF: il costo non è incluso finché il documento principale non è leggibile come PDF.</div>` : ''}
+    </div>`;
+  }
+};
+
+async function ensureStatsPageCounts(lessons, onChange){
+  const targets = (lessons||[]).filter(l => l.mainFile && l.mainFile.kind === 'pdf' && typeof l.mainFilePages !== 'number');
+  if(!targets.length) return;
+  let changed = false;
+  await Promise.all(targets.map(async l => {
+    try{ await LibraryScanner.cacheMainFilePages(l); changed = true; }catch(e){ console.warn('Statistiche: conteggio pagine fallito', l.title || l.folderName, e); }
+  }));
+  if(changed && typeof onChange === 'function') onChange();
+}
+
+/* ============================================================
    SETUP SCREEN
    ============================================================ */
 const SetupScreen = {
@@ -1577,106 +1803,131 @@ const Router = {
 const DashboardPage = {
   render(){
     TopbarView.render(`<b>Dashboard</b>`, `<button class="btn btn-primary btn-sm" id="db-new-lesson">${icon('plus',14)} Nuova lezione</button>`);
+    const lessons = allLessonsFlat();
     const t = libraryTotals();
+    const st = statisticsForLessons(lessons);
     const hour = new Date().getHours();
     const saluto = hour < 6 ? 'Buonanotte' : hour < 12 ? 'Buongiorno' : hour < 18 ? 'Buon pomeriggio' : 'Buonasera';
-
-    const inProgress = allLessonsFlat()
-      .map(l => ({ l, status: lessonStatus(l) }))
-      .filter(x => x.status === 'progress' || x.status === 'missing')
-      .sort((a,b) => (b.l.date?.getTime()||0) - (a.l.date?.getTime()||0))
-      .slice(0, 5);
-
-    const pinnedLessons = allLessonsFlat().filter(l => l.pinned);
-
     const nextEvent = CalendarStore.events
       .filter(e => e.start.getTime() >= Date.now() - 3600000)
       .sort((a,b) => a.start.getTime() - b.start.getTime())[0];
-
-    const recentLessons = allLessonsFlat()
-      .slice()
-      .sort((a,b) => (b.date?.getTime()||0) - (a.date?.getTime()||0))
-      .slice(0, 6);
-
+    const inProgress = lessons.map(l => ({ l, status: lessonStatus(l) }))
+      .filter(x => x.status === 'progress' || x.status === 'missing')
+      .sort((a,b) => (b.l.date?.getTime()||0) - (a.l.date?.getTime()||0)).slice(0,5);
+    const pinnedLessons = lessons.filter(l => l.pinned);
+    const recentLessons = lessons.slice().sort((a,b) => (b.date?.getTime()||0) - (a.date?.getTime()||0)).slice(0,6);
+    const fileItems = Object.entries(st.filesByKind).map(([k,v])=>({ label:fileKindLabel(k), value:v }))
+      .sort((a,b)=>b.value-a.value).slice(0,8);
+    const subjectItems = Object.entries(st.lessonsBySubject).map(([label,value])=>({label,value}))
+      .sort((a,b)=>b.value-a.value).slice(0,8);
+    const subjectCostItems = AppState.library.subjects.map(s=>{
+      const ss = statisticsForSubject(s); return { label:s.name, value:ss.totalPrintCost, color:s.color };
+    }).filter(x=>x.value>0).sort((a,b)=>b.value-a.value).slice(0,8);
     const content = document.getElementById('content');
     content.innerHTML = `
       <div class="page">
         <div class="section-title">${saluto}, Pietro.</div>
         <div class="section-sub" style="text-transform:capitalize; margin-bottom:22px;">${fmtDate(new Date())}</div>
 
-        <div class="grid grid-stats" style="margin-bottom:30px;">
+        <div class="grid grid-stats" style="margin-bottom:18px;">
           <div class="stat-pill"><div class="stat-pill-num">${t.subjects}</div><div class="stat-pill-label">Materie</div></div>
           <div class="stat-pill"><div class="stat-pill-num">${t.totalLessons}</div><div class="stat-pill-label">Lezioni</div></div>
           <div class="stat-pill"><div class="stat-pill-num" style="color:var(--success)">${t.complete}</div><div class="stat-pill-label">Complete</div></div>
-          <div class="stat-pill"><div class="stat-pill-num" style="color:var(--warning)">${t.progress}</div><div class="stat-pill-label">In lavorazione</div></div>
-          <div class="stat-pill"><div class="stat-pill-num" style="color:var(--danger)">${t.missing}</div><div class="stat-pill-label">Materiale mancante</div></div>
+          <div class="stat-pill"><div class="stat-pill-num" style="color:var(--accent)">${st.highlighted}</div><div class="stat-pill-label">Evidenziate su carta</div></div>
+          <div class="stat-pill"><div class="stat-pill-num" style="color:var(--warning)">${st.printed}</div><div class="stat-pill-label">Stampate</div></div>
+          <div class="stat-pill"><div class="stat-pill-num">${st.sheetsKnownFor ? fmtNumber(st.sheets) : '—'}</div><div class="stat-pill-label">Fogli usati</div></div>
+          <div class="stat-pill"><div class="stat-pill-num">${fmtNumber(st.files)}</div><div class="stat-pill-label">File</div></div>
+          <div class="stat-pill"><div class="stat-pill-num">${fmtNumber(st.pdfFiles)}</div><div class="stat-pill-label">PDF</div></div>
+          <div class="stat-pill"><div class="stat-pill-num">${st.pagesKnownFor ? fmtNumber(st.pages) : '—'}</div><div class="stat-pill-label">Pagine PDF</div></div>
+          <div class="stat-pill"><div class="stat-pill-num" style="color:var(--accent)">${st.printed===0 || st.printedLessonsWithKnownPages>0 ? fmtMoney(st.totalPrintCost) : '—'}</div><div class="stat-pill-label">Costo stampa</div></div>
         </div>
 
-        ${ t.totalLessons === 0 ? `
+        ${t.totalLessons === 0 ? `
           <div class="empty-state card">
             ${icon('lesson',38)}
             <div class="empty-state-title">Nessuna lezione ancora</div>
-            <div class="empty-state-sub">Quando creerai la tua prima lezione, apparirà qui insieme al suo stato di avanzamento.</div>
+            <div class="empty-state-sub">Quando creerai la tua prima lezione, appariranno anche tutte le statistiche su file, PDF, carta e costi di stampa.</div>
             <button class="btn btn-primary" id="db-empty-new-lesson" style="margin-top:6px;">${icon('plus',14)} Nuova lezione</button>
           </div>
         ` : `
-          ${ nextEvent ? `
-          <div class="card card-hover" data-nav="calendar" style="display:flex; align-items:center; gap:14px; margin-bottom:22px; cursor:pointer;">
-            ${icon('calendar',22)}
-            <div style="min-width:0;">
-              <div style="font-size:11.5px; color:var(--text-tertiary); font-weight:600; text-transform:uppercase;">Prossimo evento</div>
-              <div style="font-size:14.5px; font-weight:650; margin-top:2px;">${esc(nextEvent.summary||'Evento')} — ${fmtDate(nextEvent.start)}</div>
+          ${nextEvent ? `<div class="card card-hover" data-nav="calendar" style="display:flex; align-items:center; gap:14px; margin-bottom:22px; cursor:pointer;">
+            ${icon('calendar',22)}<div style="min-width:0;"><div style="font-size:11.5px; color:var(--text-tertiary); font-weight:600; text-transform:uppercase;">Prossimo evento</div><div style="font-size:14.5px; font-weight:650; margin-top:2px;">${esc(nextEvent.summary||'Evento')} — ${fmtDate(nextEvent.start)}</div></div>
+          </div>` : ''}
+
+          <div class="stats-dashboard-grid">
+            <div class="stats-card stats-span-4">
+              <div class="stats-card-head"><div><div class="stats-card-title">Stato delle lezioni</div><div class="stats-card-sub">Distribuzione del materiale presente nella libreria.</div></div></div>
+              ${StatisticsView.donut('Stato delle lezioni', [
+                {label:'Complete',value:st.complete,color:'var(--success)'},
+                {label:'In lavorazione',value:st.progress,color:'var(--warning)'},
+                {label:'Materiale mancante',value:st.missing,color:'var(--danger)'}
+              ], st.completePct+'%', 'complete')}
             </div>
-          </div>` : ''}
 
-          <div class="section-head" style="margin-top:8px;">
-            <div><div style="font-size:16px; font-weight:700;">Continua da dove hai lasciato</div></div>
-          </div>
-          ${ inProgress.length === 0 ? `<div class="card muted" style="margin-bottom:30px;">Nessuna lezione in lavorazione. Ottimo lavoro!</div>` : `
-          <div style="margin-bottom:30px;">
-            ${inProgress.map(({l,status}) => this.progressCard(l,status)).join('')}
-          </div>`}
+            <div class="stats-span-8">${StatisticsView.printingCard(st)}</div>
 
-          ${ pinnedLessons.length ? `
-          <div class="section-head">
-            <div><div style="font-size:16px; font-weight:700;">${icon('star',15)} Preferite</div></div>
-          </div>
-          <div class="card" style="padding:6px 14px; margin-bottom:30px;">
-            ${pinnedLessons.map(l => LessonRow.render(l)).join('')}
-          </div>` : ''}
+            <div class="stats-card stats-span-6">
+              <div class="stats-card-head"><div><div class="stats-card-title">File nella libreria</div><div class="stats-card-sub">Quanti file sono presenti per formato.</div></div><span class="paper-state-badge">${fmtNumber(st.files)} totali</span></div>
+              ${StatisticsView.bars(fileItems)}
+            </div>
 
-          <div class="section-head">
-            <div><div style="font-size:16px; font-weight:700;">Lezioni recenti</div></div>
-            <a href="#" data-nav="lessons-all" style="font-size:12.5px; color:var(--accent); font-weight:600;">Vedi tutte</a>
+            <div class="stats-card stats-span-6">
+              <div class="stats-card-head"><div><div class="stats-card-title">Lezioni per materia</div><div class="stats-card-sub">Distribuzione del carico didattico.</div></div></div>
+              ${StatisticsView.bars(subjectItems)}
+            </div>
+
+            <div class="stats-card stats-span-6">
+              <div class="stats-card-head"><div><div class="stats-card-title">Stato della carta</div><div class="stats-card-sub">Avanzamento manuale su fogli stampati.</div></div></div>
+              ${StatisticsView.donut('Stato della carta', [
+                {label:'Evidenziate',value:st.highlighted,color:'var(--accent)'},
+                {label:'Stampate',value:st.printed,color:'var(--success)'},
+                {label:'Non ancora segnate',value:Math.max(0,st.lessons-Math.max(st.highlighted,st.printed)),color:'var(--text-tertiary)'}
+              ], Math.max(st.highlighted,st.printed)+'', 'lezioni attive')}
+            </div>
+
+            <div class="stats-card stats-span-6">
+              <div class="stats-card-head"><div><div class="stats-card-title">Costo di stampa per materia</div><div class="stats-card-sub">Solo le lezioni già segnate come stampate.</div></div></div>
+              ${StatisticsView.bars(subjectCostItems, null, ' €')}
+            </div>
+
+            <div class="stats-card stats-span-6">
+              <div class="stats-card-head"><div><div class="stats-card-title">Volumi di studio</div><div class="stats-card-sub">Indicatori medi e composizione del materiale.</div></div></div>
+              <div class="metric-row">
+                <div class="metric-mini"><div class="metric-mini-value">${st.pagesKnownFor ? fmtNumber(Math.round(st.avgPagesPerLesson)) : '—'}</div><div class="metric-mini-label">Pagine PDF medie / lezione</div></div>
+                <div class="metric-mini"><div class="metric-mini-value">${st.lessons ? st.fileAvg.toFixed(1).replace('.', ',') : '0'}</div><div class="metric-mini-label">File medi / lezione</div></div>
+                <div class="metric-mini"><div class="metric-mini-value">${fmtNumber(st.audioFiles)}</div><div class="metric-mini-label">Registrazioni</div></div>
+                <div class="metric-mini"><div class="metric-mini-value">${fmtNumber(st.docxFiles)}</div><div class="metric-mini-label">Documenti Word</div></div>
+              </div>
+            </div>
           </div>
-          <div class="card" style="padding:6px 14px;">
-            ${recentLessons.map(l => LessonRow.render(l)).join('') || `<div class="muted" style="padding:16px;">Nessuna lezione recente.</div>`}
-          </div>
+
+          <div class="section-head" style="margin-top:8px;"><div><div style="font-size:16px; font-weight:700;">Continua da dove hai lasciato</div></div></div>
+          ${inProgress.length === 0 ? `<div class="card muted" style="margin-bottom:30px;">Nessuna lezione in lavorazione. Ottimo lavoro!</div>` : `<div style="margin-bottom:30px;">${inProgress.map(({l,status}) => this.progressCard(l,status)).join('')}</div>`}
+
+          ${pinnedLessons.length ? `<div class="section-head"><div><div style="font-size:16px; font-weight:700;">${icon('star',15)} Preferite</div></div></div><div class="card" style="padding:6px 14px; margin-bottom:30px;">${pinnedLessons.map(l => LessonRow.render(l)).join('')}</div>` : ''}
+
+          <div class="section-head"><div><div style="font-size:16px; font-weight:700;">Lezioni recenti</div></div><a href="#" data-nav="lessons-all" style="font-size:12.5px; color:var(--accent); font-weight:600;">Vedi tutte</a></div>
+          <div class="card" style="padding:6px 14px;">${recentLessons.map(l => LessonRow.render(l)).join('') || `<div class="muted" style="padding:16px;">Nessuna lezione recente.</div>`}</div>
         `}
       </div>
     `;
-    content.querySelectorAll('[data-nav]').forEach(a => a.addEventListener('click', (e)=>{ e.preventDefault(); Router.go(a.dataset.nav); }));
+    content.querySelectorAll('[data-nav]').forEach(a => a.addEventListener('click', e=>{ e.preventDefault(); Router.go(a.dataset.nav); }));
     LessonRow.bind(content);
     const newBtn = document.getElementById('db-new-lesson');
     if(newBtn) newBtn.addEventListener('click', () => LessonFormModal.open());
     const emptyBtn = document.getElementById('db-empty-new-lesson');
     if(emptyBtn) emptyBtn.addEventListener('click', () => LessonFormModal.open());
+    ensureStatsPageCounts(lessons, () => {
+      if(AppState.route.page !== 'dashboard') return;
+      this.render();
+    });
   },
-
   progressCard(l, status){
     const meta = lessonStatusMeta(status);
-    return `
-      <div class="card card-hover" data-open-lesson="${l.subjectName}::${l.id}" style="display:flex; align-items:center; justify-content:space-between; gap:16px; margin-bottom:10px; cursor:pointer;">
-        <div style="min-width:0;">
-          <div style="font-size:11.5px; color:var(--text-tertiary); font-weight:600; text-transform:uppercase; letter-spacing:0.02em;">${esc(l.subjectName)}</div>
-          <div style="font-size:14.5px; font-weight:650; margin-top:2px;">Lezione ${l.number ?? '—'}${l.title ? ' · '+esc(l.title) : ''}</div>
-          <div style="display:flex; gap:6px; margin-top:8px; flex-wrap:wrap;">
-            ${REQUIRED_STEPS.map(s => `<span class="status-pill ${lessonStepDone(l,s.key)?'status-complete':'status-missing'}">${icon(lessonStepDone(l,s.key)?'check':'x',10)} ${s.label}</span>`).join('')}
-          </div>
-        </div>
-        <button class="btn btn-sm btn-primary" style="flex-shrink:0;">Continua</button>
-      </div>
-    `;
+    return `<div class="card card-hover" data-open-lesson="${l.subjectName}::${l.id}" style="display:flex; align-items:center; justify-content:space-between; gap:16px; margin-bottom:10px; cursor:pointer;">
+      <div style="min-width:0;"><div style="font-size:11.5px; color:var(--text-tertiary); font-weight:600; text-transform:uppercase; letter-spacing:0.02em;">${esc(l.subjectName)}</div><div style="font-size:14.5px; font-weight:650; margin-top:2px;">Lezione ${l.number ?? '—'}${l.title ? ' · '+esc(l.title) : ''}</div><div style="display:flex; gap:6px; margin-top:8px; flex-wrap:wrap;">${REQUIRED_STEPS.map(s => `<span class="status-pill ${lessonStepDone(l,s.key)?'status-complete':'status-missing'}">${icon(lessonStepDone(l,s.key)?'check':'x',10)} ${s.label}</span>`).join('')}${l.printed?`<span class="status-pill status-complete">${icon('print',10)} Stampata</span>`:''}</div></div>
+      <button class="btn btn-sm btn-primary" style="flex-shrink:0;">Continua</button>
+    </div>`;
   }
 };
 
@@ -1956,12 +2207,41 @@ const SubjectPage = {
         </div>
         <div class="section-sub">${[s.docente && 'Docente: '+s.docente, s.codice && 'Codice: '+s.codice, s.aula && 'Aula: '+s.aula].filter(Boolean).join(' · ') || 'Nessun dettaglio aggiuntivo'}</div>
 
-        <div class="grid grid-stats" style="margin:20px 0 26px;">
+        <div class="grid grid-stats" style="margin:20px 0 18px;">
           <div class="stat-pill"><div class="stat-pill-num">${stats.total}</div><div class="stat-pill-label">Lezioni</div></div>
           <div class="stat-pill"><div class="stat-pill-num" style="color:var(--success)">${stats.complete}</div><div class="stat-pill-label">Complete</div></div>
           <div class="stat-pill"><div class="stat-pill-num" style="color:var(--warning)">${stats.progress}</div><div class="stat-pill-label">In lavorazione</div></div>
           <div class="stat-pill"><div class="stat-pill-num" style="color:var(--danger)">${stats.missing}</div><div class="stat-pill-label">Mancanti</div></div>
-          <div class="stat-pill" id="stat-total-pages"><div class="stat-pill-num">${stats.mainPdfCount ? (stats.pagesKnownFor < stats.mainPdfCount ? stats.totalPages+'+' : stats.totalPages) : '—'}</div><div class="stat-pill-label">Pagine totali (PDF)</div></div>
+          <div class="stat-pill" id="stat-total-pages"><div class="stat-pill-num">${stats.mainPdfCount ? (stats.pagesKnownFor < stats.mainPdfCount ? stats.totalPages+'+' : stats.totalPages) : '—'}</div><div class="stat-pill-label">Pagine PDF</div></div>
+          <div class="stat-pill"><div class="stat-pill-num">${fmtNumber(statisticsForSubject(s).files)}</div><div class="stat-pill-label">File</div></div>
+          <div class="stat-pill"><div class="stat-pill-num" style="color:var(--accent)">${fmtNumber(statisticsForSubject(s).highlighted)}</div><div class="stat-pill-label">Evidenziate</div></div>
+          <div class="stat-pill"><div class="stat-pill-num" style="color:var(--success)">${fmtNumber(statisticsForSubject(s).printed)}</div><div class="stat-pill-label">Stampate</div></div>
+          <div class="stat-pill"><div class="stat-pill-num">${statisticsForSubject(s).sheetsKnownFor ? fmtNumber(statisticsForSubject(s).sheets) : '—'}</div><div class="stat-pill-label">Fogli</div></div>
+          <div class="stat-pill"><div class="stat-pill-num" style="color:var(--accent)">${statisticsForSubject(s).printed===0 || statisticsForSubject(s).printedLessonsWithKnownPages>0 ? fmtMoney(statisticsForSubject(s).totalPrintCost) : '—'}</div><div class="stat-pill-label">Costo stampa</div></div>
+        </div>
+
+        <div class="stats-dashboard-grid">
+          <div class="stats-span-8">${StatisticsView.printingCard(statisticsForSubject(s))}</div>
+          <div class="stats-card stats-span-4">
+            <div class="stats-card-head"><div><div class="stats-card-title">Progresso</div><div class="stats-card-sub">Stato delle ${stats.total} lezioni della materia.</div></div></div>
+            ${StatisticsView.donut('Progresso materia', [
+              {label:'Complete',value:stats.complete,color:'var(--success)'},
+              {label:'In lavorazione',value:stats.progress,color:'var(--warning)'},
+              {label:'Mancanti',value:stats.missing,color:'var(--danger)'}
+            ], stats.pct+'%', 'complete')}
+          </div>
+          <div class="stats-card stats-span-6">
+            <div class="stats-card-head"><div><div class="stats-card-title">File per formato</div><div class="stats-card-sub">Composizione del materiale della materia.</div></div></div>
+            ${StatisticsView.bars(Object.entries(statisticsForSubject(s).filesByKind).map(([k,v])=>({label:fileKindLabel(k),value:v})).sort((a,b)=>b.value-a.value))}
+          </div>
+          <div class="stats-card stats-span-6">
+            <div class="stats-card-head"><div><div class="stats-card-title">Stato su carta</div><div class="stats-card-sub">Evidenziata e stampata per ciascuna lezione.</div></div></div>
+            ${StatisticsView.donut('Stato su carta', [
+              {label:'Evidenziate',value:statisticsForSubject(s).highlighted,color:'var(--accent)'},
+              {label:'Stampate',value:statisticsForSubject(s).printed,color:'var(--success)'},
+              {label:'Non segnate',value:Math.max(0,stats.total-Math.max(statisticsForSubject(s).highlighted,statisticsForSubject(s).printed)),color:'var(--text-tertiary)'}
+            ], Math.max(statisticsForSubject(s).highlighted, statisticsForSubject(s).printed)+'', 'lezioni')}
+          </div>
         </div>
 
         <div class="tabs">
@@ -1984,15 +2264,9 @@ const SubjectPage = {
   /** Calcola in background (senza bloccare la UI) il numero di pagine dei mainFile PDF non ancora in cache,
       poi aggiorna la card "Pagine totali" quando finisce. */
   async ensurePageCounts(s){
-    const toCompute = s.lessons.filter(l => l.mainFile && l.mainFile.kind === 'pdf' && typeof l.mainFilePages !== 'number');
-    if(!toCompute.length) return;
-    for(const l of toCompute){
-      try{ await LibraryScanner.cacheMainFilePages(l); }catch(e){ /* file illeggibile: si salta, senza bloccare gli altri */ }
-      const pill = document.getElementById('stat-total-pages');
-      if(!pill) return; // pagina cambiata nel frattempo
-      const stats = subjectStats(s);
-      pill.querySelector('.stat-pill-num').textContent = stats.mainPdfCount ? (stats.pagesKnownFor < stats.mainPdfCount ? stats.totalPages+'+' : stats.totalPages) : '—';
-    }
+    await ensureStatsPageCounts(s.lessons, () => {
+      if(AppState.route.page === 'subject' && AppState.route.params.subjectName === s.name) this.render(AppState.route.params);
+    });
   },
 
   renderTab(s){
@@ -2052,11 +2326,19 @@ const SubjectPage = {
     } else if(this.activeTab === 'progressi'){
       const stats = subjectStats(s);
       el.innerHTML = `
-        <div class="card" style="max-width:480px;">
-          <div style="font-size:13px; font-weight:650; margin-bottom:10px;">Completamento complessivo</div>
-          <div class="progress-track" style="height:8px; margin-bottom:8px;"><div class="progress-fill" style="width:${stats.pct}%; background:${s.color}; height:8px;"></div></div>
-          <div class="muted" style="font-size:12.5px;">${stats.complete} su ${stats.total} lezioni complete (${stats.pct}%)</div>
+        <div class="stats-dashboard-grid">
+        <div class="stats-card stats-span-7">
+          <div class="stats-card-head"><div><div class="stats-card-title">Completamento complessivo</div><div class="stats-card-sub">Avanzamento della materia rispetto alle lezioni presenti.</div></div><span class="stat-pulse">${stats.pct}%</span></div>
+          <div class="progress-track" style="height:10px; margin:8px 0 12px;"><div class="progress-fill" style="width:${stats.pct}%; background:${s.color}; height:10px;"></div></div>
+          <div class="metric-row">
+            <div class="metric-mini"><div class="metric-mini-value">${stats.complete}</div><div class="metric-mini-label">Complete</div></div>
+            <div class="metric-mini"><div class="metric-mini-value">${stats.progress}</div><div class="metric-mini-label">In lavorazione</div></div>
+            <div class="metric-mini"><div class="metric-mini-value">${stats.missing}</div><div class="metric-mini-label">Mancanti</div></div>
+            <div class="metric-mini"><div class="metric-mini-value">${fmtNumber(statisticsForSubject(s).files)}</div><div class="metric-mini-label">File complessivi</div></div>
+          </div>
         </div>
+        <div class="stats-span-5">${StatisticsView.printingCard(statisticsForSubject(s), true)}</div>
+      </div>
       `;
     }
   },
@@ -2242,7 +2524,23 @@ const LessonPage = {
 
         ${lesson.tags && lesson.tags.length ? `<div style="display:flex; gap:6px; margin-top:10px;">${lesson.tags.map(t=>`<span class="status-pill status-ready" data-goto-tag="${esc(t)}" style="cursor:pointer;">${icon('tag',10)} ${esc(t)}</span>`).join('')}</div>` : ''}
 
-        <div id="lesson-main-doc" style="margin-top:22px;"></div>
+        <div class="stats-dashboard-grid" style="margin-top:20px;">
+          <div class="stats-span-8">${StatisticsView.printingCard(statisticsForLesson(lesson))}</div>
+          <div class="stats-card stats-span-4">
+            <div class="stats-card-head"><div><div class="stats-card-title">Statistiche della lezione</div><div class="stats-card-sub">Materiale e stato cartaceo della singola lezione.</div></div></div>
+            <div class="metric-row">
+              <div class="metric-mini"><div class="metric-mini-value">${fmtNumber(statisticsForLesson(lesson).files)}</div><div class="metric-mini-label">File</div></div>
+              <div class="metric-mini"><div class="metric-mini-value">${lessonPageCount(lesson)==null?'—':fmtNumber(lessonPageCount(lesson))}</div><div class="metric-mini-label">Pagine PDF</div></div>
+              <div class="metric-mini"><div class="metric-mini-value">${printingForLesson(lesson).sheets==null?'—':fmtNumber(printingForLesson(lesson).sheets)}</div><div class="metric-mini-label">Fogli</div></div>
+            </div>
+            <div style="display:flex; flex-wrap:wrap; gap:7px; margin-top:12px;">
+              <span class="paper-state-badge ${lesson.highlightedOnPaper?'done':''}">${icon(lesson.highlightedOnPaper?'check':'highlighter',11)} ${lesson.highlightedOnPaper?'Già evidenziata':'Non evidenziata'}</span>
+              <span class="paper-state-badge ${lesson.printed?'done':''}">${icon(lesson.printed?'check':'print',11)} ${lesson.printed?'Già stampata':'Non stampata'}</span>
+            </div>
+          </div>
+        </div>
+
+        <div id="lesson-main-doc" style="margin-top:4px;"></div>
 
         <div style="margin-top:18px; display:flex; gap:10px; flex-wrap:wrap;">
           <button class="btn btn-primary" id="btn-prepare-latex">${icon('bolt',15)} Prepara LaTeX</button>
@@ -2291,6 +2589,9 @@ const LessonPage = {
     this.renderMainDoc(lesson);
     this.renderRawSection(lesson);
     this.bindDragDrop(lesson);
+    ensureStatsPageCounts([lesson], () => {
+      if(AppState.route.page === 'lesson' && AppState.route.params.lessonId === lesson.id) this.render(AppState.route.params);
+    });
   },
 
   /* ---------- Documento principale, in grande ---------- */
@@ -4463,6 +4764,22 @@ const SettingsPage = {
         </div>
 
         <div class="card" style="margin-top:14px;">
+          <div style="font-size:13px; font-weight:650; margin-bottom:4px;">Stampa e costi</div>
+          <div class="muted" style="font-size:12.5px; line-height:1.65; margin-bottom:14px;">Imposta quanto paghi per ogni facciata stampata. La carta viene calcolata separatamente a <b>0,01 € per foglio</b>. Per la stampa fronte-retro un foglio contiene due facciate: 10 pagine = 5 fogli, 11 pagine = 6 fogli.</div>
+          <div class="field-row">
+            <div class="field"><label>Prezzo per facciata (€)</label><input id="set-face-price" type="number" inputmode="decimal" min="0" step="0.01" value="${Number(AppState.printSettings.facePrice).toFixed(2)}"></div>
+            <div class="field"><label>Costo carta per foglio (€)</label><input type="text" value="0,01" disabled></div>
+          </div>
+          <label style="display:flex; align-items:center; gap:9px; cursor:pointer; font-size:12.5px; color:var(--text-secondary); margin-top:1px;">
+            <input id="set-duplex" type="checkbox" ${AppState.printSettings.duplex?'checked':''}> Stampo normalmente fronte-retro
+          </label>
+          <div style="display:flex; gap:8px; margin-top:12px;">
+            <button class="btn btn-sm btn-primary" id="set-save-print-settings">${icon('save',14)} Salva impostazioni stampa</button>
+            <span class="paper-state-badge" style="align-self:center;">${AppState.printSettings.duplex ? 'Fronte-retro attivo' : 'Solo fronte'}</span>
+          </div>
+        </div>
+
+        <div class="card" style="margin-top:14px;">
           <div style="font-size:13px; font-weight:650; margin-bottom:10px;">Aspetto</div>
           <div style="display:flex; gap:8px;">
             <button class="btn btn-sm ${AppState.theme==='light'?'btn-primary':''}" data-theme="light">${icon('sun',14)} Chiaro</button>
@@ -4508,6 +4825,13 @@ const SettingsPage = {
       AppState.setRootAbsolutePath('');
       Toast.info('Percorso rimosso');
       SettingsPage.render();
+    });
+    content.querySelector('#set-save-print-settings').addEventListener('click', () => {
+      const facePrice = Math.max(0, Number(String(content.querySelector('#set-face-price').value).replace(',', '.')) || 0);
+      const duplex = !!content.querySelector('#set-duplex').checked;
+      AppState.savePrintSettings({ facePrice, duplex });
+      Toast.success(`Impostazioni stampa salvate: ${fmtMoney(facePrice)} per facciata · ${duplex ? 'fronte-retro' : 'solo fronte'}.`);
+      this.render();
     });
     content.querySelectorAll('[data-theme]').forEach(b => b.addEventListener('click', () => { AppState.setTheme(b.dataset.theme); this.render(); }));
     content.querySelector('#set-install-pwa').addEventListener('click', () => {
@@ -4635,7 +4959,7 @@ function setupPWA(){
   // Service worker minimale: cache-first del solo index.html per uso offline dopo il primo caricamento.
   if('serviceWorker' in navigator){
     const swCode = `
-      const CACHE = 'uninotes-v2';
+      const CACHE = 'uninotes-v3';
       self.addEventListener('install', (e) => { self.skipWaiting(); });
       self.addEventListener('activate', (e) => { self.clients.claim(); });
       self.addEventListener('fetch', (e) => {
