@@ -1144,15 +1144,34 @@ const LibraryScanner = {
     }
   },
 
-  /** Calcola (via pdf.js) e mette in cache in .lesson.json il numero di pagine del documento principale */
+  /**
+   * Calcola il numero di pagine del PDF e lo mette in cache in .lesson.json.
+   * Per le statistiche NON dipende dalla CDN: prova PDF.js solo se già disponibile,
+   * altrimenti usa un parser leggero del catalogo PDF come fallback.
+   */
   async cacheMainFilePages(lesson, file){
     file = file || lesson.mainFile;
     if(!file || file.kind !== 'pdf') return null;
-    await ensurePdfJs();
     const fileObj = await file.handle.getFile();
     const buf = await fileObj.arrayBuffer();
-    const pdf = await window.pdfjsLib.getDocument({ data: buf }).promise;
-    const numPages = pdf.numPages;
+    let numPages = null;
+
+    // Fast path: PDF.js già caricato (tipicamente perché l'utente ha aperto un PDF).
+    if(window.pdfjsLib){
+      try{
+        const pdf = await window.pdfjsLib.getDocument({ data: buf }).promise;
+        numPages = Number(pdf.numPages) || null;
+      }catch(e){
+        console.warn('PDF.js non ha potuto leggere il PDF, uso il conteggio locale.', e);
+      }
+    }
+
+    // Fallback locale: legge i dizionari pagina del PDF senza rete.
+    if(!(numPages > 0)){
+      numPages = countPdfPagesFallback(buf);
+    }
+    if(!(numPages > 0)) throw new Error('Numero pagine PDF non determinabile');
+
     lesson.mainFilePages = numPages;
     const metaHandle = await FileSystemManager.getOrCreateFile(lesson.handle, '.lesson.json');
     let existing = {};
@@ -1284,17 +1303,55 @@ function fmtNumber(value){
   return new Intl.NumberFormat('it-IT').format(value);
 }
 function plural(n, one, many){ return n === 1 ? one : many; }
+/** Conteggio pagine PDF offline, usato dalle statistiche quando PDF.js/CDN non è disponibile. */
+function countPdfPagesFallback(arrayBuffer){
+  try{
+    const bytes = new Uint8Array(arrayBuffer);
+    const maxBytes = Math.min(bytes.length, 24 * 1024 * 1024);
+    let latin1 = '';
+    for(let i=0;i<maxBytes;i++) latin1 += String.fromCharCode(bytes[i]);
+
+    // Metodo principale: ogni pagina PDF reale ha un dizionario /Type /Page.
+    //  evita di confondere /Pages con /Page.
+    const directPages = latin1.match(/\/Type\s*\/Page\b/g);
+    const directCount = directPages ? directPages.length : 0;
+    if(directCount > 0) return directCount;
+
+    // Alcuni generatori mettono invece il totale nel nodo radice /Type /Pages.
+    const counts = [];
+    const pagesTypeRe = /\/Type\s*\/Pages\b/g;
+    let m;
+    while((m = pagesTypeRe.exec(latin1))){
+      const from = Math.max(0, m.index - 1200);
+      const to = Math.min(latin1.length, m.index + 2200);
+      const windowText = latin1.slice(from, to);
+      const cm = /\/Count\s+(\d+)/.exec(windowText);
+      if(cm) counts.push(Number(cm[1]));
+    }
+    const best = counts.filter(n => Number.isFinite(n) && n > 0).sort((a,b)=>b-a)[0];
+    return best || null;
+  }catch(e){
+    console.warn('Conteggio PDF offline fallito', e);
+    return null;
+  }
+}
+
 function lessonPageCount(lesson){
   return (lesson && lesson.mainFile && lesson.mainFile.kind === 'pdf' && typeof lesson.mainFilePages === 'number' && isFinite(lesson.mainFilePages)) ? lesson.mainFilePages : null;
 }
 function printingForLesson(lesson){
   const pages = lessonPageCount(lesson);
-  if(!lesson || !lesson.printed || pages == null){
-    return { printed: !!(lesson && lesson.printed), pages, sheets: null, faceCost: null, paperCost: null, totalCost: null, known: pages != null };
+  if(!lesson || !lesson.printed){
+    return { printed:false, pages, sheets:null, faceCost:0, paperCost:0, totalCost:0, known:pages != null };
   }
+  if(pages == null){
+    return { printed:true, pages:null, sheets:null, faceCost:null, paperCost:null, totalCost:null, known:false };
+  }
+  const facePrice = Number.isFinite(Number(AppState.printSettings.facePrice)) ? Math.max(0, Number(AppState.printSettings.facePrice)) : 0;
+  const paperPrice = Number.isFinite(Number(AppState.printSettings.paperPrice)) ? Math.max(0, Number(AppState.printSettings.paperPrice)) : 0.01;
   const sheets = AppState.printSettings.duplex ? Math.ceil(pages / 2) : pages;
-  const faceCost = pages * Number(AppState.printSettings.facePrice || 0);
-  const paperCost = sheets * Number(AppState.printSettings.paperPrice || 0.01);
+  const faceCost = pages * facePrice;
+  const paperCost = sheets * paperPrice;
   return { printed:true, pages, sheets, faceCost, paperCost, totalCost:faceCost + paperCost, known:true };
 }
 function fileKindLabel(kind){
@@ -1433,7 +1490,11 @@ async function ensureStatsPageCounts(lessons, onChange){
   if(!targets.length) return;
   let changed = false;
   await Promise.all(targets.map(async l => {
-    try{ await LibraryScanner.cacheMainFilePages(l); changed = true; }catch(e){ console.warn('Statistiche: conteggio pagine fallito', l.title || l.folderName, e); }
+    try{
+      await LibraryScanner.cacheMainFilePages(l);
+      changed = true;
+      if(typeof onChange === 'function') onChange();
+    }catch(e){ console.warn('Statistiche: conteggio pagine fallito', l.title || l.folderName, e); }
   }));
   if(changed && typeof onChange === 'function') onChange();
 }
@@ -4981,11 +5042,11 @@ function setupPWA(){
   // Service worker minimale: cache-first del solo index.html per uso offline dopo il primo caricamento.
   if('serviceWorker' in navigator){
     const swCode = `
-      const CACHE = 'uninotes-v4';
+      const CACHE = 'uninotes-v5';
       self.addEventListener('install', (e) => { self.skipWaiting(); });
       self.addEventListener('activate', (e) => { self.clients.claim(); });
       self.addEventListener('fetch', (e) => {
-        if(e.request.method !== 'GET') return;
+        if(e.request.method !== 'GET' || new URL(e.request.url).origin !== self.location.origin) return;
         e.respondWith(
           caches.open(CACHE).then(async cache => {
             const cached = await cache.match(e.request);
@@ -5013,7 +5074,6 @@ async function boot(){
   AppState.init();
   CalendarStore.init();
   window.addEventListener('uninotes:print-settings-changed', () => { Router.render(); });
-document.addEventListener('uninotes:print-settings-changed', () => { try { Router.render(); } catch (e) {} });
   setupPWA();
   SetupScreen.render();
 
