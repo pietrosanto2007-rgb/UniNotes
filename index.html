@@ -799,15 +799,32 @@ const AppState = {
     this.rootAbsolutePath = localStorage.getItem('uninotes.rootAbsolutePath') || '';
     try{
       const raw = JSON.parse(localStorage.getItem('uninotes.printSettings') || 'null');
-      if(raw && typeof raw === 'object') this.printSettings = { ...this.printSettings, ...raw, paperPrice: 0.01 };
+      if(raw && typeof raw === 'object'){
+        this.printSettings = this.normalizePrintSettings(raw);
+        // Riscrive il formato canonico, così eventuali vecchi valori come "0,05" non possono più propagarsi nel motore dei costi.
+        localStorage.setItem('uninotes.printSettings', JSON.stringify(this.printSettings));
+      }
     }catch(e){}
+    this.printSettings = this.normalizePrintSettings(this.printSettings);
     this.applyTheme();
   },
+  normalizePrintPrice(value, fallback=0.05){
+    if(typeof value === 'string') value = value.trim().replace(/\s/g,'').replace(',', '.');
+    const n = Number(value);
+    return Number.isFinite(n) && n >= 0 ? n : fallback;
+  },
+  normalizePrintSettings(raw){
+    const source = raw && typeof raw === 'object' ? raw : {};
+    return {
+      facePrice: this.normalizePrintPrice(source.facePrice, 0.05),
+      duplex: source.duplex === true,
+      paperPrice: 0.01
+    };
+  },
   savePrintSettings(next){
-    const rawFacePrice = Number(next && next.facePrice);
-    const facePrice = Number.isFinite(rawFacePrice) ? Math.max(0, rawFacePrice) : this.printSettings.facePrice;
+    const facePrice = this.normalizePrintPrice(next && next.facePrice, this.printSettings.facePrice);
     const duplex = typeof next?.duplex === 'boolean' ? next.duplex : this.printSettings.duplex;
-    this.printSettings = { ...this.printSettings, facePrice, duplex, paperPrice: 0.01 };
+    this.printSettings = this.normalizePrintSettings({ facePrice, duplex });
     this.printSettingsRevision++;
     localStorage.setItem('uninotes.printSettings', JSON.stringify(this.printSettings));
     // Forza il ricalcolo immediato di tutte le metriche di stampa.
@@ -1443,9 +1460,10 @@ function printingForLesson(lesson){
   if(pages == null){
     return { printed:true, pages:null, sheets:null, faceCost:null, paperCost:null, totalCost:null, known:false };
   }
-  const facePrice = Number.isFinite(Number(AppState.printSettings.facePrice)) ? Math.max(0, Number(AppState.printSettings.facePrice)) : 0;
-  const paperPrice = Number.isFinite(Number(AppState.printSettings.paperPrice)) ? Math.max(0, Number(AppState.printSettings.paperPrice)) : 0.01;
-  const sheets = AppState.printSettings.duplex ? Math.ceil(pages / 2) : pages;
+  const settings = AppState.normalizePrintSettings(AppState.printSettings);
+  const facePrice = settings.facePrice;
+  const paperPrice = settings.paperPrice;
+  const sheets = settings.duplex ? Math.ceil(pages / 2) : pages;
   const faceCost = pages * facePrice;
   const paperCost = sheets * paperPrice;
   return { printed:true, pages, sheets, faceCost, paperCost, totalCost:faceCost + paperCost, known:true };
@@ -1463,6 +1481,7 @@ function lessonFileEntries(lesson){
 }
 function statisticsForLessons(lessons){
   const rows = lessons || [];
+  AppState.printSettings = AppState.normalizePrintSettings(AppState.printSettings);
   const st = {
     lessons: rows.length, complete:0, progress:0, missing:0, highlighted:0, printed:0,
     files:0, pdfFiles:0, audioFiles:0, docxFiles:0, textFiles:0, codeFiles:0, otherFiles:0,
@@ -4986,11 +5005,7 @@ const SettingsPage = {
     const printPriceInput = content.querySelector('#set-face-price');
     const printDuplexInput = content.querySelector('#set-duplex');
     const printPreview = content.querySelector('#set-print-live-preview');
-    const parsePrintPrice = value => {
-      const normalized = String(value ?? '').trim().replace(',', '.').replace(/[^0-9.\-]/g, '');
-      const parsed = Number(normalized);
-      return Number.isFinite(parsed) ? Math.max(0, parsed) : 0;
-    };
+    const parsePrintPrice = value => AppState.normalizePrintPrice(value, AppState.printSettings.facePrice);
     const renderPrintPreview = () => {
       if(!printPreview) return;
       const facePrice = parsePrintPrice(printPriceInput?.value);
@@ -4998,8 +5013,8 @@ const SettingsPage = {
       const st = currentLibraryPrintStats();
       // Il prezzo modificato viene applicato immediatamente anche all'anteprima, senza attendere il salvataggio.
       const sheets = duplex ? Math.ceil(st.printedPages / 2) : st.printedPages;
-      const cost = st.printedPages * facePrice + sheets * 0.01;
-      printPreview.innerHTML = `<div style="font-size:11px;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:.03em;font-weight:650;">Anteprima costo totale libreria</div><div style="font-size:22px;font-weight:750;margin-top:2px;">${fmtMoney(cost)}</div><div class="muted" style="font-size:11.5px;margin-top:2px;">${fmtNumber(st.printed)} lezioni stampate · ${fmtNumber(st.printedPages)} facciate · ${fmtNumber(sheets)} fogli</div>`;
+      const cost = (st.printedPages * facePrice) + (sheets * 0.01);
+      printPreview.innerHTML = `<div style="font-size:11px;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:.03em;font-weight:650;">Anteprima costo totale libreria</div><div style="font-size:22px;font-weight:750;margin-top:2px;">${fmtMoney(cost)}</div><div class="muted" style="font-size:11.5px;margin-top:2px;">${fmtNumber(st.printed)} lezioni stampate · ${fmtNumber(st.printedPages)} facciate · ${fmtNumber(sheets)} fogli · ${fmtMoney(facePrice)} / facciata</div>`;
     };
     printPriceInput?.addEventListener('input', renderPrintPreview);
     printDuplexInput?.addEventListener('change', renderPrintPreview);
