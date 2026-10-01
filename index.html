@@ -789,7 +789,7 @@ const AppState = {
   sidebarSectionsOpen: {},
   audioObjectUrls: new Map(),
   rootAbsolutePath: '', // percorso POSIX assoluto reale della cartella collegata (per "Apri nel Finder")
-  printSettings: { facePriceCents: 5, facePrice: 0.05, duplex: false, paperPriceCents: 1, paperPrice: 0.01 },
+  printSettings: { facePriceCents: 5, duplex: false, paperPriceCents: 1 },
   printSettingsRevision: 0,
 
   init(){
@@ -797,21 +797,38 @@ const AppState = {
     this.sidebarCollapsed = localStorage.getItem('uninotes.sidebarCollapsed') === '1';
     this.activity = JSON.parse(localStorage.getItem('uninotes.activity') || '[]');
     this.rootAbsolutePath = localStorage.getItem('uninotes.rootAbsolutePath') || '';
+    this.printSettings = this.loadPrintSettings();
+    this.applyTheme();
+  },
+
+  loadPrintSettings(){
+    let cents = Number(localStorage.getItem('uninotes.print.priceCents'));
+    let duplex = localStorage.getItem('uninotes.print.duplex') === '1';
     try{
       const raw = JSON.parse(localStorage.getItem('uninotes.printSettings') || 'null');
-      this.printSettings = this.normalizePrintSettings(raw || this.printSettings);
-      localStorage.setItem('uninotes.printSettings', JSON.stringify(this.printSettings));
-    }catch(e){
-      this.printSettings = this.normalizePrintSettings(this.printSettings);
-    }
-    this.applyTheme();
+      if(Number.isFinite(cents) && cents >= 0){
+        // Prefer the dedicated canonical key.
+      } else if(raw && Object.prototype.hasOwnProperty.call(raw, 'facePrice')) {
+        cents = this.eurosToCents(raw.facePrice, 5);
+      } else if(raw && Number.isFinite(Number(raw.facePriceCents))){
+        cents = Math.max(0, Math.round(Number(raw.facePriceCents)));
+      } else {
+        cents = 5;
+      }
+      if(localStorage.getItem('uninotes.print.duplex') === null && raw) duplex = raw.duplex === true || raw.duplex === 'true' || raw.duplex === 1;
+    }catch(e){ if(!Number.isFinite(cents) || cents < 0) cents = 5; }
+    cents = Math.max(0, Math.round(cents));
+    const settings = { schemaVersion: 3, facePriceCents: cents, facePrice: cents/100, duplex: !!duplex, paperPriceCents: 1, paperPrice: 0.01 };
+    localStorage.setItem('uninotes.print.priceCents', String(cents));
+    localStorage.setItem('uninotes.print.duplex', settings.duplex ? '1' : '0');
+    localStorage.setItem('uninotes.printSettings', JSON.stringify(settings));
+    return settings;
   },
 
   normalizePrintPrice(value, fallback=0.05){
     if(typeof value === 'number' && Number.isFinite(value) && value >= 0) return value;
     let raw = String(value ?? '').trim().replace(/€/g,'').replace(/\s/g,'');
     if(!raw) return fallback;
-    // Supporta 0,05 / 0.05 / 5 (interpretiamo sempre il valore come euro).
     if(raw.includes(',') && raw.includes('.')) raw = raw.replace(/\./g,'').replace(',','.');
     else raw = raw.replace(',','.');
     const n = Number(raw);
@@ -823,50 +840,24 @@ const AppState = {
     return Math.max(0, Math.round(n * 100));
   },
 
-  normalizePrintSettings(raw){
-    const source = raw && typeof raw === 'object' ? raw : {};
-    // Migrazione esplicita: nelle versioni precedenti poteva esistere facePriceCents=0
-    // mentre facePrice conteneva il valore corretto. Le vecchie preferenze usano quindi facePrice.
-    const isV2 = Number(source.schemaVersion) >= 2;
-    let facePriceCents;
-    if(isV2 && Number.isFinite(Number(source.facePriceCents))){
-      facePriceCents = Math.round(Number(source.facePriceCents));
-    }else if(Object.prototype.hasOwnProperty.call(source, 'facePrice')){
-      facePriceCents = this.eurosToCents(source.facePrice, 5);
-    }else if(Number.isFinite(Number(source.facePriceCents))){
-      facePriceCents = Math.round(Number(source.facePriceCents));
-    }else{
-      facePriceCents = 5;
-    }
-    if(facePriceCents < 0) facePriceCents = 0;
-    return {
-      schemaVersion: 2,
-      facePriceCents,
-      facePrice: facePriceCents / 100,
-      duplex: source.duplex === true || source.duplex === 'true' || source.duplex === 1,
-      paperPriceCents: 1,
-      paperPrice: 0.01
-    };
-  },
-
   getLivePrintSettings(){
-    try{
-      const raw = JSON.parse(localStorage.getItem('uninotes.printSettings') || 'null');
-      if(raw && typeof raw === 'object') return this.normalizePrintSettings(raw);
-    }catch(e){}
-    return this.normalizePrintSettings(this.printSettings);
+    return this.loadPrintSettings();
   },
 
   savePrintSettings(next){
     const current = this.getLivePrintSettings();
-    const facePriceCents = next && Number.isFinite(Number(next.facePriceCents))
+    const cents = next && Number.isFinite(Number(next.facePriceCents))
       ? Math.max(0, Math.round(Number(next.facePriceCents)))
       : this.eurosToCents(next && next.facePrice, current.facePriceCents);
     const duplex = typeof next?.duplex === 'boolean' ? next.duplex : current.duplex;
-    this.printSettings = this.normalizePrintSettings({ facePriceCents, duplex });
+    const settings = { schemaVersion: 3, facePriceCents: cents, facePrice: cents/100, duplex: !!duplex, paperPriceCents: 1, paperPrice: 0.01 };
+    this.printSettings = settings;
     this.printSettingsRevision++;
-    localStorage.setItem('uninotes.printSettings', JSON.stringify(this.printSettings));
-    window.dispatchEvent(new CustomEvent('uninotes:print-settings-changed', { detail: { ...this.printSettings } }));
+    // Two canonical primitive keys + compatibility object.
+    localStorage.setItem('uninotes.print.priceCents', String(cents));
+    localStorage.setItem('uninotes.print.duplex', duplex ? '1' : '0');
+    localStorage.setItem('uninotes.printSettings', JSON.stringify(settings));
+    window.dispatchEvent(new CustomEvent('uninotes:print-settings-changed', { detail: { ...settings } }));
   },
   setRootAbsolutePath(p){
     this.rootAbsolutePath = (p || '').trim();
@@ -1489,59 +1480,57 @@ async function inflatePdfBytes(bytes){
 function lessonPageCount(lesson){
   return (lesson && lesson.mainFile && lesson.mainFile.kind === 'pdf' && typeof lesson.mainFilePages === 'number' && isFinite(lesson.mainFilePages)) ? lesson.mainFilePages : null;
 }
+function getCanonicalPrintPriceCents(){
+  const raw = localStorage.getItem('uninotes.print.priceCents');
+  const n = Number(raw);
+  if(Number.isFinite(n) && n >= 0) return Math.round(n);
+  return AppState.getLivePrintSettings().facePriceCents;
+}
+function getCanonicalDuplex(){
+  return localStorage.getItem('uninotes.print.duplex') === '1';
+}
+
+function calculatePrintCost(pages){
+  const p = Number.isFinite(Number(pages)) ? Math.max(0, Math.round(Number(pages))) : null;
+  if(p == null) return null;
+  const facePriceCents = getCanonicalPrintPriceCents();
+  const paperPriceCents = 1;
+  const duplex = getCanonicalDuplex();
+  const sheets = duplex ? Math.ceil(p / 2) : p;
+  const faceCostCents = p * facePriceCents;
+  const paperCostCents = sheets * paperPriceCents;
+  const totalCostCents = faceCostCents + paperCostCents;
+  return { pages:p, sheets, facePriceCents, paperPriceCents, faceCostCents, paperCostCents, totalCostCents, faceCost:faceCostCents/100, paperCost:paperCostCents/100, totalCost:totalCostCents/100 };
+}
+
 const PrintCostEngine = {
   getSettings(){
-    return AppState.getLivePrintSettings();
+    const cents = getCanonicalPrintPriceCents();
+    const duplex = getCanonicalDuplex();
+    return { facePriceCents:cents, facePrice:cents/100, duplex, paperPriceCents:1, paperPrice:0.01 };
   },
   lesson(lesson){
-    const settings = this.getSettings();
     const pages = lessonPageCount(lesson);
-    if(!lesson || lesson.printed !== true) return { printed:false, known:pages != null, pages, sheets:0, faceCostCents:0, paperCostCents:0, totalCostCents:0, faceCost:0, paperCost:0, totalCost:0 };
+    const printed = !!lesson && (lesson.printed === true || lesson.printed === 'true' || lesson.printed === 1);
+    if(!printed) return { printed:false, known:pages != null, pages, sheets:0, faceCostCents:0, paperCostCents:0, totalCostCents:0, faceCost:0, paperCost:0, totalCost:0 };
     if(pages == null) return { printed:true, known:false, pages:null, sheets:null, faceCostCents:null, paperCostCents:null, totalCostCents:null, faceCost:null, paperCost:null, totalCost:null };
-    const calc = calculatePrintCost(pages, settings, settings.duplex, settings);
-    return calc ? { printed:true, known:true, ...calc } : { printed:true, known:false, pages, sheets:null, faceCostCents:null, paperCostCents:null, totalCostCents:null, faceCost:null, paperCost:null, totalCost:null };
+    return { printed:true, known:true, ...calculatePrintCost(pages) };
   },
   total(lessons){
-    const settings = this.getSettings();
-    let printed=0, pages=0, sheets=0, faceCostCents=0, paperCostCents=0, totalCostCents=0, knownPrinted=0, missing=0;
+    let printed=0, knownPrinted=0, missing=0, pages=0, sheets=0, faceCostCents=0, paperCostCents=0, totalCostCents=0;
     for(const lesson of (lessons||[])){
-      if(lesson.printed !== true) continue;
-      printed++;
       const result = this.lesson(lesson);
+      if(!result.printed) continue;
+      printed++;
       if(!result.known){ missing++; continue; }
-      knownPrinted++; pages += result.pages; sheets += result.sheets;
-      faceCostCents += result.faceCostCents; paperCostCents += result.paperCostCents; totalCostCents += result.totalCostCents;
+      knownPrinted++; pages += result.pages; sheets += result.sheets; faceCostCents += result.faceCostCents; paperCostCents += result.paperCostCents; totalCostCents += result.totalCostCents;
     }
+    const settings = this.getSettings();
     return { settings, printed, knownPrinted, missing, pages, sheets, faceCostCents, paperCostCents, totalCostCents, faceCost:faceCostCents/100, paperCost:paperCostCents/100, totalCost:totalCostCents/100 };
   }
 };
 
-function calculatePrintCost(pages, facePrice, duplex, paperPrice=0.01){
-  // Motore unico del costo: niente cache, niente stato UI.
-  // Formula: (facciate × prezzo facciata) + (fogli × €0,01).
-  const p = Number.isFinite(Number(pages)) ? Math.max(0, Math.round(Number(pages))) : null;
-  if(p == null) return null;
-  const facePriceCents = Number.isFinite(Number(facePrice?.facePriceCents))
-    ? Math.max(0, Math.round(Number(facePrice.facePriceCents)))
-    : Math.max(0, Math.round(Number(AppState.normalizePrintPrice(facePrice, 0)) * 100));
-  const duplexMode = typeof duplex === 'object' && duplex !== null ? !!duplex.duplex : !!duplex;
-  const paperPriceCents = Number.isFinite(Number(paperPrice?.paperPriceCents))
-    ? Math.max(0, Math.round(Number(paperPrice.paperPriceCents)))
-    : Math.max(0, Math.round(Number(paperPrice) * 100));
-  const sheets = duplexMode ? Math.ceil(p / 2) : p;
-  const faceCostCents = p * facePriceCents;
-  const paperCostCents = sheets * paperPriceCents;
-  const totalCostCents = faceCostCents + paperCostCents;
-  return {
-    pages:p, sheets,
-    facePriceCents, paperPriceCents,
-    faceCostCents, paperCostCents, totalCostCents,
-    faceCost:faceCostCents/100, paperCost:paperCostCents/100, totalCost:totalCostCents/100
-  };
-}
-function printingForLesson(lesson){
-  return PrintCostEngine.lesson(lesson);
-}
+function printingForLesson(lesson){ return PrintCostEngine.lesson(lesson); }
 function fileKindLabel(kind){
   const map = { audio:'Audio', pdf:'PDF', docx:'Word', text:'Testo', code:'Codice', other:'Altro' };
   return map[kind] || kind || 'Altro';
@@ -5091,7 +5080,7 @@ const SettingsPage = {
       const duplex = !!printDuplexInput?.checked;
       const st = currentLibraryPrintStats();
       // Il prezzo modificato viene applicato immediatamente anche all'anteprima, senza attendere il salvataggio.
-      const calc = calculatePrintCost(st.printedPages, facePrice, duplex, 0.01);
+      const calc = (() => { const tempCents = AppState.eurosToCents(facePrice, 5); const pages = Number(st.printedPages)||0; const sheets = duplex ? Math.ceil(pages/2) : pages; const faceCostCents = pages * tempCents; const paperCostCents = sheets; return { sheets, totalCost:(faceCostCents + paperCostCents)/100 }; })();
       const sheets = calc ? calc.sheets : 0;
       const cost = calc ? calc.totalCost : 0;
       printPreview.innerHTML = `<div style="font-size:11px;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:.03em;font-weight:650;">Anteprima costo totale libreria</div><div style="font-size:22px;font-weight:750;margin-top:2px;">${fmtMoney(cost)}</div><div class="muted" style="font-size:11.5px;margin-top:2px;">${fmtNumber(st.printed)} lezioni stampate · ${fmtNumber(st.printedPages)} facciate · ${fmtNumber(sheets)} fogli · ${fmtMoney(facePrice)} / facciata</div>`;
