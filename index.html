@@ -1146,8 +1146,8 @@ const LibraryScanner = {
 
   /**
    * Calcola il numero di pagine del PDF e lo mette in cache in .lesson.json.
-   * Per le statistiche NON dipende dalla CDN: prova PDF.js solo se già disponibile,
-   * altrimenti usa un parser leggero del catalogo PDF come fallback.
+   * Il conteggio è completamente offline: prima usa PDF.js se già disponibile,
+   * poi analizza direttamente il PDF, incluse le pagine contenute negli Object Stream.
    */
   async cacheMainFilePages(lesson, file){
     file = file || lesson.mainFile;
@@ -1156,21 +1156,23 @@ const LibraryScanner = {
     const buf = await fileObj.arrayBuffer();
     let numPages = null;
 
-    // Fast path: PDF.js già caricato (tipicamente perché l'utente ha aperto un PDF).
+    // Fast path: PDF.js già caricato (ad esempio dopo aver aperto un PDF).
     if(window.pdfjsLib){
       try{
         const pdf = await window.pdfjsLib.getDocument({ data: buf }).promise;
         numPages = Number(pdf.numPages) || null;
       }catch(e){
-        console.warn('PDF.js non ha potuto leggere il PDF, uso il conteggio locale.', e);
+        console.warn('PDF.js non ha potuto leggere il PDF, uso il parser offline.', e);
       }
     }
 
-    // Fallback locale: legge i dizionari pagina del PDF senza rete.
+    // Parser PDF locale robusto: supporta oggetti normali e Object Stream compressi.
     if(!(numPages > 0)){
-      numPages = countPdfPagesFallback(buf);
+      numPages = await countPdfPagesFallback(buf);
     }
-    if(!(numPages > 0)) throw new Error('Numero pagine PDF non determinabile');
+    if(!(numPages > 0)){
+      throw new Error('Numero pagine PDF non determinabile');
+    }
 
     lesson.mainFilePages = numPages;
     const metaHandle = await FileSystemManager.getOrCreateFile(lesson.handle, '.lesson.json');
@@ -1303,37 +1305,131 @@ function fmtNumber(value){
   return new Intl.NumberFormat('it-IT').format(value);
 }
 function plural(n, one, many){ return n === 1 ? one : many; }
-/** Conteggio pagine PDF offline, usato dalle statistiche quando PDF.js/CDN non è disponibile. */
-function countPdfPagesFallback(arrayBuffer){
+/**
+ * Conteggio pagine PDF offline per le statistiche.
+ * Supporta oggetti PDF normali, page tree con /Count e Object Stream compressi.
+ */
+async function countPdfPagesFallback(arrayBuffer){
   try{
     const bytes = new Uint8Array(arrayBuffer);
-    const maxBytes = Math.min(bytes.length, 24 * 1024 * 1024);
-    let latin1 = '';
-    for(let i=0;i<maxBytes;i++) latin1 += String.fromCharCode(bytes[i]);
+    if(bytes.length < 8) return null;
 
-    // Metodo principale: ogni pagina PDF reale ha un dizionario /Type /Page.
-    //  evita di confondere /Pages con /Page.
-    const directPages = latin1.match(/\/Type\s*\/Page\b/g);
-    const directCount = directPages ? directPages.length : 0;
-    if(directCount > 0) return directCount;
+    const text = bytesToLatin1(bytes);
+    if(!/^%PDF-/.test(text)) return null;
 
-    // Alcuni generatori mettono invece il totale nel nodo radice /Type /Pages.
-    const counts = [];
-    const pagesTypeRe = /\/Type\s*\/Pages\b/g;
-    let m;
-    while((m = pagesTypeRe.exec(latin1))){
-      const from = Math.max(0, m.index - 1200);
-      const to = Math.min(latin1.length, m.index + 2200);
-      const windowText = latin1.slice(from, to);
-      const cm = /\/Count\s+(\d+)/.exec(windowText);
-      if(cm) counts.push(Number(cm[1]));
+    // 1) PDF classici: le Page sono oggetti indiretti normali.
+    const directPages = uniquePageObjectCount(text);
+    if(directPages > 0) return directPages;
+
+    // 2) PDF moderni: page tree e Page possono vivere dentro Object Stream.
+    const objectMatches = [...text.matchAll(/(\d+)\s+(\d+)\s+obj\b/g)];
+    let bestCount = 0;
+    const objectStreams = [];
+
+    for(let i=0; i<objectMatches.length; i++){
+      const m = objectMatches[i];
+      const start = m.index;
+      const end = i + 1 < objectMatches.length ? objectMatches[i+1].index : text.length;
+      const objText = text.slice(start, end);
+      const counts = [...objText.matchAll(/\/Type\s*\/Pages\b[\s\S]{0,1800}?\/Count\s+(\d+)/g)]
+        .map(x => Number(x[1]))
+        .filter(n => Number.isFinite(n) && n > 0);
+      if(counts.length) bestCount = Math.max(bestCount, ...counts);
+      if(/\/Type\s*\/ObjStm\b/.test(objText)) objectStreams.push({ start, end, objText });
     }
-    const best = counts.filter(n => Number.isFinite(n) && n > 0).sort((a,b)=>b-a)[0];
-    return best || null;
+
+    const decodedStreams = [];
+    for(const os of objectStreams){
+      try{
+        const decoded = await decodePdfObjectStream(bytes, os.start, os.end, os.objText);
+        if(!decoded) continue;
+        const decodedText = bytesToLatin1(decoded);
+        const pageCount = (decodedText.match(/\/Type\s*\/Page(?:\b|[\s\/>])/g) || []).length;
+        if(pageCount > 0) decodedStreams.push({ pageCount, text: decodedText });
+
+        const streamCounts = [...decodedText.matchAll(/\/Type\s*\/Pages\b[\s\S]{0,1800}?\/Count\s+(\d+)/g)]
+          .map(x => Number(x[1]))
+          .filter(n => Number.isFinite(n) && n > 0);
+        if(streamCounts.length) bestCount = Math.max(bestCount, ...streamCounts);
+      }catch(e){
+        console.warn('Object Stream PDF non decodificabile', e);
+      }
+    }
+
+    // 3) Somma le Page trovate negli stream decodificati.
+    const objectStreamPages = decodedStreams.reduce((sum, x) => sum + x.pageCount, 0);
+    if(objectStreamPages > 0) return objectStreamPages;
+
+    // 4) Ultimo fallback: /Count nel page tree. Il valore massimo è normalmente il totale.
+    return bestCount || null;
   }catch(e){
     console.warn('Conteggio PDF offline fallito', e);
     return null;
   }
+}
+
+function bytesToLatin1(bytes){
+  try{ return new TextDecoder('latin1').decode(bytes); }
+  catch(e){
+    let out='';
+    const chunk=0x8000;
+    for(let i=0;i<bytes.length;i+=chunk){
+      out += String.fromCharCode(...bytes.subarray(i, Math.min(bytes.length, i+chunk)));
+    }
+    return out;
+  }
+}
+
+function uniquePageObjectCount(text){
+  const ids = new Set();
+  const re = /(\d+)\s+(\d+)\s+obj\b/g;
+  let m;
+  while((m=re.exec(text))){
+    const start=m.index;
+    const end=text.indexOf('endobj', start);
+    const obj=text.slice(start, end>start?end:Math.min(text.length,start+120000));
+    if(/\/Type\s*\/Page(?:\b|[\s\/>])/.test(obj)) ids.add(`${m[1]} ${m[2]}`);
+  }
+  return ids.size || (text.match(/\/Type\s*\/Page(?:\b|[\s\/>])/g)||[]).length;
+}
+
+async function decodePdfObjectStream(allBytes, objStart, objEnd, objText){
+  if(!/\/Type\s*\/ObjStm\b/.test(objText)) return null;
+  const filters = objText.match(/\/Filter\s*(?:\[([^\]]+)\]|(\/\w+))/);
+  const filterText = filters ? (filters[1] || filters[2] || '') : '';
+  if(filterText && !/\/FlateDecode\b/.test(filterText)) return null;
+
+  const firstMatch = /\/First\s+(\d+)/.exec(objText);
+  if(!firstMatch) return null;
+
+  let dataStart = objText.indexOf('stream');
+  if(dataStart < 0) return null;
+  dataStart += 6;
+
+  if(allBytes[objStart + dataStart] === 13 && allBytes[objStart + dataStart + 1] === 10) dataStart += 2;
+  else if(allBytes[objStart + dataStart] === 10 || allBytes[objStart + dataStart] === 13) dataStart += 1;
+
+  const lengthMatch = /\/Length\s+(\d+)/.exec(objText);
+  let length = lengthMatch ? Number(lengthMatch[1]) : null;
+  if(!(length > 0)){
+    const endStreamRel = objText.indexOf('endstream', dataStart);
+    if(endStreamRel < 0) return null;
+    length = endStreamRel - dataStart;
+  }
+
+  const absoluteStart = objStart + dataStart;
+  const compressed = allBytes.slice(absoluteStart, absoluteStart + length);
+  if(filterText){
+    return await inflatePdfBytes(compressed);
+  }
+  return compressed;
+}
+
+async function inflatePdfBytes(bytes){
+  if(typeof DecompressionStream !== 'function') return null;
+  const ds = new DecompressionStream('deflate');
+  const stream = new Blob([bytes]).stream().pipeThrough(ds);
+  return new Uint8Array(await new Response(stream).arrayBuffer());
 }
 
 function lessonPageCount(lesson){
@@ -5042,9 +5138,9 @@ function setupPWA(){
   // Service worker minimale: cache-first del solo index.html per uso offline dopo il primo caricamento.
   if('serviceWorker' in navigator){
     const swCode = `
-      const CACHE = 'uninotes-v5';
+      const CACHE = 'uninotes-v6';
       self.addEventListener('install', (e) => { self.skipWaiting(); });
-      self.addEventListener('activate', (e) => { self.clients.claim(); });
+      self.addEventListener('activate', (e) => { e.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(k => k.startsWith('uninotes-v') && k !== CACHE).map(k => caches.delete(k)))).then(() => self.clients.claim())); });
       self.addEventListener('fetch', (e) => {
         if(e.request.method !== 'GET' || new URL(e.request.url).origin !== self.location.origin) return;
         e.respondWith(
