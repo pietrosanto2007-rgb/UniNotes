@@ -1154,6 +1154,24 @@ a{ color:inherit; text-decoration:none; }
   #sidebar.collapsed .nav-item.active::before{display:none;}
 }
 
+
+/* ============================================================
+   SEMESTER UI
+   ============================================================ */
+.semester-hero{display:flex;align-items:center;gap:15px;padding:18px 20px;border:1px solid var(--border);border-radius:18px;background:linear-gradient(135deg,var(--surface),var(--surface-2));box-shadow:var(--shadow-sm)}
+.semester-hero-icon{width:42px;height:42px;border-radius:13px;background:var(--accent-soft);color:var(--accent);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.semester-hero-copy{min-width:0;flex:1}.semester-kicker{font-size:10px;text-transform:uppercase;letter-spacing:.07em;font-weight:750;color:var(--text-tertiary)}
+.semester-hero-title{font-size:20px;font-weight:750;letter-spacing:-.025em;margin-top:1px}.semester-hero-sub{font-size:12px;color:var(--text-secondary);margin-top:4px;line-height:1.5}
+.semester-hero-badge,.semester-current-badge,.semester-muted-badge,.semester-archive-chip,.semester-upcoming-chip{font-size:10.5px;font-weight:700;border-radius:999px;padding:5px 9px;white-space:nowrap}
+.semester-hero-badge{background:var(--accent-soft);color:var(--accent)}.semester-current-badge{background:var(--success-soft);color:var(--success)}.semester-muted-badge{background:var(--surface-2);color:var(--text-secondary);border:1px solid var(--border)}
+.semester-section{margin-top:18px}.semester-section-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px}.semester-section-title{font-size:14px;font-weight:720;letter-spacing:-.01em;margin-top:2px}.semester-section-sub{font-size:11.5px;color:var(--text-tertiary);margin-top:2px;line-height:1.45}
+.semester-subject-card{position:relative}.semester-subject-card.is-previous{opacity:.88}.semester-subject-card.is-upcoming{opacity:.94}.semester-archive-chip{display:inline-flex;gap:4px;align-items:center;background:var(--surface-2);color:var(--text-tertiary)}
+.semester-upcoming-chip{background:var(--accent-soft);color:var(--accent)}.semester-now-dot{width:7px;height:7px;border-radius:50%;background:var(--success);box-shadow:0 0 0 4px var(--success-soft);margin:5px 5px 0 0}
+.field-hint{font-size:10.5px;color:var(--text-tertiary);margin-top:5px;line-height:1.4}
+.previous-semester-section{padding-top:4px}.upcoming-semester-section{padding-top:4px}
+@media (max-width:700px){.semester-hero{padding:15px;border-radius:18px;align-items:flex-start}.semester-hero-title{font-size:18px}.semester-hero-sub{font-size:11px}.semester-hero-badge{align-self:flex-start}.semester-section-head{align-items:flex-start}.semester-section-sub{max-width:260px}.semester-subject-card .subject-meta{white-space:normal}}
+@media (min-width:701px){.semester-hero{padding:20px 22px}.semester-hero-title{font-size:22px}.semester-section{margin-top:22px}.semester-subject-card{min-height:176px}}
+
 </style>
 </head>
 <body>
@@ -2071,6 +2089,10 @@ function fmtMoney(value){
   if(value == null || !isFinite(value)) return '—';
   return new Intl.NumberFormat('it-IT', { style:'currency', currency:'EUR', minimumFractionDigits:2, maximumFractionDigits:12, useGrouping:false }).format(value);
 }
+function fmtStatsMoney(value){
+  if(value == null || !isFinite(value)) return '—';
+  return new Intl.NumberFormat('it-IT', { style:'currency', currency:'EUR', minimumFractionDigits:2, maximumFractionDigits:2, useGrouping:false }).format(value);
+}
 function fmtNumber(value){
   if(value == null || !isFinite(value)) return '—';
   return new Intl.NumberFormat('it-IT').format(value);
@@ -2383,19 +2405,19 @@ const StatisticsView = {
     const pages = stats.printedPages;
     const cost = stats.totalPrintCost;
     const live = AppState.getLivePrintSettings();
-    const formula = stats.printedLessonsWithKnownPages ? `${fmtNumber(pages)} facciate × ${fmtMoney(live.facePrice)} + ${fmtNumber(stats.sheets)} fogli × ${fmtMoney(live.paperPrice)}` : '';
+    const formula = stats.printedLessonsWithKnownPages ? `${fmtNumber(pages)} facciate × ${fmtStatsMoney(live.facePrice)} + ${fmtNumber(stats.sheets)} fogli × ${fmtStatsMoney(live.paperPrice)}` : '';
     return `<div class="stats-card" id="${compact?'':'printing-card'}">
-      <div class="stats-card-head"><div><div class="stats-card-title">Costo di stampa</div><div class="stats-card-sub">${live.duplex ? 'Fronte-retro attivo' : 'Stampa solo fronte'} · carta ${fmtMoney(live.paperPrice)} / foglio</div></div><span class="stat-pulse">${icon('print',12)} ${fmtNumber(stats.printed)} stampat${stats.printed===1?'a':'e'}</span></div>
-      <div class="print-cost-total">${known ? fmtMoney(cost) : '—'}</div>
+      <div class="stats-card-head"><div><div class="stats-card-title">Costo di stampa</div><div class="stats-card-sub">${live.duplex ? 'Fronte-retro attivo' : 'Stampa solo fronte'} · carta ${fmtStatsMoney(live.paperPrice)} / foglio</div></div><span class="stat-pulse">${icon('print',12)} ${fmtNumber(stats.printed)} stampat${stats.printed===1?'a':'e'}</span></div>
+      <div class="print-cost-total">${known ? fmtStatsMoney(cost) : '—'}</div>
       <div class="print-cost-meta">
         <span class="print-cost-chip"><b>${fmtNumber(pages)}</b> facciate</span>
         <span class="print-cost-chip"><b>${stats.sheetsKnownFor ? fmtNumber(stats.sheets) : '—'}</b> fogli</span>
-        <span class="print-cost-chip"><b>${fmtMoney(stats.printingFaceCost)}</b> stampa</span>
-        <span class="print-cost-chip"><b>${fmtMoney(stats.paperCost)}</b> carta</span>
-        <span class="print-cost-chip"><b>${stats.printedLessonsWithKnownPages ? fmtMoney(stats.avgPrintCost) : '—'}</b> media / lezione</span>
+        <span class="print-cost-chip"><b>${fmtStatsMoney(stats.printingFaceCost)}</b> stampa</span>
+        <span class="print-cost-chip"><b>${fmtStatsMoney(stats.paperCost)}</b> carta</span>
+        <span class="print-cost-chip"><b>${stats.printedLessonsWithKnownPages ? fmtStatsMoney(stats.avgPrintCost) : '—'}</b> media / lezione</span>
         ${AppState.getLivePrintSettings().duplex ? `<span class="print-cost-chip"><b>${stats.sheetsKnownFor ? fmtNumber(stats.sheetsSavedByDuplex) : '—'}</b> fogli risparmiati vs solo fronte</span>` : ''}
       </div>
-      ${stats.printedLessonsWithKnownPages ? `<div class="muted" style="font-size:11px;margin-top:9px;font-family:var(--mono);">${esc(formula)} = ${fmtMoney(cost)}</div>` : ''}${stats.estimatedCostMissingPages ? `<div class="muted" style="font-size:10.5px; margin-top:9px;">${icon('alert',11)} ${stats.estimatedCostMissingPages} ${plural(stats.estimatedCostMissingPages,'lezione stampata','lezioni stampate')} senza conteggio pagine PDF: il costo non è incluso finché il documento principale non è leggibile come PDF.</div>` : ''}
+      ${stats.printedLessonsWithKnownPages ? `<div class="muted" style="font-size:11px;margin-top:9px;font-family:var(--mono);">${esc(formula)} = ${fmtStatsMoney(cost)}</div>` : ''}${stats.estimatedCostMissingPages ? `<div class="muted" style="font-size:10.5px; margin-top:9px;">${icon('alert',11)} ${stats.estimatedCostMissingPages} ${plural(stats.estimatedCostMissingPages,'lezione stampata','lezioni stampate')} senza conteggio pagine PDF: il costo non è incluso finché il documento principale non è leggibile come PDF.</div>` : ''}
     </div>`;
   }
 };
@@ -2505,6 +2527,7 @@ const SetupScreen = {
       if(!AppState.isMobileFolder) await SettingsManager.rememberFolder(handle);
       const lib = await LibraryScanner.scan(handle);
       AppState.library = lib;
+      lib.subjects.forEach(ensureSubjectSemester);
       const totalLessons = lib.subjects.reduce((n,s)=>n+s.lessons.length,0);
       finishBoot();
       if(lib.subjects.length){
@@ -2936,7 +2959,7 @@ const StatisticsPage = {
             <div class="stat-pill"><div class="stat-pill-num">${st.sheetsKnown ? fmtNumber(st.sheets) : '—'}</div><div class="stat-pill-label">Fogli usati</div></div>
             <div class="stat-pill"><div class="stat-pill-num">${fmtNumber(st.files)}</div><div class="stat-pill-label">File</div></div>
             <div class="stat-pill"><div class="stat-pill-num">${st.pagesKnownFor ? fmtNumber(st.pages) : '—'}</div><div class="stat-pill-label">Pagine PDF</div></div>
-            <div class="stat-pill"><div class="stat-pill-num" style="color:var(--accent)">${st.printed===0 || st.printedLessonsWithKnownPages>0 ? fmtMoney(st.totalPrintCost) : '—'}</div><div class="stat-pill-label">Costo totale stampa</div></div>
+            <div class="stat-pill"><div class="stat-pill-num" style="color:var(--accent)">${st.printed===0 || st.printedLessonsWithKnownPages>0 ? fmtStatsMoney(st.totalPrintCost) : '—'}</div><div class="stat-pill-label">Costo totale stampa</div></div>
           </div>
 
           <div class="stats-dashboard-grid">
@@ -2975,7 +2998,7 @@ const StatisticsPage = {
                 <div class="metric-mini"><div class="metric-mini-value">${st.printedPages ? fmtNumber(st.printedPages) : '—'}</div><div class="metric-mini-label">Facciate stampate</div></div>
                 <div class="metric-mini"><div class="metric-mini-value">${st.sheetsKnown ? fmtNumber(st.sheets) : '—'}</div><div class="metric-mini-label">Fogli effettivi</div></div>
                 <div class="metric-mini"><div class="metric-mini-value">${AppState.getLivePrintSettings().duplex && st.sheetsKnown ? fmtNumber(st.sheetsSavedByDuplex) : '0'}</div><div class="metric-mini-label">Fogli risparmiati</div></div>
-                <div class="metric-mini"><div class="metric-mini-value">${st.printedLessonsWithKnownPages ? fmtMoney(st.avgPrintCost) : '—'}</div><div class="metric-mini-label">Costo medio / lezione</div></div>
+                <div class="metric-mini"><div class="metric-mini-value">${st.printedLessonsWithKnownPages ? fmtStatsMoney(st.avgPrintCost) : '—'}</div><div class="metric-mini-label">Costo medio / lezione</div></div>
               </div>
             </div>
           </div>
@@ -2987,7 +3010,7 @@ const StatisticsPage = {
               </tr></thead>
               <tbody>${subjectRows.map(({subject,ss})=>`<tr data-open-subject="${esc(subject.name)}" style="border-bottom:1px solid var(--border);cursor:pointer;">
                 <td style="padding:10px 7px;font-weight:650;"><span class="subject-dot" style="display:inline-block;width:8px;height:8px;margin:0 7px 0 0;vertical-align:middle;background:${subject.color}"></span>${esc(subject.name)}</td>
-                <td style="padding:10px 7px;">${fmtNumber(ss.lessons)}</td><td style="padding:10px 7px;">${fmtNumber(ss.complete)}</td><td style="padding:10px 7px;">${fmtNumber(ss.highlighted)}</td><td style="padding:10px 7px;">${fmtNumber(ss.printed)}</td><td style="padding:10px 7px;">${ss.pagesKnown ? fmtNumber(ss.pages) : '—'}</td><td style="padding:10px 7px;">${ss.sheetsKnown ? fmtNumber(ss.sheets) : '—'}</td><td style="padding:10px 7px;text-align:right;font-weight:700;">${ss.printed===0 || ss.printedLessonsWithKnownPages>0 ? fmtMoney(ss.totalPrintCost) : '—'}</td>
+                <td style="padding:10px 7px;">${fmtNumber(ss.lessons)}</td><td style="padding:10px 7px;">${fmtNumber(ss.complete)}</td><td style="padding:10px 7px;">${fmtNumber(ss.highlighted)}</td><td style="padding:10px 7px;">${fmtNumber(ss.printed)}</td><td style="padding:10px 7px;">${ss.pagesKnown ? fmtNumber(ss.pages) : '—'}</td><td style="padding:10px 7px;">${ss.sheetsKnown ? fmtNumber(ss.sheets) : '—'}</td><td style="padding:10px 7px;text-align:right;font-weight:700;">${ss.printed===0 || ss.printedLessonsWithKnownPages>0 ? fmtStatsMoney(ss.totalPrintCost) : '—'}</td>
               </tr>`).join('') || `<tr><td colspan="8" style="padding:16px;color:var(--text-tertiary);">Nessuna materia.</td></tr>`}</tbody>
             </table></div>
           </div>
@@ -3147,63 +3170,194 @@ const LessonRow = {
 };
 
 /* ============================================================
+   SEMESTERS ENGINE — calendario Politecnico di Milano
+   ============================================================ */
+const POLIMI_ACADEMIC_CALENDARS = {
+  '2026/2027': {
+    label: 'A.A. 2026/2027',
+    first:  { start:'2026-09-14', teachingEnd:'2026-12-23', examEnd:'2027-02-20' },
+    second: { start:'2027-02-22', teachingEnd:'2027-06-05', examEnd:'2027-07-24' }
+  }
+};
+function parseISODateLocal(value){
+  if(value instanceof Date && !isNaN(value)) return new Date(value.getFullYear(), value.getMonth(), value.getDate());
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(value||''));
+  if(!m) return null;
+  const d = new Date(Number(m[1]), Number(m[2])-1, Number(m[3]));
+  return isNaN(d) ? null : d;
+}
+function academicYearForDate(date=new Date()){
+  const d = date instanceof Date ? date : new Date(date);
+  const y = d.getFullYear();
+  const month = d.getMonth()+1;
+  return month >= 9 ? `${y}/${y+1}` : `${y-1}/${y}`;
+}
+function getAcademicCalendar(year=academicYearForDate()){
+  return POLIMI_ACADEMIC_CALENDARS[year] || POLIMI_ACADEMIC_CALENDARS['2026/2027'];
+}
+function semesterDateRange(year, semester){
+  const cal = getAcademicCalendar(year);
+  return semester === '2' ? cal.second : cal.first;
+}
+function semesterForDate(date, year=academicYearForDate()){
+  const d = date instanceof Date ? date : new Date(date);
+  if(isNaN(d)) return null;
+  const cal = getAcademicCalendar(year);
+  const t = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+  const secondStart = parseISODateLocal(cal.second.start).getTime();
+  const firstStart = parseISODateLocal(cal.first.start).getTime();
+  if(t >= firstStart && t < secondStart) return '1';
+  if(t >= secondStart) return '2';
+  return null;
+}
+function getCurrentSemesterContext(date=new Date()){
+  const academicYear = academicYearForDate(date);
+  const calendar = getAcademicCalendar(academicYear);
+  const d = date instanceof Date ? date : new Date(date);
+  const t = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+  const semester = t >= parseISODateLocal(calendar.second.start).getTime() ? '2' : '1';
+  return { academicYear, calendar, semester, range: semester === '2' ? calendar.second : calendar.first };
+}
+function normalizeSemester(value){
+  const v = String(value ?? '').trim().toLowerCase();
+  if(['1','1°','primo','primo semestre','first','first semester'].includes(v)) return '1';
+  if(['2','2°','secondo','secondo semestre','second','second semester'].includes(v)) return '2';
+  return null;
+}
+function semesterLabel(semester){ return semester === '2' ? '2° semestre' : '1° semestre'; }
+function formatSemesterDates(year, semester){
+  const r = semesterDateRange(year, semester);
+  const f = d => new Intl.DateTimeFormat('it-IT',{day:'2-digit',month:'2-digit',year:'numeric'}).format(parseISODateLocal(d));
+  return `${f(r.start)} → esami fino al ${f(r.examEnd)}`;
+}
+function inferSubjectSemester(lessons){
+  const counts = {'1':0,'2':0};
+  for(const l of lessons || []){
+    if(!l?.date) continue;
+    const ly = academicYearForDate(l.date);
+    const sem = semesterForDate(l.date, ly);
+    if(sem && counts[sem] != null) counts[sem]++;
+  }
+  if(counts['1'] || counts['2']) return counts['2'] > counts['1'] ? '2' : '1';
+  return getCurrentSemesterContext().semester;
+}
+function ensureSubjectSemester(subject){
+  if(!subject) return;
+  const datedLesson = (subject.lessons || []).find(l => l.date);
+  subject.academicYear = subject.academicYear || (datedLesson ? academicYearForDate(datedLesson.date) : getCurrentSemesterContext().academicYear);
+  subject.semester = normalizeSemester(subject.semester) || inferSubjectSemester(subject.lessons || []);
+}
+function subjectIsCurrent(subject){
+  ensureSubjectSemester(subject);
+  const ctx = getCurrentSemesterContext();
+  return subject.academicYear === ctx.academicYear && subject.semester === ctx.semester;
+}
+function visibleSubjectGroups(subjects){
+  const ctx = getCurrentSemesterContext();
+  const current = [], previous = [], upcoming = [];
+  (subjects || []).forEach(s=>{
+    ensureSubjectSemester(s);
+    if(s.academicYear === ctx.academicYear && s.semester === ctx.semester){
+      current.push(s);
+    } else if(s.academicYear === ctx.academicYear && s.semester === (ctx.semester === '2' ? '1' : '2')){
+      if(ctx.semester === '2') previous.push(s); else upcoming.push(s);
+    } else {
+      previous.push(s);
+    }
+  });
+  return { ctx, current, previous, upcoming };
+}
+async function persistSubjectMeta(subject){
+  if(!subject?.handle) return;
+  try{
+    const metaHandle = await FileSystemManager.getOrCreateFile(subject.handle, '.subject.json');
+    let existing = {};
+    try{ existing = JSON.parse(await FileSystemManager.readTextFile(metaHandle)); }catch(e){}
+    existing.semester = normalizeSemester(subject.semester) || getCurrentSemesterContext().semester;
+    existing.academicYear = subject.academicYear || getCurrentSemesterContext().academicYear;
+    existing.docente = subject.docente || '';
+    existing.codice = subject.codice || '';
+    existing.aula = subject.aula || '';
+    existing.color = subject.color || pickColor(subject.name);
+    await FileSystemManager.writeTextFile(metaHandle, JSON.stringify(existing, null, 2));
+  }catch(e){ console.warn('Salvataggio semestre materia fallito', e); }
+}
+
+/* ============================================================
    SUBJECTS PAGE
    ============================================================ */
 const SubjectsPage = {
   render(){
     TopbarView.render(`<b>Materie</b>`, `<button class="btn btn-primary btn-sm" id="btn-new-subject">${icon('plus',14)} Nuova materia</button>`);
-    const subjects = AppState.library.subjects;
+    const groups = visibleSubjectGroups(AppState.library.subjects);
     const content = document.getElementById('content');
     content.innerHTML = `
       <div class="page">
-        <div class="section-head">
+        <div class="semester-hero">
+          <div class="semester-hero-icon">${icon('calendar',22)}</div>
+          <div class="semester-hero-copy">
+            <div class="semester-kicker">Periodo attivo · ${esc(groups.ctx.academicYear)}</div>
+            <div class="semester-hero-title">${semesterLabel(groups.ctx.semester)}</div>
+            <div class="semester-hero-sub">Lezioni dal ${esc(formatSemesterDates(groups.ctx.academicYear, groups.ctx.semester).split(' → ')[0])}. Le materie restano attive fino alla fine della sessione d'esame del semestre.</div>
+          </div>
+          <div class="semester-hero-badge">${groups.current.length} attiv${groups.current.length===1?'a':'e'}</div>
+        </div>
+        <div class="section-head" style="margin-top:22px;">
           <div>
             <div class="section-title">Materie</div>
-            <div class="section-sub">${subjects.length} material${subjects.length===1?'e':'e'} nella tua libreria</div>
+            <div class="section-sub">${groups.current.length} nel semestre corrente${groups.previous.length ? ` · ${groups.previous.length} nei semestri precedenti` : ''}</div>
           </div>
         </div>
-        ${ subjects.length === 0 ? `
+        ${groups.current.length ? `
+          <section class="semester-section">
+            <div class="semester-section-head"><div><div class="semester-kicker">Ora</div><div class="semester-section-title">${semesterLabel(groups.ctx.semester)}</div></div><span class="semester-current-badge">In corso</span></div>
+            <div class="grid grid-subjects">${groups.current.map(s=>this.card(s,'current')).join('')}</div>
+          </section>` : `
           <div class="empty-state card">
             ${icon('subject',38)}
-            <div class="empty-state-title">Nessuna materia</div>
-            <div class="empty-state-sub">Crea la tua prima materia per iniziare a organizzare lezioni e appunti.</div>
+            <div class="empty-state-title">Nessuna materia nel semestre corrente</div>
+            <div class="empty-state-sub">Assegna alle materie il semestre corretto tramite Modifica materia oppure crea una nuova materia.</div>
             <button class="btn btn-primary" id="empty-new-subject" style="margin-top:6px;">${icon('plus',14)} Nuova materia</button>
-          </div>
-        ` : `
-          <div class="grid grid-subjects">
-            ${subjects.map(s => this.card(s)).join('')}
-          </div>
-        `}
+          </div>`}
+        ${groups.upcoming.length ? `
+          <section class="semester-section upcoming-semester-section">
+            <div class="semester-section-head"><div><div class="semester-kicker">In arrivo</div><div class="semester-section-title">Prossimo semestre</div><div class="semester-section-sub">Queste materie diventeranno principali all'avvio del prossimo semestre.</div></div><span class="semester-muted-badge">${groups.upcoming.length}</span></div>
+            <div class="grid grid-subjects">${groups.upcoming.map(s=>this.card(s,'upcoming')).join('')}</div>
+          </section>` : ''}
+        ${groups.previous.length ? `
+          <section class="semester-section previous-semester-section">
+            <div class="semester-section-head"><div><div class="semester-kicker">Archivio</div><div class="semester-section-title">Semestri precedenti</div><div class="semester-section-sub">Le materie concluse restano sempre accessibili.</div></div><span class="semester-muted-badge">${groups.previous.length} material${groups.previous.length===1?'e':'i'}</span></div>
+            <div class="grid grid-subjects">${groups.previous.map(s=>this.card(s,'previous')).join('')}</div>
+          </section>` : ''}
       </div>
     `;
-    const nb = document.getElementById('btn-new-subject');
-    if(nb) nb.addEventListener('click', () => SubjectFormModal.open());
-    const enb = document.getElementById('empty-new-subject');
-    if(enb) enb.addEventListener('click', () => SubjectFormModal.open());
-    content.querySelectorAll('[data-open-subject]').forEach(elm => {
-      elm.addEventListener('click', () => Router.go('subject', { subjectName: elm.dataset.openSubject }));
-    });
+    document.getElementById('btn-new-subject')?.addEventListener('click', () => SubjectFormModal.open());
+    document.getElementById('empty-new-subject')?.addEventListener('click', () => SubjectFormModal.open());
+    content.querySelectorAll('[data-open-subject]').forEach(elm => elm.addEventListener('click', () => Router.go('subject',{subjectName:elm.dataset.openSubject})));
   },
-
-  card(s){
+  card(s,state='current'){
+    ensureSubjectSemester(s);
     const stats = subjectStats(s);
+    const previous = state === 'previous';
+    const upcoming = state === 'upcoming';
     return `
-      <div class="card card-hover subject-card" data-open-subject="${esc(s.name)}">
+      <div class="card card-hover subject-card semester-subject-card ${previous?'is-previous':''} ${upcoming?'is-upcoming':''}" data-open-subject="${esc(s.name)}">
         <div class="subject-card-top">
-          <div style="display:flex; gap:9px; align-items:flex-start; min-width:0;">
+          <div style="display:flex;gap:9px;align-items:flex-start;min-width:0;">
             <div class="subject-dot" style="background:${s.color}"></div>
             <div style="min-width:0;">
               <div class="subject-name">${esc(s.name)}</div>
-              <div class="subject-meta">${[s.docente, s.codice].filter(Boolean).join(' · ') || 'Nessun dettaglio'}</div>
+              <div class="subject-meta">${semesterLabel(s.semester)} · ${esc(s.academicYear||'')}${[s.docente,s.codice].filter(Boolean).length?' · '+[s.docente,s.codice].filter(Boolean).join(' · '):''}</div>
             </div>
           </div>
+          ${previous?`<span class="semester-archive-chip">${icon('clock',11)} Precedente</span>`:upcoming?`<span class="semester-upcoming-chip">In arrivo</span>`:`<span class="semester-now-dot"></span>`}
         </div>
         <div class="subject-stats">
           <div><div class="subject-stat-num">${stats.total}</div><div class="subject-stat-label">Lezioni</div></div>
           <div><div class="subject-stat-num" style="color:var(--success)">${stats.complete}</div><div class="subject-stat-label">Complete</div></div>
           <div><div class="subject-stat-num">${stats.pct}%</div><div class="subject-stat-label">Completamento</div></div>
         </div>
-        <div class="progress-track"><div class="progress-fill" style="width:${stats.pct}%; background:${s.color}"></div></div>
+        <div class="progress-track"><div class="progress-fill" style="width:${stats.pct}%;background:${s.color}"></div></div>
       </div>
     `;
   }
@@ -3221,6 +3375,7 @@ const SubjectEditModal = {
           <div class="field"><label>Codice corso</label><input id="f-codice" value="${esc(s.codice||'')}"></div>
         </div>
         <div class="field"><label>Aula</label><input id="f-aula" value="${esc(s.aula||'')}"></div>
+        <div class="field"><label>Semestre</label><select id="f-semester"><option value="1" ${(s.semester||'1')==='1'?'selected':''}>1° semestre</option><option value="2" ${s.semester==='2'?'selected':''}>2° semestre</option></select><div class="field-hint">${esc(s.academicYear || getCurrentSemesterContext().academicYear)} · ${esc(formatSemesterDates(s.academicYear || getCurrentSemesterContext().academicYear, s.semester || getCurrentSemesterContext().semester))}</div></div>
         <div class="field"><label>Colore</label>
           <div style="display:flex; gap:8px;">
             ${this.colors.map(c => `<div data-color="${c}" style="width:26px; height:26px; border-radius:50%; background:${c}; cursor:pointer; border:2px solid ${s.color===c?'var(--text)':'transparent'};"></div>`).join('')}
@@ -3253,8 +3408,9 @@ const SubjectEditModal = {
         s.codice = m.querySelector('#f-codice').value.trim();
         s.aula = m.querySelector('#f-aula').value.trim();
         s.color = selectedColor;
-        const metaHandle = await FileSystemManager.getOrCreateFile(s.handle, '.subject.json');
-        await FileSystemManager.writeTextFile(metaHandle, JSON.stringify({ docente:s.docente, codice:s.codice, aula:s.aula, color:s.color }, null, 2));
+        s.semester = normalizeSemester(m.querySelector('#f-semester')?.value) || getCurrentSemesterContext().semester;
+        s.academicYear = s.academicYear || getCurrentSemesterContext().academicYear;
+        await persistSubjectMeta(s);
         ModalManager.close();
         Toast.success('Materia aggiornata');
         Router.render();
@@ -3294,6 +3450,7 @@ const SubjectFormModal = {
           <div class="field"><label>Codice corso</label><input id="f-codice" placeholder="Facoltativo"></div>
         </div>
         <div class="field"><label>Aula</label><input id="f-aula" placeholder="Facoltativo"></div>
+        <div class="field"><label>Semestre</label><select id="f-semester"><option value="1" ${getCurrentSemesterContext().semester==='1'?'selected':''}>1° semestre</option><option value="2" ${getCurrentSemesterContext().semester==='2'?'selected':''}>2° semestre</option></select><div class="field-hint">Preimpostato sul semestre corrente.</div></div>
       </div>
       <div class="modal-footer">
         <button class="btn" id="m-cancel">Annulla</button>
@@ -3313,11 +3470,13 @@ const SubjectFormModal = {
     if(!AppState.dirHandle){ Toast.error('Nessuna cartella collegata.'); return; }
     try{
       const handle = await FileSystemManager.createSubDir(AppState.dirHandle, name);
-      const meta = { docente: m.querySelector('#f-docente').value.trim(), codice: m.querySelector('#f-codice').value.trim(), aula: m.querySelector('#f-aula').value.trim() };
+      const semester = normalizeSemester(m.querySelector('#f-semester')?.value) || getCurrentSemesterContext().semester;
+      const academicYear = getCurrentSemesterContext().academicYear;
+      const meta = { docente: m.querySelector('#f-docente').value.trim(), codice: m.querySelector('#f-codice').value.trim(), aula: m.querySelector('#f-aula').value.trim(), semester, academicYear };
       const metaHandle = await FileSystemManager.getOrCreateFile(handle, '.subject.json');
       await FileSystemManager.writeTextFile(metaHandle, JSON.stringify(meta, null, 2));
       AppState.library.subjects.push({
-        id: 'subj_'+name, name, handle, docente: meta.docente, codice: meta.codice, aula: meta.aula, color: pickColor(name), lessons: []
+        id: 'subj_'+name, name, handle, docente: meta.docente, codice: meta.codice, aula: meta.aula, color: pickColor(name), semester: meta.semester, academicYear: meta.academicYear, lessons: []
       });
       AppState.library.subjects.sort((a,b)=>a.name.localeCompare(b.name,'it'));
       AppState.logActivity(name, 'Materia creata');
@@ -3353,7 +3512,7 @@ const SubjectPage = {
           <div class="subject-dot" style="width:12px;height:12px;background:${s.color}"></div>
           <div class="section-title">${esc(s.name)}</div>
         </div>
-        <div class="section-sub">${[s.docente && 'Docente: '+s.docente, s.codice && 'Codice: '+s.codice, s.aula && 'Aula: '+s.aula].filter(Boolean).join(' · ') || 'Nessun dettaglio aggiuntivo'}</div>
+        <div class="section-sub">${[semesterLabel(s.semester), s.academicYear, s.docente && 'Docente: '+s.docente, s.codice && 'Codice: '+s.codice, s.aula && 'Aula: '+s.aula].filter(Boolean).join(' · ') || 'Nessun dettaglio aggiuntivo'}</div>
 
         <div style="margin:20px 0 18px;">${StatisticsView.printingCard(statisticsForSubject(s), true)}</div>
 
@@ -5929,7 +6088,7 @@ const SettingsPage = {
       const preview = PrintCostEngine.total(allLessons, previewSettings);
       const sheets = preview.sheets;
       const cost = preview.totalCost;
-      printPreview.innerHTML = `<div style="font-size:11px;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:.03em;font-weight:650;">Anteprima costo totale libreria</div><div style="font-size:22px;font-weight:750;margin-top:2px;">${fmtMoney(cost)}</div><div class="muted" style="font-size:11.5px;margin-top:2px;">${fmtNumber(preview.printed)} lezioni stampate · ${fmtNumber(preview.pages)} facciate · ${fmtNumber(sheets)} fogli · ${fmtMoney(facePrice)} / facciata · fronte-retro calcolato per lezione</div>`;
+      printPreview.innerHTML = `<div style="font-size:11px;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:.03em;font-weight:650;">Anteprima costo totale libreria</div><div style="font-size:22px;font-weight:750;margin-top:2px;">${fmtStatsMoney(cost)}</div><div class="muted" style="font-size:11.5px;margin-top:2px;">${fmtNumber(preview.printed)} lezioni stampate · ${fmtNumber(preview.pages)} facciate · ${fmtNumber(sheets)} fogli · ${fmtMoney(facePrice)} / facciata · fronte-retro calcolato per lezione</div>`;
     };
     printPriceInput?.addEventListener('input', renderPrintPreview);
     printDuplexInput?.addEventListener('change', renderPrintPreview);
