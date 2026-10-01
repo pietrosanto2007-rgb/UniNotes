@@ -789,7 +789,7 @@ const AppState = {
   sidebarSectionsOpen: {},
   audioObjectUrls: new Map(),
   rootAbsolutePath: '', // percorso POSIX assoluto reale della cartella collegata (per "Apri nel Finder")
-  printSettings: { facePrice: 0.05, duplex: false, paperPrice: 0.01 },
+  printSettings: { facePriceCents: 5, facePrice: 0.05, duplex: false, paperPriceCents: 1, paperPrice: 0.01 },
   printSettingsRevision: 0,
 
   init(){
@@ -799,33 +799,56 @@ const AppState = {
     this.rootAbsolutePath = localStorage.getItem('uninotes.rootAbsolutePath') || '';
     try{
       const raw = JSON.parse(localStorage.getItem('uninotes.printSettings') || 'null');
-      if(raw && typeof raw === 'object'){
-        this.printSettings = this.normalizePrintSettings(raw);
-        // Riscrive il formato canonico, così eventuali vecchi valori come "0,05" non possono più propagarsi nel motore dei costi.
-        localStorage.setItem('uninotes.printSettings', JSON.stringify(this.printSettings));
-      }
-    }catch(e){}
-    this.printSettings = this.normalizePrintSettings(this.printSettings);
+      this.printSettings = this.normalizePrintSettings(raw || this.printSettings);
+      localStorage.setItem('uninotes.printSettings', JSON.stringify(this.printSettings));
+    }catch(e){
+      this.printSettings = this.normalizePrintSettings(this.printSettings);
+    }
     this.applyTheme();
   },
+
   normalizePrintPrice(value, fallback=0.05){
-    let raw = value;
-    if(typeof raw === 'string'){
-      raw = raw.trim().replace(/€/g,'').replace(/\s/g,'');
-      if(raw.includes(',') && raw.includes('.')) raw = raw.replace(/\./g,'').replace(',', '.');
-      else raw = raw.replace(',', '.');
-    }
+    if(typeof value === 'number' && Number.isFinite(value) && value >= 0) return value;
+    let raw = String(value ?? '').trim().replace(/€/g,'').replace(/\s/g,'');
+    if(!raw) return fallback;
+    // Supporta 0,05 / 0.05 / 5 (interpretiamo sempre il valore come euro).
+    if(raw.includes(',') && raw.includes('.')) raw = raw.replace(/\./g,'').replace(',','.');
+    else raw = raw.replace(',','.');
     const n = Number(raw);
     return Number.isFinite(n) && n >= 0 ? n : fallback;
   },
+
+  eurosToCents(value, fallbackCents=5){
+    const n = this.normalizePrintPrice(value, fallbackCents/100);
+    return Math.max(0, Math.round(n * 100));
+  },
+
   normalizePrintSettings(raw){
     const source = raw && typeof raw === 'object' ? raw : {};
+    // Migrazione esplicita: nelle versioni precedenti poteva esistere facePriceCents=0
+    // mentre facePrice conteneva il valore corretto. Le vecchie preferenze usano quindi facePrice.
+    const isV2 = Number(source.schemaVersion) >= 2;
+    let facePriceCents;
+    if(isV2 && Number.isFinite(Number(source.facePriceCents))){
+      facePriceCents = Math.round(Number(source.facePriceCents));
+    }else if(Object.prototype.hasOwnProperty.call(source, 'facePrice')){
+      facePriceCents = this.eurosToCents(source.facePrice, 5);
+    }else if(Number.isFinite(Number(source.facePriceCents))){
+      facePriceCents = Math.round(Number(source.facePriceCents));
+    }else{
+      facePriceCents = 5;
+    }
+    if(facePriceCents < 0) facePriceCents = 0;
     return {
-      facePrice: this.normalizePrintPrice(source.facePrice, 0.05),
+      schemaVersion: 2,
+      facePriceCents,
+      facePrice: facePriceCents / 100,
       duplex: source.duplex === true || source.duplex === 'true' || source.duplex === 1,
+      paperPriceCents: 1,
       paperPrice: 0.01
     };
   },
+
   getLivePrintSettings(){
     try{
       const raw = JSON.parse(localStorage.getItem('uninotes.printSettings') || 'null');
@@ -833,15 +856,17 @@ const AppState = {
     }catch(e){}
     return this.normalizePrintSettings(this.printSettings);
   },
+
   savePrintSettings(next){
-    const facePrice = this.normalizePrintPrice(next && next.facePrice, this.printSettings.facePrice);
-    const duplex = typeof next?.duplex === 'boolean' ? next.duplex : this.printSettings.duplex;
-    this.printSettings = this.normalizePrintSettings({ facePrice, duplex });
+    const current = this.getLivePrintSettings();
+    const facePriceCents = next && Number.isFinite(Number(next.facePriceCents))
+      ? Math.max(0, Math.round(Number(next.facePriceCents)))
+      : this.eurosToCents(next && next.facePrice, current.facePriceCents);
+    const duplex = typeof next?.duplex === 'boolean' ? next.duplex : current.duplex;
+    this.printSettings = this.normalizePrintSettings({ facePriceCents, duplex });
     this.printSettingsRevision++;
     localStorage.setItem('uninotes.printSettings', JSON.stringify(this.printSettings));
-    // Forza il ricalcolo immediato di tutte le metriche di stampa.
     window.dispatchEvent(new CustomEvent('uninotes:print-settings-changed', { detail: { ...this.printSettings } }));
-    setTimeout(() => { try { Router.render(); } catch (e) { console.warn('Rerender costi stampa fallito', e); } }, 0);
   },
   setRootAbsolutePath(p){
     this.rootAbsolutePath = (p || '').trim();
@@ -1464,29 +1489,58 @@ async function inflatePdfBytes(bytes){
 function lessonPageCount(lesson){
   return (lesson && lesson.mainFile && lesson.mainFile.kind === 'pdf' && typeof lesson.mainFilePages === 'number' && isFinite(lesson.mainFilePages)) ? lesson.mainFilePages : null;
 }
+const PrintCostEngine = {
+  getSettings(){
+    return AppState.getLivePrintSettings();
+  },
+  lesson(lesson){
+    const settings = this.getSettings();
+    const pages = lessonPageCount(lesson);
+    if(!lesson || lesson.printed !== true) return { printed:false, known:pages != null, pages, sheets:0, faceCostCents:0, paperCostCents:0, totalCostCents:0, faceCost:0, paperCost:0, totalCost:0 };
+    if(pages == null) return { printed:true, known:false, pages:null, sheets:null, faceCostCents:null, paperCostCents:null, totalCostCents:null, faceCost:null, paperCost:null, totalCost:null };
+    const calc = calculatePrintCost(pages, settings, settings.duplex, settings);
+    return calc ? { printed:true, known:true, ...calc } : { printed:true, known:false, pages, sheets:null, faceCostCents:null, paperCostCents:null, totalCostCents:null, faceCost:null, paperCost:null, totalCost:null };
+  },
+  total(lessons){
+    const settings = this.getSettings();
+    let printed=0, pages=0, sheets=0, faceCostCents=0, paperCostCents=0, totalCostCents=0, knownPrinted=0, missing=0;
+    for(const lesson of (lessons||[])){
+      if(lesson.printed !== true) continue;
+      printed++;
+      const result = this.lesson(lesson);
+      if(!result.known){ missing++; continue; }
+      knownPrinted++; pages += result.pages; sheets += result.sheets;
+      faceCostCents += result.faceCostCents; paperCostCents += result.paperCostCents; totalCostCents += result.totalCostCents;
+    }
+    return { settings, printed, knownPrinted, missing, pages, sheets, faceCostCents, paperCostCents, totalCostCents, faceCost:faceCostCents/100, paperCost:paperCostCents/100, totalCost:totalCostCents/100 };
+  }
+};
+
 function calculatePrintCost(pages, facePrice, duplex, paperPrice=0.01){
-  const p = Number(pages);
-  const price = Number(facePrice);
-  const paper = Number(paperPrice);
-  if(!Number.isFinite(p) || p < 0 || !Number.isFinite(price) || price < 0 || !Number.isFinite(paper) || paper < 0) return null;
-  const sheets = duplex ? Math.ceil(p / 2) : p;
-  const faceCost = p * price;
-  const paperCost = sheets * paper;
-  const totalCost = faceCost + paperCost;
-  return { pages:p, sheets, faceCost, paperCost, totalCost };
+  // Motore unico del costo: niente cache, niente stato UI.
+  // Formula: (facciate × prezzo facciata) + (fogli × €0,01).
+  const p = Number.isFinite(Number(pages)) ? Math.max(0, Math.round(Number(pages))) : null;
+  if(p == null) return null;
+  const facePriceCents = Number.isFinite(Number(facePrice?.facePriceCents))
+    ? Math.max(0, Math.round(Number(facePrice.facePriceCents)))
+    : Math.max(0, Math.round(Number(AppState.normalizePrintPrice(facePrice, 0)) * 100));
+  const duplexMode = typeof duplex === 'object' && duplex !== null ? !!duplex.duplex : !!duplex;
+  const paperPriceCents = Number.isFinite(Number(paperPrice?.paperPriceCents))
+    ? Math.max(0, Math.round(Number(paperPrice.paperPriceCents)))
+    : Math.max(0, Math.round(Number(paperPrice) * 100));
+  const sheets = duplexMode ? Math.ceil(p / 2) : p;
+  const faceCostCents = p * facePriceCents;
+  const paperCostCents = sheets * paperPriceCents;
+  const totalCostCents = faceCostCents + paperCostCents;
+  return {
+    pages:p, sheets,
+    facePriceCents, paperPriceCents,
+    faceCostCents, paperCostCents, totalCostCents,
+    faceCost:faceCostCents/100, paperCost:paperCostCents/100, totalCost:totalCostCents/100
+  };
 }
 function printingForLesson(lesson){
-  const pages = lessonPageCount(lesson);
-  const settings = AppState.getLivePrintSettings();
-  if(!lesson || !lesson.printed){
-    return { printed:false, pages, sheets:null, faceCost:0, paperCost:0, totalCost:0, known:pages != null };
-  }
-  if(pages == null){
-    return { printed:true, pages:null, sheets:null, faceCost:null, paperCost:null, totalCost:null, known:false };
-  }
-  const calc = calculatePrintCost(pages, settings.facePrice, settings.duplex, settings.paperPrice);
-  if(!calc) return { printed:true, pages, sheets:null, faceCost:null, paperCost:null, totalCost:null, known:false };
-  return { printed:true, ...calc, known:true };
+  return PrintCostEngine.lesson(lesson);
 }
 function fileKindLabel(kind){
   const map = { audio:'Audio', pdf:'PDF', docx:'Word', text:'Testo', code:'Codice', other:'Altro' };
@@ -1501,7 +1555,7 @@ function lessonFileEntries(lesson){
 }
 function statisticsForLessons(lessons){
   const rows = lessons || [];
-  const livePrintSettings = AppState.getLivePrintSettings();
+  const livePrintSettings = PrintCostEngine.getSettings();
   AppState.printSettings = livePrintSettings;
   const st = {
     lessons: rows.length, complete:0, progress:0, missing:0, highlighted:0, printed:0,
@@ -1605,8 +1659,10 @@ const StatisticsView = {
     const known = stats.printedLessonsWithKnownPages > 0 || stats.printed === 0;
     const pages = stats.printedPages;
     const cost = stats.totalPrintCost;
+    const live = AppState.getLivePrintSettings();
+    const formula = stats.printedLessonsWithKnownPages ? `${fmtNumber(pages)} facciate × ${fmtMoney(live.facePrice)} + ${fmtNumber(stats.sheets)} fogli × ${fmtMoney(live.paperPrice)}` : '';
     return `<div class="stats-card" id="${compact?'':'printing-card'}">
-      <div class="stats-card-head"><div><div class="stats-card-title">Costo di stampa</div><div class="stats-card-sub">${AppState.printSettings.duplex ? 'Fronte-retro attivo' : 'Stampa solo fronte'} · carta ${fmtMoney(AppState.printSettings.paperPrice)} / foglio</div></div><span class="stat-pulse">${icon('print',12)} ${fmtNumber(stats.printed)} stampat${stats.printed===1?'a':'e'}</span></div>
+      <div class="stats-card-head"><div><div class="stats-card-title">Costo di stampa</div><div class="stats-card-sub">${live.duplex ? 'Fronte-retro attivo' : 'Stampa solo fronte'} · carta ${fmtMoney(live.paperPrice)} / foglio</div></div><span class="stat-pulse">${icon('print',12)} ${fmtNumber(stats.printed)} stampat${stats.printed===1?'a':'e'}</span></div>
       <div class="print-cost-total">${known ? fmtMoney(cost) : '—'}</div>
       <div class="print-cost-meta">
         <span class="print-cost-chip"><b>${fmtNumber(pages)}</b> facciate</span>
@@ -1614,9 +1670,9 @@ const StatisticsView = {
         <span class="print-cost-chip"><b>${fmtMoney(stats.printingFaceCost)}</b> stampa</span>
         <span class="print-cost-chip"><b>${fmtMoney(stats.paperCost)}</b> carta</span>
         <span class="print-cost-chip"><b>${stats.printedLessonsWithKnownPages ? fmtMoney(stats.avgPrintCost) : '—'}</b> media / lezione</span>
-        ${AppState.printSettings.duplex ? `<span class="print-cost-chip"><b>${stats.sheetsKnownFor ? fmtNumber(stats.sheetsSavedByDuplex) : '—'}</b> fogli risparmiati vs solo fronte</span>` : ''}
+        ${AppState.getLivePrintSettings().duplex ? `<span class="print-cost-chip"><b>${stats.sheetsKnownFor ? fmtNumber(stats.sheetsSavedByDuplex) : '—'}</b> fogli risparmiati vs solo fronte</span>` : ''}
       </div>
-      ${stats.estimatedCostMissingPages ? `<div class="muted" style="font-size:10.5px; margin-top:9px;">${icon('alert',11)} ${stats.estimatedCostMissingPages} ${plural(stats.estimatedCostMissingPages,'lezione stampata','lezioni stampate')} senza conteggio pagine PDF: il costo non è incluso finché il documento principale non è leggibile come PDF.</div>` : ''}
+      ${stats.printedLessonsWithKnownPages ? `<div class="muted" style="font-size:11px;margin-top:9px;font-family:var(--mono);">${esc(formula)} = ${fmtMoney(cost)}</div>` : ''}${stats.estimatedCostMissingPages ? `<div class="muted" style="font-size:10.5px; margin-top:9px;">${icon('alert',11)} ${stats.estimatedCostMissingPages} ${plural(stats.estimatedCostMissingPages,'lezione stampata','lezioni stampate')} senza conteggio pagine PDF: il costo non è incluso finché il documento principale non è leggibile come PDF.</div>` : ''}
     </div>`;
   }
 };
@@ -2017,6 +2073,8 @@ const StatisticsPage = {
     TopbarView.render(`<b>Statistiche</b>`, `<button class="btn btn-sm" id="stats-refresh">${icon('refresh',14)} Aggiorna</button>`);
     const lessons = allLessonsFlat();
     const st = statisticsForLessons(lessons);
+    const livePrintSettings = AppState.getLivePrintSettings();
+    AppState.printSettings = livePrintSettings;
     const content = document.getElementById('content');
     const subjectRows = AppState.library.subjects.map(subject => ({ subject, ss: statisticsForSubject(subject) }))
       .sort((a,b) => b.ss.totalPrintCost - a.ss.totalPrintCost || b.ss.lessons - a.ss.lessons);
@@ -2034,7 +2092,7 @@ const StatisticsPage = {
             <div class="section-title">Statistiche complete</div>
             <div class="section-sub">Analisi di lezioni, file, PDF, stato cartaceo e costi di stampa dell'intera libreria.</div>
           </div>
-          <div class="paper-state-badge">Prezzo ${fmtMoney(AppState.printSettings.facePrice)} / facciata · ${AppState.printSettings.duplex ? 'fronte-retro' : 'solo fronte'}</div>
+          <div class="paper-state-badge">Prezzo ${fmtMoney(AppState.getLivePrintSettings().facePrice)} / facciata · ${AppState.getLivePrintSettings().duplex ? 'fronte-retro' : 'solo fronte'}</div>
         </div>
 
         ${lessons.length === 0 ? `
@@ -2088,7 +2146,7 @@ const StatisticsPage = {
               <div class="metric-row">
                 <div class="metric-mini"><div class="metric-mini-value">${st.printedPages ? fmtNumber(st.printedPages) : '—'}</div><div class="metric-mini-label">Facciate stampate</div></div>
                 <div class="metric-mini"><div class="metric-mini-value">${st.sheetsKnown ? fmtNumber(st.sheets) : '—'}</div><div class="metric-mini-label">Fogli effettivi</div></div>
-                <div class="metric-mini"><div class="metric-mini-value">${AppState.printSettings.duplex && st.sheetsKnown ? fmtNumber(st.sheetsSavedByDuplex) : '0'}</div><div class="metric-mini-label">Fogli risparmiati</div></div>
+                <div class="metric-mini"><div class="metric-mini-value">${AppState.getLivePrintSettings().duplex && st.sheetsKnown ? fmtNumber(st.sheetsSavedByDuplex) : '0'}</div><div class="metric-mini-label">Fogli risparmiati</div></div>
                 <div class="metric-mini"><div class="metric-mini-value">${st.printedLessonsWithKnownPages ? fmtMoney(st.avgPrintCost) : '—'}</div><div class="metric-mini-label">Costo medio / lezione</div></div>
               </div>
             </div>
@@ -4963,16 +5021,16 @@ const SettingsPage = {
           <div style="font-size:13px; font-weight:650; margin-bottom:4px;">Stampa e costi</div>
           <div class="muted" style="font-size:12.5px; line-height:1.65; margin-bottom:14px;">Imposta quanto paghi per ogni facciata stampata. La carta viene calcolata separatamente a <b>0,01 € per foglio</b>. Per la stampa fronte-retro un foglio contiene due facciate: 10 pagine = 5 fogli, 11 pagine = 6 fogli.</div>
           <div class="field-row">
-            <div class="field"><label>Prezzo per facciata (€)</label><input id="set-face-price" type="text" inputmode="decimal" autocomplete="off" value="${Number(AppState.printSettings.facePrice).toFixed(2)}"></div>
+            <div class="field"><label>Prezzo per facciata (€)</label><input id="set-face-price" type="text" inputmode="decimal" autocomplete="off" value="${AppState.getLivePrintSettings().facePrice.toFixed(2)}"></div>
             <div class="field"><label>Costo carta per foglio (€)</label><input type="text" value="0,01" disabled></div>
           </div>
           <label style="display:flex; align-items:center; gap:9px; cursor:pointer; font-size:12.5px; color:var(--text-secondary); margin-top:1px;">
-            <input id="set-duplex" type="checkbox" ${AppState.printSettings.duplex?'checked':''}> Stampo normalmente fronte-retro
+            <input id="set-duplex" type="checkbox" ${AppState.getLivePrintSettings().duplex?'checked':''}> Stampo normalmente fronte-retro
           </label>
           <div id="set-print-live-preview" style="margin-top:12px; padding:11px 12px; border-radius:10px; background:var(--surface-2); border:1px solid var(--border);"></div>
           <div style="display:flex; gap:8px; margin-top:12px;">
             <button class="btn btn-sm btn-primary" id="set-save-print-settings">${icon('save',14)} Salva impostazioni stampa</button>
-            <span class="paper-state-badge" style="align-self:center;">${AppState.printSettings.duplex ? 'Fronte-retro attivo' : 'Solo fronte'}</span>
+            <span class="paper-state-badge" style="align-self:center;">${AppState.getLivePrintSettings().duplex ? 'Fronte-retro attivo' : 'Solo fronte'}</span>
           </div>
         </div>
 
@@ -5026,7 +5084,7 @@ const SettingsPage = {
     const printPriceInput = content.querySelector('#set-face-price');
     const printDuplexInput = content.querySelector('#set-duplex');
     const printPreview = content.querySelector('#set-print-live-preview');
-    const parsePrintPrice = value => AppState.normalizePrintPrice(value, AppState.printSettings.facePrice);
+    const parsePrintPrice = value => AppState.normalizePrintPrice(value, AppState.getLivePrintSettings().facePrice);
     const renderPrintPreview = () => {
       if(!printPreview) return;
       const facePrice = parsePrintPrice(printPriceInput?.value);
@@ -5043,9 +5101,12 @@ const SettingsPage = {
     renderPrintPreview();
     content.querySelector('#set-save-print-settings').addEventListener('click', () => {
       const facePrice = parsePrintPrice(printPriceInput?.value);
+      const facePriceCents = AppState.eurosToCents(facePrice, AppState.getLivePrintSettings().facePriceCents);
       const duplex = !!printDuplexInput?.checked;
-      AppState.savePrintSettings({ facePrice, duplex });
+      AppState.savePrintSettings({ facePriceCents, duplex });
+      AppState.printSettings = AppState.getLivePrintSettings();
       renderPrintPreview();
+      Router.render();
       Toast.success(`Impostazioni stampa salvate: ${fmtMoney(facePrice)} per facciata · ${duplex ? 'fronte-retro' : 'solo fronte'}.`);
     });
     content.querySelectorAll('[data-theme]').forEach(b => b.addEventListener('click', () => { AppState.setTheme(b.dataset.theme); this.render(); }));
@@ -5149,20 +5210,21 @@ function finishBoot(){
    PWA — manifest e service worker generati come Blob (single-file)
    ============================================================ */
 function setupPWA(){
+  const isWebOrigin = location.protocol === 'http:' || location.protocol === 'https:';
   const manifest = {
     name: 'Uni Notes',
     short_name: 'Uni Notes',
-    start_url: './',
+    ...(isWebOrigin ? { start_url: location.href.split('#')[0] } : {}),
     display: 'standalone',
     background_color: '#EEECE7',
     theme_color: '#3457D5',
     orientation: 'any',
     icons: [
-      {
+      ...(isWebOrigin ? [{
         src: new URL('./icon.png', location.href).href,
         sizes: '192x192 512x512',
         type: 'image/png'
-      }
+      }] : [])
     ]
   };
   try{
@@ -5172,35 +5234,9 @@ function setupPWA(){
     if(link) link.href = url;
   }catch(e){ console.warn('Manifest PWA non disponibile', e); }
 
-  // Service worker minimale: cache-first del solo index.html per uso offline dopo il primo caricamento.
-  if('serviceWorker' in navigator){
-    const swCode = `
-      const CACHE = 'uninotes-v6';
-      self.addEventListener('install', (e) => { self.skipWaiting(); });
-      self.addEventListener('activate', (e) => { e.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(k => k.startsWith('uninotes-v') && k !== CACHE).map(k => caches.delete(k)))).then(() => self.clients.claim())); });
-      self.addEventListener('fetch', (e) => {
-        if(e.request.method !== 'GET' || new URL(e.request.url).origin !== self.location.origin) return;
-        e.respondWith(
-          caches.open(CACHE).then(async cache => {
-            const cached = await cache.match(e.request);
-            if(cached) return cached;
-            try{
-              const resp = await fetch(e.request);
-              if(resp && resp.status === 200 && e.request.url.startsWith(self.location.origin)) cache.put(e.request, resp.clone());
-              return resp;
-            }catch(err){
-              return cached || Response.error();
-            }
-          })
-        );
-      });
-    `;
-    try{
-      const swBlob = new Blob([swCode], { type:'application/javascript' });
-      const swUrl = URL.createObjectURL(swBlob);
-      navigator.serviceWorker.register(swUrl).catch(()=>{ /* non bloccante */ });
-    }catch(e){ console.warn('Service worker non disponibile', e); }
-  }
+  // Il service worker dinamico Blob non è affidabile per una pagina standalone/file://
+  // e può generare richieste o errori di origine non necessari. L'app resta pienamente
+  // utilizzabile senza service worker; la cache locale dei dati resta gestita da localStorage/FS API.
 }
 
 async function boot(){
