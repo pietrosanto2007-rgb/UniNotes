@@ -639,6 +639,323 @@ a{ color:inherit; text-decoration:none; }
 @media print{
   body > *:not(.pdfr-print-frame){ display:none !important; }
 }
+
+/* ============================================================
+   UNI NOTES — MOBILE REDESIGN 2026
+   Experience mobile-first, touch-first, premium
+   ============================================================ */
+@media (max-width:700px){
+  :root{
+    --mobile-bg:#f4f5f8;
+    --mobile-surface:rgba(255,255,255,.92);
+    --mobile-card:#ffffff;
+    --mobile-line:rgba(25,32,48,.08);
+    --mobile-text:#151923;
+    --mobile-muted:#7a8190;
+    --mobile-blue:#3457d5;
+    --mobile-blue-2:#6f8bf0;
+    --mobile-green:#1e8e5a;
+    --mobile-shadow:0 10px 30px rgba(35,43,62,.08), 0 2px 8px rgba(35,43,62,.05);
+    --mobile-radius-xl:24px;
+    --mobile-radius-lg:18px;
+    --mobile-radius-md:14px;
+  }
+  html[data-theme="dark"]{
+    --mobile-bg:#0f1116;
+    --mobile-surface:rgba(28,30,36,.94);
+    --mobile-card:#1d2027;
+    --mobile-line:rgba(255,255,255,.08);
+    --mobile-text:#f5f6f8;
+    --mobile-muted:#9a9eaa;
+    --mobile-shadow:0 12px 34px rgba(0,0,0,.34), 0 2px 9px rgba(0,0,0,.2);
+  }
+
+  html,body,#app,#main{background:var(--mobile-bg);}
+  body{font-size:15px; overscroll-behavior:none;}
+  #main{padding-bottom:calc(76px + env(safe-area-inset-bottom));}
+  #content{padding-bottom:0;}
+
+  /* topbar: floating app header */
+  #topbar{
+    position:relative;
+    height:64px;
+    min-height:64px;
+    padding:env(safe-area-inset-top) 14px 0;
+    box-sizing:content-box;
+    background:linear-gradient(180deg, rgba(244,245,248,.98), rgba(244,245,248,.82));
+    border-bottom:0;
+    gap:8px;
+    z-index:20;
+  }
+  html[data-theme="dark"] #topbar{
+    background:linear-gradient(180deg, rgba(15,17,22,.98), rgba(15,17,22,.82));
+  }
+  #topbar::after{
+    content:"";
+    position:absolute;
+    left:14px; right:14px; bottom:0;
+    height:1px; background:var(--mobile-line);
+  }
+  .mobile-menu-btn,.topbar-search,.topbar .icon-btn,#topbar > .btn{
+    width:40px; height:40px; min-width:40px; border-radius:13px;
+  }
+  .mobile-menu-btn{background:var(--mobile-card); border:1px solid var(--mobile-line); box-shadow:0 3px 12px rgba(35,43,62,.05);}
+  .topbar-search{background:var(--mobile-card); border:1px solid var(--mobile-line); box-shadow:0 3px 12px rgba(35,43,62,.05);}
+  .topbar-crumbs{
+    order:0;
+    flex:1;
+    min-width:0;
+    display:block;
+    line-height:1.15;
+  }
+  .topbar-crumbs .sep{display:none;}
+  .topbar-crumbs b{
+    display:block;
+    max-width:none;
+    font-size:18px;
+    letter-spacing:-.025em;
+    font-weight:760;
+    color:var(--mobile-text);
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  }
+  .topbar-crumbs > :not(b){display:none;}
+  #topbar-sync-btn{display:none !important;}
+  #topbar-theme-btn{display:flex !important;}
+  #topbar > .btn{
+    display:flex !important;
+    align-items:center; justify-content:center;
+    padding:0 !important;
+    font-size:0 !important;
+    border:0;
+    box-shadow:0 3px 12px rgba(35,43,62,.05);
+    background:var(--mobile-card);
+    color:var(--mobile-text);
+  }
+  #topbar > .btn svg{width:17px;height:17px;}
+
+  /* App content */
+  .page{
+    width:100%;
+    max-width:none;
+    padding:18px 14px calc(28px + env(safe-area-inset-bottom));
+    animation:mobilePageIn .22s ease both;
+  }
+  @keyframes mobilePageIn{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:none}}
+  .section-head{
+    margin:0 0 14px !important;
+    gap:10px;
+  }
+  .section-title{font-size:26px; font-weight:780; letter-spacing:-.035em;}
+  .section-sub{font-size:13px; line-height:1.45; color:var(--mobile-muted);}
+
+  /* Mobile bottom navigation */
+  .mobile-bottom-nav{
+    display:grid;
+    grid-template-columns:repeat(5,1fr);
+    position:fixed;
+    left:10px; right:10px; bottom:calc(8px + env(safe-area-inset-bottom));
+    height:64px;
+    padding:6px;
+    background:rgba(255,255,255,.9);
+    border:1px solid var(--mobile-line);
+    border-radius:22px;
+    box-shadow:0 16px 36px rgba(22,28,40,.12),0 2px 8px rgba(22,28,40,.06);
+    backdrop-filter:blur(20px) saturate(140%);
+    -webkit-backdrop-filter:blur(20px) saturate(140%);
+    z-index:1100;
+  }
+  html[data-theme="dark"] .mobile-bottom-nav{background:rgba(29,32,39,.9); box-shadow:0 18px 40px rgba(0,0,0,.38);}
+  .mobile-bottom-nav button{
+    appearance:none; border:0; background:transparent; color:var(--mobile-muted);
+    border-radius:16px; display:flex; flex-direction:column; align-items:center; justify-content:center;
+    gap:3px; min-width:0; font:inherit; font-size:10px; font-weight:650; cursor:pointer;
+    transition:transform .16s ease, background .16s ease, color .16s ease;
+  }
+  .mobile-bottom-nav button:active{transform:scale(.94);}
+  .mobile-bottom-nav button.active{background:var(--accent-soft); color:var(--mobile-blue);}
+  .mobile-bottom-nav svg{width:19px;height:19px;}
+  .mobile-bottom-nav .nav-badge{font-size:9px; line-height:1; margin-top:-1px; opacity:.8;}
+  html[data-theme="dark"] .mobile-bottom-nav button.active{color:#90a5ff;}
+
+  /* Drawer */
+  #sidebar{
+    width:min(88vw,350px) !important;
+    background:rgba(247,248,250,.97);
+    border-right:1px solid var(--mobile-line);
+    border-radius:0 28px 28px 0;
+    padding-top:env(safe-area-inset-top);
+    box-shadow:20px 0 60px rgba(17,22,34,.18);
+    backdrop-filter:blur(24px);
+    -webkit-backdrop-filter:blur(24px);
+  }
+  html[data-theme="dark"] #sidebar{background:rgba(24,27,33,.98);}
+  .sidebar-header{padding:18px 16px 16px 18px; gap:11px;}
+  .sidebar-logo{width:38px;height:38px;border-radius:12px;font-size:16px;box-shadow:0 7px 18px rgba(52,87,213,.22);}
+  .sidebar-title{font-size:16px;font-weight:760;}
+  .sidebar-collapse-btn{width:34px;height:34px;border-radius:11px;background:var(--surface);}
+  .sidebar-scroll{padding:8px 12px 16px;}
+  .nav-section{margin-top:18px;}
+  .nav-section-title{font-size:10px;letter-spacing:.09em;padding:0 10px 8px;}
+  .nav-item{
+    padding:11px 12px;
+    border-radius:13px;
+    gap:11px;
+    font-size:14px;
+    font-weight:600;
+    min-height:45px;
+  }
+  .nav-item svg{width:18px;height:18px;}
+  .nav-item.active{box-shadow:inset 0 0 0 1px rgba(52,87,213,.08);}
+  .nav-item .nav-count{font-size:10px;padding:3px 7px;}
+  .sidebar-footer{padding:12px;border-top:1px solid var(--mobile-line);}
+  .sidebar-folder{margin:0; padding:12px; border-radius:14px;}
+
+  /* Cards become app surfaces, not document boxes */
+  .card,.stat-pill,.filecard{
+    border:1px solid var(--mobile-line);
+    background:var(--mobile-card);
+    box-shadow:none;
+  }
+  .card{
+    border-radius:var(--mobile-radius-lg);
+    padding:16px;
+  }
+  .card-hover:hover{transform:none;box-shadow:none;border-color:var(--mobile-line);}
+  .grid{gap:12px;}
+  .grid-subjects{grid-template-columns:1fr;}
+  .subject-card{
+    position:relative;
+    min-height:134px;
+    padding:17px;
+    gap:14px;
+    overflow:hidden;
+    box-shadow:var(--mobile-shadow);
+  }
+  .subject-card::after{
+    content:"";
+    position:absolute; width:90px;height:90px;border-radius:50%;
+    right:-28px; bottom:-36px;
+    background:var(--accent-soft);
+  }
+  .subject-card-top{position:relative;z-index:1;}
+  .subject-name{font-size:16px;}
+  .subject-meta{font-size:12px;}
+  .subject-stats{gap:20px;}
+  .subject-stat-num{font-size:22px;}
+  .progress-track{height:6px;}
+
+  /* Dashboard redesign */
+  .page > .section-title:first-child{
+    font-size:31px;
+    line-height:1.08;
+    margin-top:4px;
+  }
+  .page > .section-title:first-child + .section-sub{
+    font-size:13px;
+    margin-bottom:18px !important;
+  }
+  .page .card[data-nav="statistics"]{
+    border-radius:22px !important;
+    padding:17px !important;
+    background:linear-gradient(135deg,#3457d5,#6e86ed) !important;
+    color:white !important;
+    box-shadow:0 16px 30px rgba(52,87,213,.22) !important;
+    border:0 !important;
+  }
+  .page .card[data-nav="statistics"] .sidebar-logo{background:rgba(255,255,255,.17) !important;box-shadow:none;}
+  .page .card[data-nav="statistics"] .muted{color:rgba(255,255,255,.78) !important;}
+  .page .card[data-nav="statistics"] .btn{background:rgba(255,255,255,.13);color:#fff;border-color:rgba(255,255,255,.18);}
+
+  /* Compact lesson rows */
+  .lesson-row{
+    display:grid;
+    grid-template-columns:32px minmax(0,1fr) auto;
+    grid-template-areas:
+      "pin info status"
+      ". actions actions"
+      ". files files";
+    gap:8px 9px;
+    padding:13px 11px;
+    border-bottom:1px solid var(--mobile-line);
+  }
+  .lesson-row > [data-toggle-pin]{grid-area:pin; width:30px;height:30px;background:var(--surface-2);}
+  .lesson-num{display:none;}
+  .lesson-info{grid-area:info; min-width:0;}
+  .lesson-title{font-size:14px;line-height:1.25;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+  .lesson-title .muted{display:none;}
+  .lesson-date{font-size:10.5px;margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .lesson-paper-actions{grid-area:actions;display:grid !important;grid-template-columns:1fr 1fr;gap:7px;width:100%;margin-left:0 !important;}
+  .lesson-paper-actions .paper-status-btn{
+    min-height:36px; justify-content:center; padding:7px 8px; border-radius:11px;
+    font-size:10.5px; font-weight:700;
+  }
+  .lesson-files{grid-area:files;width:auto;margin-left:0;gap:4px;}
+  .file-chip{width:23px;height:23px;}
+  .status-pill{grid-area:status;font-size:9px;padding:4px 7px;align-self:start;}
+
+  /* File cards and actions */
+  .filecard{padding:13px;border-radius:16px;}
+  .filecard-title{font-size:13.5px;}
+  .filecard-meta{font-size:10.5px;}
+  .filecard-actions{justify-content:stretch;display:grid;grid-template-columns:1fr 1fr;gap:7px;width:100%;}
+  .filecard-actions .btn{justify-content:center;min-height:38px;}
+
+  /* Tabs */
+  .tabs{
+    border:1px solid var(--mobile-line); border-radius:14px; padding:4px; background:var(--mobile-card); gap:3px; margin-bottom:15px;
+  }
+  .tab{flex:1;text-align:center;padding:8px 6px;margin:0;border-radius:10px;font-size:11.5px;}
+  .tab.active{background:var(--accent-soft);color:var(--mobile-blue);}
+  .tab.active::after{display:none;}
+
+  /* Stats */
+  .stats-grid{grid-template-columns:repeat(2,minmax(0,1fr)) !important;gap:10px;}
+  .stat-pill{padding:14px;border-radius:16px;min-height:90px;box-shadow:var(--mobile-shadow);}
+  .stat-pill-num{font-size:22px;line-height:1.05;}
+  .stat-pill-label{font-size:10.5px;}
+  .chart-card{border-radius:20px !important;box-shadow:var(--mobile-shadow) !important;padding:15px !important;}
+  .chart-bar-row{grid-template-columns:72px minmax(60px,1fr) auto !important;}
+  .donut-box{gap:14px;}
+  .cost-breakdown{gap:9px;}
+  .cost-breakdown > div{padding:12px !important;border-radius:13px !important;}
+  .cost-breakdown-value{font-size:16px;}
+
+  /* Settings and forms */
+  .field label{font-size:11px;}
+  .field input,.field textarea,.field select{min-height:44px;border-radius:12px;padding:10px 12px;}
+  .btn{min-height:42px;border-radius:12px;padding:9px 13px;font-size:12.5px;}
+  .btn-sm{min-height:36px;padding:7px 10px;}
+  .btn-primary{box-shadow:0 8px 18px rgba(52,87,213,.18);}
+  input[type="checkbox"],input[type="radio"]{width:18px;height:18px;}
+
+  /* Empty states */
+  .empty-state{padding:54px 20px;border-radius:22px;}
+
+  /* Modal as bottom sheet */
+  .modal{
+    top:auto; bottom:0; left:0; right:0; width:100% !important; max-height:min(88dvh,760px); border-radius:24px 24px 0 0;
+    transform:translateY(105%); transition:transform 220ms var(--ease),opacity 180ms var(--ease);
+    border-left:0;border-right:0;border-bottom:0;
+  }
+  .modal.show{transform:translateY(0);}
+  .modal-header{padding:16px 18px 12px;}
+  .modal-body{padding:16px 18px 18px;}
+  .modal-footer{padding:12px 18px calc(12px + env(safe-area-inset-bottom));}
+
+  /* Setup screen */
+  #setup-screen{padding:26px 18px; background:var(--mobile-bg);}
+  .setup-logo{width:76px;height:76px;border-radius:22px;margin-bottom:18px;box-shadow:0 16px 30px rgba(52,87,213,.2);}
+  .setup-title{font-size:29px;line-height:1.05;letter-spacing:-.04em;}
+  .setup-sub{font-size:14px;line-height:1.55;margin-top:10px;}
+  .setup-actions{margin-top:24px;max-width:360px;gap:9px;}
+  .setup-actions .btn{min-height:48px;border-radius:15px;}
+
+  /* Touch affordances */
+  button,a,[data-nav],[data-open-lesson],[data-open-subject]{-webkit-tap-highlight-color:transparent;touch-action:manipulation;}
+  .nav-item,.lesson-row,.subject-card,.filecard{cursor:pointer;}
+  ::-webkit-scrollbar{width:0;height:0;}
+}
+
 </style>
 </head>
 <body>
@@ -2296,6 +2613,32 @@ const ThemeMenu = {
 };
 
 /* ============================================================
+   MOBILE BOTTOM NAV
+   ============================================================ */
+const MobileBottomNav = {
+  init(){
+    document.querySelectorAll('#mobile-bottom-nav [data-mobile-nav]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const target = btn.dataset.mobileNav;
+        if(target === 'menu'){ MobileNav.open(); return; }
+        Router.go(target);
+      });
+    });
+    this.sync();
+  },
+  sync(){
+    const current = AppState.route.page;
+    document.querySelectorAll('#mobile-bottom-nav [data-mobile-nav]').forEach(btn => {
+      const target = btn.dataset.mobileNav;
+      const active = (target === current) || (target === 'subjects' && current === 'subject') ||
+        (target === 'lessons-all' && ['lesson','lessons-pinned'].includes(current));
+      btn.classList.toggle('active', active);
+      btn.setAttribute('aria-current', active ? 'page' : 'false');
+    });
+  }
+};
+
+/* ============================================================
    ROUTER
    ============================================================ */
 const Router = {
@@ -2348,6 +2691,7 @@ const Router = {
     };
     const view = pages[page] || DashboardPage;
     view.render(AppState.route.params);
+    MobileBottomNav.sync();
   }
 };
 
@@ -5573,6 +5917,7 @@ async function boot(){
     if(e.target.id === 'cmdk-backdrop') CommandPalette.close();
   });
   document.getElementById('mobile-nav-backdrop')?.addEventListener('click', () => MobileNav.close());
+  MobileBottomNav.init();
 
   // Sync when tab becomes active again (compatible mechanism)
   document.addEventListener('visibilitychange', () => {
