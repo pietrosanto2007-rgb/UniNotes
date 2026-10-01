@@ -1490,12 +1490,15 @@ function getCanonicalDuplex(){
   return localStorage.getItem('uninotes.print.duplex') === '1';
 }
 
-function calculatePrintCost(pages){
+function calculatePrintCost(pages, settingsOverride=null){
   const p = Number.isFinite(Number(pages)) ? Math.max(0, Math.round(Number(pages))) : null;
   if(p == null) return null;
-  const facePriceCents = getCanonicalPrintPriceCents();
-  const paperPriceCents = 1;
-  const duplex = getCanonicalDuplex();
+  const settings = settingsOverride || PrintCostEngine.getSettings();
+  const facePriceCents = Math.max(0, Math.round(Number(settings.facePriceCents) || 0));
+  const paperPriceCents = Math.max(0, Math.round(Number(settings.paperPriceCents) || 1));
+  const duplex = !!settings.duplex;
+  // IMPORTANTE: i fogli vengono calcolati PER SINGOLA LEZIONE.
+  // Esempio: due lezioni da 11 pagine in fronte-retro = 6 + 6 = 12 fogli.
   const sheets = duplex ? Math.ceil(p / 2) : p;
   const faceCostCents = p * facePriceCents;
   const paperCostCents = sheets * paperPriceCents;
@@ -1509,17 +1512,17 @@ const PrintCostEngine = {
     const duplex = getCanonicalDuplex();
     return { facePriceCents:cents, facePrice:cents/100, duplex, paperPriceCents:1, paperPrice:0.01 };
   },
-  lesson(lesson){
+  lesson(lesson, settingsOverride=null){
     const pages = lessonPageCount(lesson);
     const printed = !!lesson && (lesson.printed === true || lesson.printed === 'true' || lesson.printed === 1);
     if(!printed) return { printed:false, known:pages != null, pages, sheets:0, faceCostCents:0, paperCostCents:0, totalCostCents:0, faceCost:0, paperCost:0, totalCost:0 };
     if(pages == null) return { printed:true, known:false, pages:null, sheets:null, faceCostCents:null, paperCostCents:null, totalCostCents:null, faceCost:null, paperCost:null, totalCost:null };
-    return { printed:true, known:true, ...calculatePrintCost(pages) };
+    return { printed:true, known:true, ...calculatePrintCost(pages, settingsOverride) };
   },
-  total(lessons){
+  total(lessons, settingsOverride=null){
     let printed=0, knownPrinted=0, missing=0, pages=0, sheets=0, faceCostCents=0, paperCostCents=0, totalCostCents=0;
     for(const lesson of (lessons||[])){
-      const result = this.lesson(lesson);
+      const result = this.lesson(lesson, settingsOverride);
       if(!result.printed) continue;
       printed++;
       if(!result.known){ missing++; continue; }
@@ -5078,12 +5081,17 @@ const SettingsPage = {
       if(!printPreview) return;
       const facePrice = parsePrintPrice(printPriceInput?.value);
       const duplex = !!printDuplexInput?.checked;
-      const st = currentLibraryPrintStats();
-      // Il prezzo modificato viene applicato immediatamente anche all'anteprima, senza attendere il salvataggio.
-      const calc = (() => { const tempCents = AppState.eurosToCents(facePrice, 5); const pages = Number(st.printedPages)||0; const sheets = duplex ? Math.ceil(pages/2) : pages; const faceCostCents = pages * tempCents; const paperCostCents = sheets; return { sheets, totalCost:(faceCostCents + paperCostCents)/100 }; })();
-      const sheets = calc ? calc.sheets : 0;
-      const cost = calc ? calc.totalCost : 0;
-      printPreview.innerHTML = `<div style="font-size:11px;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:.03em;font-weight:650;">Anteprima costo totale libreria</div><div style="font-size:22px;font-weight:750;margin-top:2px;">${fmtMoney(cost)}</div><div class="muted" style="font-size:11.5px;margin-top:2px;">${fmtNumber(st.printed)} lezioni stampate · ${fmtNumber(st.printedPages)} facciate · ${fmtNumber(sheets)} fogli · ${fmtMoney(facePrice)} / facciata</div>`;
+      const allLessons = allLessonsFlat();
+      const previewSettings = {
+        facePriceCents: AppState.eurosToCents(facePrice, AppState.getLivePrintSettings().facePriceCents),
+        duplex,
+        paperPriceCents: 1
+      };
+      // Anche l'anteprima applica il fronte-retro LEZIONE PER LEZIONE.
+      const preview = PrintCostEngine.total(allLessons, previewSettings);
+      const sheets = preview.sheets;
+      const cost = preview.totalCost;
+      printPreview.innerHTML = `<div style="font-size:11px;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:.03em;font-weight:650;">Anteprima costo totale libreria</div><div style="font-size:22px;font-weight:750;margin-top:2px;">${fmtMoney(cost)}</div><div class="muted" style="font-size:11.5px;margin-top:2px;">${fmtNumber(preview.printed)} lezioni stampate · ${fmtNumber(preview.pages)} facciate · ${fmtNumber(sheets)} fogli · ${fmtMoney(facePrice)} / facciata · fronte-retro calcolato per lezione</div>`;
     };
     printPriceInput?.addEventListener('input', renderPrintPreview);
     printDuplexInput?.addEventListener('change', renderPrintPreview);
