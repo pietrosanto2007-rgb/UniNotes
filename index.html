@@ -8332,7 +8332,7 @@ if(typeof SettingsPage !== 'undefined' && !SettingsPage.__aiPatched){
       <div style="font-size:13px; font-weight:650; margin-bottom:4px;">AI locale (Ollama)</div>
       <div class="muted" style="font-size:12.5px; margin-bottom:10px;" id="ai-set-status">Verifica in corso…</div>
       <div class="field"><label>Modello predefinito</label><select id="ai-set-model"></select></div>
-      <div class="field"><label>Lingua dei riepiloghi AI</label><select id="ai-set-summary-language">${Object.entries(AI_SUMMARY_LANGUAGES).map(([k,v])=>`<option value="${k}">${v.label}</option>`).join('')}</select></div>
+      <div class="field"><label>Lingua dei riepiloghi AI</label><select id="ai-set-summary-language"></select></div>
       <div class="muted" style="font-size:11.5px; line-height:1.5; margin-top:-4px; margin-bottom:10px;">I riepiloghi vengono generati esclusivamente nella lingua selezionata. L'audio non viene analizzato: viene solo rinominato in base al titolo della lezione e all'ordine temporale di creazione.</div>
       <div class="field"><label>Modalità permessi AI</label>
         <select id="ai-set-mode">
@@ -8353,9 +8353,14 @@ if(typeof SettingsPage !== 'undefined' && !SettingsPage.__aiPatched){
     modeSel.addEventListener('change', () => AIPermissions.setMode(modeSel.value));
     const languageSel = card.querySelector('#ai-set-summary-language');
     if(languageSel){
-      languageSel.value = aiSummaryLanguage();
+      const languages = window.UniNotesAISummaryLanguages || {
+        it:{label:'Italiano'}, en:{label:'English'}, es:{label:'Español'}, fr:{label:'Français'}, de:{label:'Deutsch'}
+      };
+      languageSel.innerHTML = Object.entries(languages).map(([k,v])=>`<option value="${k}">${v.label}</option>`).join('');
+      const savedLanguage = localStorage.getItem('uninotes.aiSummaryLanguage') || 'it';
+      languageSel.value = languages[savedLanguage] ? savedLanguage : 'it';
       languageSel.addEventListener('change', () => {
-        localStorage.setItem('uninotes.aiSummaryLanguage', AI_SUMMARY_LANGUAGES[languageSel.value] ? languageSel.value : 'it');
+        localStorage.setItem('uninotes.aiSummaryLanguage', languages[languageSel.value] ? languageSel.value : 'it');
         Toast.success('Lingua dei riepiloghi AI aggiornata.');
       });
     }
@@ -8412,6 +8417,7 @@ console.info('[Uni Notes AI Agent] Modulo caricato. Apri il pannello AI dalla to
   fr: { label:'Français', instruction:'francese' },
   de: { label:'Deutsch', instruction:'tedesco' }
 };
+window.UniNotesAISummaryLanguages = AI_SUMMARY_LANGUAGES;
 
 const AI_SUMMARY_FOLDER_NAME = 'Riepiloghi AI';
   const AI_SUMMARY_FILE_NAME = 'Riepilogo AI.md';
@@ -8636,29 +8642,64 @@ const AI_SUMMARY_FOLDER_NAME = 'Riepiloghi AI';
     else await aiYield(100);
   }
 
-  async function aiOllamaJson(messages, signal){
+  function aiExtractJsonObject(content){
+    const raw=String(content||'').trim();
+    if(!raw) return null;
+    const candidates=[];
+    candidates.push(raw);
+    const fenced=raw.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
+    if(fenced) candidates.push(fenced[1].trim());
+    const first=raw.indexOf('{'), last=raw.lastIndexOf('}');
+    if(first>=0&&last>first) candidates.push(raw.slice(first,last+1));
+    for(const candidate of candidates){
+      try{
+        const parsed=JSON.parse(candidate);
+        if(parsed&&typeof parsed==='object') return parsed;
+      }catch(e){}
+    }
+    return null;
+  }
+
+  async function aiOllamaJson(messages, signal, schema){
     aiThrowIfAborted(signal);
     const model=aiModel(); if(!model) throw new Error('Nessun modello Ollama selezionato.');
     const profile=aiResourceProfile();
-    const res=await fetch(OllamaManager.baseUrl+'/api/chat',{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({
-        model, messages, stream:false, format:'json', think:false, keep_alive:profile.keepAlive,
-        options:{temperature:0.1,num_ctx:profile.numCtx,num_predict:profile.numPredict}
-      }),
-      signal
+    const requestBody={
+      model, messages, stream:false, format: schema || 'json', think:false, keep_alive:profile.keepAlive,
+      options:{temperature:0.1,num_ctx:profile.numCtx,num_predict:profile.numPredict}
+    };
+    const doRequest=async(body)=>{
+      const res=await fetch(OllamaManager.baseUrl+'/api/chat',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify(body),
+        signal
+      });
+      aiThrowIfAborted(signal);
+      if(!res.ok){ const t=await res.text().catch(()=> ''); throw new Error('Ollama HTTP '+res.status+(t?': '+t.slice(0,160):'')); }
+      const data=await res.json();
+      aiThrowIfAborted(signal);
+      return data&&data.message?String(data.message.content||''):'';
+    };
+
+    let content=await doRequest(requestBody);
+    let parsed=aiExtractJsonObject(content);
+    if(parsed) return parsed;
+
+    // Alcuni modelli dichiarano supporto JSON ma occasionalmente restituiscono testo non conforme.
+    // Un singolo retry più vincolante evita di bloccare l'intera coda senza moltiplicare il carico.
+    await aiYield(350);
+    aiThrowIfAborted(signal);
+    const retryMessages=[...messages];
+    const last=retryMessages.length-1;
+    retryMessages.push({
+      role:'user',
+      content:'ATTENZIONE: la risposta precedente non era JSON valido. Rispondi ADESSO esclusivamente con un oggetto JSON valido, senza markdown fence, testo introduttivo o spiegazioni esterne al JSON.'
     });
-    aiThrowIfAborted(signal);
-    if(!res.ok){ const t=await res.text().catch(()=> ''); throw new Error('Ollama HTTP '+res.status+(t?': '+t.slice(0,160):'')); }
-    const data=await res.json();
-    aiThrowIfAborted(signal);
-    const content=data&&data.message?String(data.message.content||''):'';
-    try{return JSON.parse(content);}catch(e){
-      const match=content.match(/\{[\s\S]*\}/);
-      if(match) return JSON.parse(match[0]);
-      throw new Error('Risposta AI non valida.');
-    }
+    content=await doRequest(Object.assign({},requestBody,{messages:retryMessages,options:Object.assign({},requestBody.options,{temperature:0,num_predict:Math.min(requestBody.options.num_predict,1400)})}));
+    parsed=aiExtractJsonObject(content);
+    if(parsed) return parsed;
+    throw new Error('Risposta AI non valida dopo 2 tentativi.');
   }
 
   async function aiPdfText(file,maxChars=aiResourceProfile().maxPdfChars,signal){
@@ -8700,6 +8741,7 @@ const AI_SUMMARY_FOLDER_NAME = 'Riepiloghi AI';
 
   async function aiSummarize(lesson,pdfData,signal){
     aiThrowIfAborted(signal);
+    const profile = aiResourceProfile();
     const lang = aiSummaryLanguageInfo();
     const baseInstruction=`Sei un tutor universitario professionale. Devi creare un riassunto fedele e strutturato di una lezione universitaria.
 
@@ -8729,7 +8771,8 @@ Non inserire HTML.`;
     if(pdfData.text.length<=60000){
       return await aiOllamaJson(
         [{role:'system',content:baseInstruction},{role:'user',content:`Materia: ${lesson.subjectName}\nTitolo attuale: ${lesson.title||'(vuoto)'}\n\nTESTO DEL PDF:\n${pdfData.text}`}],
-        signal
+        signal,
+        {type:'object',properties:{title:{type:'string'},summary:{type:'string'}},required:['title','summary']}
       );
     }
     const partials=[];
@@ -8739,7 +8782,8 @@ Non inserire HTML.`;
       const out=await aiOllamaJson(
         [{role:'system',content:`Riassumi fedelmente questo segmento di una lezione universitaria esclusivamente in ${lang.instruction}. Rispondi SOLO JSON {"summary":"..."}. Usa Markdown leggibile con **grassetto**, *corsivo*, \`==evidenziato==\` e callout quando utili. Non inventare nulla.`},
          {role:'user',content:`Segmento ${idx}\nMateria: ${lesson.subjectName}\n${chunk}`}],
-        signal
+        signal,
+        {type:'object',properties:{summary:{type:'string'}},required:['summary']}
       );
       if(out&&out.summary) partials.push(aiCleanMarkdown(out.summary).slice(0,7000));
       await aiYield(profile.betweenRequests);
@@ -8747,7 +8791,8 @@ Non inserire HTML.`;
     aiThrowIfAborted(signal);
     return await aiOllamaJson(
       [{role:'system',content:baseInstruction},{role:'user',content:`Materia: ${lesson.subjectName}\nTitolo attuale: ${lesson.title||'(vuoto)'}\n\nRIASSUNTI DEI SEGMENTI:\n${partials.join('\n\n---\n\n')}`}],
-      signal
+      signal,
+      {type:'object',properties:{title:{type:'string'},summary:{type:'string'}},required:['title','summary']}
     );
   }
 
