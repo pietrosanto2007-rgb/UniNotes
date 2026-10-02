@@ -5916,12 +5916,25 @@ const HtmlToDocx = {
 const MarkdownPreview = {
   render(src){
     let html = esc(src);
+    html = html.replace(/> \[!(KEY|NOTE|WARNING|TIP|EXAMPLE)\] ?(.*)$/gm, (_, type, text) => {
+      const labels = { KEY:'Essenziale', NOTE:'Nota', WARNING:'Attenzione', TIP:'Suggerimento', EXAMPLE:'Esempio' };
+      const cls = type.toLowerCase();
+      return `<div class="md-callout md-callout-${cls}"><div class="md-callout-label">${labels[type]}</div><div class="md-callout-text">${text}</div></div>`;
+    });
     html = html.replace(/^### (.*)$/gm,'<h3>$1</h3>').replace(/^## (.*)$/gm,'<h2>$1</h2>').replace(/^# (.*)$/gm,'<h1>$1</h1>');
-    html = html.replace(/\*\*(.+?)\*\*/g,'<b>$1</b>').replace(/\*(.+?)\*/g,'<i>$1</i>');
-    html = html.replace(/`(.+?)`/g,'<code style="background:var(--surface-2); padding:1px 5px; border-radius:4px; font-family:var(--mono); font-size:0.9em;">$1</code>');
+    html = html.replace(/\*\*([^*\n]+?)\*\*/g,'<strong>$1</strong>').replace(/(?<!\*)\*([^*\n]+?)\*(?!\*)/g,'<em>$1</em>');
+    html = html.replace(/==([^=\n]+)==/g,'<mark class="md-mark">$1</mark>');
+    html = html.replace(/`([^`\n]+)`/g,'<code style="background:var(--surface-2); padding:2px 6px; border-radius:6px; font-family:var(--mono); font-size:0.9em; color:var(--accent-strong);">$1</code>');
     html = html.replace(/^- (.*)$/gm,'<li>$1</li>');
-    html = html.replace(/(<li>.*<\/li>\n?)+/g, m => `<ul style="padding-left:20px;">${m}</ul>`);
-    html = html.split('\n\n').map(p => p.trim().startsWith('<h')||p.trim().startsWith('<ul') ? p : `<p>${p}</p>`).join('\n');
+    html = html.replace(/(^|\n)(\d+)\. (.*)$/gm,'$1<li class="md-ol-item"><span>$2.</span> $3</li>');
+    html = html.replace(/(<li(?! class="md-ol-item").*<\/li>\n?)+/g, m => `<ul style="padding-left:22px;">${m}</ul>`);
+    html = html.replace(/(<li class="md-ol-item".*<\/li>\n?)+/g, m => `<ol style="padding-left:22px;">${m}</ol>`);
+    html = html.split('\n\n').map(p => {
+      const t=p.trim();
+      if(!t) return '';
+      if(t.startsWith('<h')||t.startsWith('<ul')||t.startsWith('<ol')||t.startsWith('<div class="md-callout')) return p;
+      return `<p>${p}</p>`;
+    }).join('\n');
     return html;
   }
 };
@@ -7344,6 +7357,9 @@ function resolveFileInLesson(lesson, fileName){
 
 async function getParentDirHandle(lesson, file, source){
   if(source === 'mainFile' || source === 'root' || !file.folder) return lesson.handle;
+  if(typeof window !== 'undefined' && window.UniNotesAISummaryFolder && file.folder === window.UniNotesAISummaryFolder){
+    return await lesson.handle.getDirectoryHandle(window.UniNotesAISummaryFolder,{create:false});
+  }
   const match = (lesson.subfolders||[]).find(sf => sf.folderPath===file.folder || sf.name===file.folder || (RAW_FOLDER_NAME+'/'+sf.name)===file.folder);
   if(match) return match.handle;
   const roleKey = Object.keys(CATEGORY_FOLDERS).find(k => CATEGORY_FOLDERS[k] === file.folder);
@@ -8293,6 +8309,8 @@ if(typeof SettingsPage !== 'undefined' && !SettingsPage.__aiPatched){
       <div style="font-size:13px; font-weight:650; margin-bottom:4px;">AI locale (Ollama)</div>
       <div class="muted" style="font-size:12.5px; margin-bottom:10px;" id="ai-set-status">Verifica in corso…</div>
       <div class="field"><label>Modello predefinito</label><select id="ai-set-model"></select></div>
+      <div class="field"><label>Lingua dei riepiloghi AI</label><select id="ai-set-summary-language">${Object.entries(AI_SUMMARY_LANGUAGES).map(([k,v])=>`<option value="${k}">${v.label}</option>`).join('')}</select></div>
+      <div class="muted" style="font-size:11.5px; line-height:1.5; margin-top:-4px; margin-bottom:10px;">I riepiloghi vengono generati esclusivamente nella lingua selezionata. L'audio non viene analizzato: viene solo rinominato in base al titolo della lezione e all'ordine temporale di creazione.</div>
       <div class="field"><label>Modalità permessi AI</label>
         <select id="ai-set-mode">
           <option value="conservative">Conservativa — conferma ogni operazione distruttiva</option>
@@ -8310,6 +8328,14 @@ if(typeof SettingsPage !== 'undefined' && !SettingsPage.__aiPatched){
     const modeSel = card.querySelector('#ai-set-mode');
     modeSel.value = AIPermissions.mode();
     modeSel.addEventListener('change', () => AIPermissions.setMode(modeSel.value));
+    const languageSel = card.querySelector('#ai-set-summary-language');
+    if(languageSel){
+      languageSel.value = aiSummaryLanguage();
+      languageSel.addEventListener('change', () => {
+        localStorage.setItem('uninotes.aiSummaryLanguage', AI_SUMMARY_LANGUAGES[languageSel.value] ? languageSel.value : 'it');
+        Toast.success('Lingua dei riepiloghi AI aggiornata.');
+      });
+    }
 
     async function refresh(){
       const statusEl = card.querySelector('#ai-set-status');
@@ -8345,65 +8371,102 @@ console.info('[Uni Notes AI Agent] Modulo caricato. Apri il pannello AI dalla to
    UNI NOTES — AUTOMAZIONE AI IN BACKGROUND (Ollama)
    ------------------------------------------------------------
    Workflow per ogni lezione, una sola volta:
-   1) rinomina i file con nomi semantici usando il contenuto;
-   2) legge il PDF principale e genera "Riepilogo AI.md";
-   3) genera e salva il nuovo titolo della lezione;
+   1) legge esclusivamente il PDF principale;
+   2) genera esclusivamente "Riepilogo AI.md";
+   3) può aggiornare il titolo della lezione in base al PDF;
    4) marca la lezione come completata in .lesson.json.
-   Nessuna operazione viene rieseguita per una lezione con
-   aiAutomation.done === true.
+   Gli altri file grezzi, inclusi gli audio, non vengono letti, rinominati o modificati.
+   Il processo può essere interrotto e ripreso.
    ============================================================ */
 (function(){
   'use strict';
 
+
+  const AI_SUMMARY_FOLDER_NAME = 'Riepiloghi AI';
   const AI_SUMMARY_FILE_NAME = 'Riepilogo AI.md';
-  const AI_AUTOMATION_VERSION = 1;
-  const AI_MAX_RENAME_CONTEXT = 14000;
+  const AI_AUTOMATION_VERSION = 4;
   const AI_MAX_FULL_PDF_TEXT = 90000;
   const AI_CHUNK_SIZE = 36000;
 
-  function aiSleep(ms){ return new Promise(r => setTimeout(r, ms)); }
   function aiEnabled(){ return localStorage.getItem('uninotes.aiBackgroundEnabled') !== '0'; }
   function aiModel(){ return typeof OllamaManager !== 'undefined' ? OllamaManager.getModel() : ''; }
+  function aiSummaryLanguage(){
+    const raw = localStorage.getItem('uninotes.aiSummaryLanguage') || 'it';
+    return AI_SUMMARY_LANGUAGES[raw] ? raw : 'it';
+  }
+  function aiSummaryLanguageInfo(){ return AI_SUMMARY_LANGUAGES[aiSummaryLanguage()]; }
   function aiSafeText(v){ return String(v == null ? '' : v).replace(/\u0000/g, '').trim(); }
-
-  function aiUniqueName(lesson, originalName, desiredName){
-    const originalExt = extOf(originalName || '');
-    let base = aiSafeText(desiredName)
-      .replace(/```/g, '')
-      .replace(/^["']+|["']+$/g, '')
-      .replace(/[\/\\:*?"<>|]/g, ' ')
-      .replace(/\s+/g, ' ')
-      .trim();
-    if(!base) return originalName;
-    if(originalExt){
-      const extRe = new RegExp('\\.' + originalExt.replace(/[.*+?^${}()|[\\]\\]/g, '\\\\$&') + '$', 'i');
-      if(!extRe.test(base)) base = base.replace(/\.[a-z0-9]{1,8}$/i, '').trim() + '.' + originalExt;
-    }else base = base.replace(/\.[a-z0-9]{1,8}$/i, '').trim();
-    if(base.length > 120){ const suffix = originalExt ? '.'+originalExt : ''; base = base.slice(0, Math.max(1,120-suffix.length)).trim()+suffix; }
-    const all = lessonFileEntries(lesson).map(f=>f&&f.name).filter(Boolean);
-    const originalLower = String(originalName).toLowerCase();
-    if(base.toLowerCase()===originalLower) return originalName;
-    const collision = n => all.some(nm => String(nm).toLowerCase()===String(n).toLowerCase() && String(nm).toLowerCase()!==originalLower);
-    if(!collision(base)) return base;
-    const ext = originalExt ? '.'+originalExt : '';
-    const stem = ext ? base.slice(0,-ext.length) : base;
-    let i=2; while(collision(`${stem} (${i})${ext}`)) i++;
-    return `${stem} (${i})${ext}`;
+  function aiAbortError(){
+    const e = new Error('Elaborazione AI interrotta dall’utente.');
+    e.name = 'AbortError';
+    return e;
+  }
+  function aiThrowIfAborted(signal){
+    if(signal && signal.aborted) throw aiAbortError();
   }
 
   async function aiReadMeta(lesson){
-    try{ const h=await lesson.handle.getFileHandle('.lesson.json'); return JSON.parse(await FileSystemManager.readTextFile(h)); }
-    catch(e){ return {}; }
+    try{
+      const h=await lesson.handle.getFileHandle('.lesson.json');
+      return JSON.parse(await FileSystemManager.readTextFile(h));
+    }catch(e){ return {}; }
   }
 
   async function aiPersist(lesson, patch){
     const h=await FileSystemManager.getOrCreateFile(lesson.handle,'.lesson.json');
     let meta={}; try{ meta=JSON.parse(await FileSystemManager.readTextFile(h)); }catch(e){}
     Object.keys(patch||{}).forEach(k=>{ if(k!=='aiAutomation') meta[k]=patch[k]; });
-    if(patch.aiAutomation){ meta.aiAutomation=Object.assign({},meta.aiAutomation||{},patch.aiAutomation); lesson.aiAutomation=Object.assign({},lesson.aiAutomation||{},patch.aiAutomation); }
+    if(patch.aiAutomation){
+      meta.aiAutomation=Object.assign({},meta.aiAutomation||{},patch.aiAutomation);
+      lesson.aiAutomation=Object.assign({},lesson.aiAutomation||{},patch.aiAutomation);
+    }
     if(Object.prototype.hasOwnProperty.call(patch,'title')) lesson.title=patch.title;
     if(Object.prototype.hasOwnProperty.call(patch,'aiSummaryFileName')) lesson.aiSummaryFileName=patch.aiSummaryFileName;
     await FileSystemManager.writeTextFile(h,JSON.stringify(meta,null,2));
+  }
+
+  async function aiGetSummaryFile(lesson, {create=false, migrateLegacy=true}={}){
+    let folder=null, summary=null;
+    try{
+      folder = await (create
+        ? lesson.handle.getDirectoryHandle(AI_SUMMARY_FOLDER_NAME,{create:true})
+        : lesson.handle.getDirectoryHandle(AI_SUMMARY_FOLDER_NAME));
+    }catch(e){ folder=null; }
+
+    if(folder){
+      try{ summary=await folder.getFileHandle(AI_SUMMARY_FILE_NAME); }catch(e){ summary=null; }
+    }
+
+    // Migrazione trasparente dei vecchi riepiloghi che si trovavano nella root della lezione.
+    if(!summary && migrateLegacy){
+      let legacy=null;
+      try{ legacy=await lesson.handle.getFileHandle(AI_SUMMARY_FILE_NAME); }catch(e){ legacy=null; }
+      if(legacy){
+        try{
+          if(!folder) folder=await lesson.handle.getDirectoryHandle(AI_SUMMARY_FOLDER_NAME,{create:true});
+          const fileObj=await legacy.getFile();
+          summary=await folder.getFileHandle(AI_SUMMARY_FILE_NAME,{create:true});
+          const writable=await summary.createWritable();
+          await writable.write(await fileObj.arrayBuffer());
+          await writable.close();
+          await lesson.handle.removeEntry(AI_SUMMARY_FILE_NAME);
+        }catch(e){ summary=null; }
+      }
+    }
+
+    if(summary){
+      lesson.aiSummaryFile={name:AI_SUMMARY_FILE_NAME,handle:summary,kind:'text',folder:AI_SUMMARY_FOLDER_NAME};
+      lesson.aiSummaryFileName=AI_SUMMARY_FILE_NAME;
+    }
+    return summary;
+  }
+
+  async function aiSummaryIsValid(lesson, handle){
+    if(!handle) return false;
+    try{
+      const text=await FileSystemManager.readTextFile(handle);
+      return aiSafeText(text).length >= 200;
+    }catch(e){ return false; }
   }
 
   const AIBackgroundInspector = {
@@ -8415,12 +8478,12 @@ console.info('[Uni Notes AI Agent] Modulo caricato. Apri il pannello AI dalla to
     push(type, text, detail=''){
       const item={id:uid(),time:Date.now(),type,text,detail};
       this.logs.push(item);
-      if(this.logs.length>120) this.logs=this.logs.slice(-120);
+      if(this.logs.length>160) this.logs=this.logs.slice(-160);
       window.UniNotesAIBackgroundLog=this.logs.slice();
       this.render();
     },
     iconFor(type){
-      return type==='done'?'checkCircle':type==='error'?'alert':type==='file'?'file':type==='pdf'?'pdf':type==='title'?'edit':type==='summary'?'notes':type==='wait'?'clock':'ai';
+      return type==='done'?'checkCircle':type==='error'?'alert':type==='pdf'?'pdf':type==='title'?'edit':type==='summary'?'notes':type==='wait'?'clock':'ai';
     },
     render(){
       if(!this.modalOpen || !this.modal) return;
@@ -8428,25 +8491,67 @@ console.info('[Uni Notes AI Agent] Modulo caricato. Apri il pannello AI dalla to
       if(!body) return;
       const s=window.UniNotesAIBackgroundStatus||{};
       const logs=this.logs.slice().reverse();
+      const canStop=!!(window.UniNotesAIBackground && window.UniNotesAIBackground.running);
+      const stopped=!!(window.UniNotesAIBackground && window.UniNotesAIBackground.stopped);
       body.innerHTML=`
         <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-bottom:14px;">
-          <div class="card" style="padding:10px 12px;"><div class="muted" style="font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;">Stato</div><div style="font-weight:750;font-size:13px;margin-top:3px;">${esc(s.phase==='processing'?'In elaborazione':s.phase==='error'?'In pausa':'In attesa')}</div></div>
-          <div class="card" style="padding:10px 12px;"><div class="muted" style="font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;">Avanzamento</div><div style="font-weight:750;font-size:13px;margin-top:3px;">${esc(String(s.completed||0))} / ${esc(String(s.total||0))}</div></div>
-          <div class="card" style="padding:10px 12px;"><div class="muted" style="font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;">Lezione</div><div style="font-weight:750;font-size:13px;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(s.currentLesson||'—')}</div></div>
+          <div class="card" style="padding:10px 12px;">
+            <div class="muted" style="font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;">Stato</div>
+            <div style="font-weight:750;font-size:13px;margin-top:3px;">${esc(s.phase==='processing'?'In elaborazione':s.phase==='error'?'Errore':s.phase==='stopped'||stopped?'Interrotto':'In attesa')}</div>
+          </div>
+          <div class="card" style="padding:10px 12px;">
+            <div class="muted" style="font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;">Avanzamento</div>
+            <div style="font-weight:750;font-size:13px;margin-top:3px;">${esc(String(s.completed||0))} / ${esc(String(s.total||0))}</div>
+          </div>
+          <div class="card" style="padding:10px 12px;">
+            <div class="muted" style="font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;">Lezione</div>
+            <div style="font-weight:750;font-size:13px;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(s.currentLesson||'—')}</div>
+          </div>
+        </div>
+        <div class="card" style="padding:12px;margin-bottom:12px;background:var(--accent-soft);border-color:transparent;">
+          <div style="font-size:12px;font-weight:700;">Workflow attuale</div>
+          <div style="font-size:11.5px;line-height:1.55;color:var(--text-secondary);margin-top:3px;">
+            Analisi esclusiva del <b>PDF principale</b> → generazione di <b>Riepilogo AI.md</b> → aggiornamento del titolo della lezione.
+            Gli altri file, inclusi gli audio, <b>non vengono letti, rinominati o modificati</b>.
+          </div>
         </div>
         <div style="border:1px solid var(--border);border-radius:12px;overflow:hidden;background:var(--surface-2);">
           ${logs.length?logs.map(x=>`<div style="display:flex;gap:9px;padding:10px 12px;border-bottom:1px solid var(--border);background:var(--surface);">
-            <div style="width:26px;height:26px;border-radius:8px;display:flex;align-items:center;justify-content:center;background:${x.type==='error'?'var(--danger-soft)':'var(--accent-soft)'};color:${x.type==='error'?'var(--danger)':'var(--accent)'};flex:0 0 auto;">${icon(this.iconFor(x.type),13)}</div>
+            <div style="width:26px;height:26px;border-radius:8px;display:flex;align-items:center;justify-content:center;background:${x.type==='error'?'var(--danger-soft)':x.type==='wait'?'var(--warning-soft)':'var(--accent-soft)'};color:${x.type==='error'?'var(--danger)':x.type==='wait'?'var(--warning)':'var(--accent)'};flex:0 0 auto;">${icon(this.iconFor(x.type),13)}</div>
             <div style="min-width:0;flex:1;"><div style="font-size:12px;font-weight:700;">${esc(x.text)}</div>${x.detail?`<div style="font-size:11px;color:var(--text-secondary);line-height:1.5;margin-top:2px;white-space:pre-wrap;">${esc(x.detail)}</div>`:''}<div style="font-size:10px;color:var(--text-tertiary);margin-top:3px;">${new Date(x.time).toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit',second:'2-digit'})}</div></div>
-          </div>`).join(''):`<div style="padding:28px 14px;text-align:center;color:var(--text-tertiary);font-size:12px;">Nessuna attività registrata per questa elaborazione.</div>`}
+          </div>`).join(''):`<div style="padding:28px 14px;text-align:center;color:var(--text-tertiary);font-size:12px;">Nessuna attività registrata.</div>`}
         </div>`;
+      const stopBtn=this.modal.querySelector('#ai-bg-stop');
+      const resumeBtn=this.modal.querySelector('#ai-bg-resume');
+      if(stopBtn){
+        stopBtn.disabled=!canStop;
+        stopBtn.style.display=canStop?'inline-flex':'none';
+      }
+      if(resumeBtn){
+        resumeBtn.style.display=(!canStop && stopped) ? 'inline-flex' : 'none';
+      }
     },
     open(){
       this.modalOpen=true;
-      this.modal=ModalManager.open(`<div class="modal-header"><div><div class="modal-title">${icon('ai',15)} AI in background</div><div class="muted" style="font-size:11px;margin-top:2px;">Registro dell'elaborazione della libreria</div></div><button class="icon-btn" id="ai-bg-inspector-close">${icon('x',15)}</button></div><div class="modal-body" id="ai-bg-inspector-body"></div>`,{wide:true});
+      this.modal=ModalManager.open(`
+        <div class="modal-header">
+          <div>
+            <div class="modal-title">${icon('ai',15)} AI in background</div>
+            <div class="muted" style="font-size:11px;margin-top:2px;">Analisi PDF e generazione dei riepiloghi</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:6px;">
+            <button class="btn btn-sm btn-danger" id="ai-bg-stop" style="display:none;">${icon('stopcircle',13)} Stop</button>
+            <button class="btn btn-sm" id="ai-bg-resume" style="display:none;">${icon('play',13)} Riprendi</button>
+            <button class="icon-btn" id="ai-bg-inspector-close">${icon('x',15)}</button>
+          </div>
+        </div>
+        <div class="modal-body" id="ai-bg-inspector-body"></div>
+      `,{wide:true});
       const close=this.modal.querySelector('#ai-bg-inspector-close'); if(close) close.onclick=()=>this.close();
+      const stop=this.modal.querySelector('#ai-bg-stop'); if(stop) stop.onclick=()=>window.UniNotesAIBackground&&window.UniNotesAIBackground.stop();
+      const resume=this.modal.querySelector('#ai-bg-resume'); if(resume) resume.onclick=()=>window.UniNotesAIBackground&&window.UniNotesAIBackground.start(true);
       this.render();
-      clearInterval(this.refreshTimer); this.refreshTimer=setInterval(()=>this.render(),500);
+      clearInterval(this.refreshTimer); this.refreshTimer=setInterval(()=>this.render(),400);
     },
     close(){
       this.modalOpen=false; this.modal=null; clearInterval(this.refreshTimer); this.refreshTimer=null; ModalManager.close();
@@ -8461,79 +8566,138 @@ console.info('[Uni Notes AI Agent] Modulo caricato. Apri il pannello AI dalla to
     if(s.phase==='processing'){
       el.style.display='flex';
       el.innerHTML=`${icon('ai',13)} <span>AI in background · ${esc(s.currentLesson||'')}</span>`;
-      el.title=`${s.completed||0}/${s.total||0} lezioni completate`;
+      el.title=`${s.completed||0}/${s.total||0} lezioni completate · clicca per aprire`;
     }else if(s.phase==='error'){
-      el.style.display='flex'; el.innerHTML=`${icon('alert',13)} <span>AI in attesa</span>`; el.title=esc(s.error||'Automazione AI in pausa');
-    }else el.style.display='none';
+      el.style.display='flex';
+      el.innerHTML=`${icon('alert',13)} <span>AI in pausa</span>`;
+      el.title=esc(s.error||'Automazione AI in pausa');
+    }else if(s.phase==='stopped'){
+      el.style.display='flex';
+      el.innerHTML=`${icon('pause',13)} <span>AI fermata</span>`;
+      el.title='Elaborazione interrotta. Clicca per aprire e riprendere.';
+    }else{
+      el.style.display='none';
+    }
   }
 
   function aiEnsureIndicator(){
     if(document.getElementById('ai-bg-indicator')) return;
     const el=document.createElement('div'); el.id='ai-bg-indicator';
     el.style.cssText='display:none;position:fixed;right:18px;bottom:18px;z-index:760;align-items:center;gap:7px;padding:9px 12px;border:1px solid var(--border);border-radius:999px;background:var(--surface);box-shadow:var(--shadow-md);color:var(--text-secondary);font-size:11.5px;font-weight:600;cursor:pointer;user-select:none;';
-    el.setAttribute('role','button');
-    el.setAttribute('tabindex','0');
+    el.setAttribute('role','button'); el.setAttribute('tabindex','0');
     el.addEventListener('click',()=>AIBackgroundInspector.open());
     el.addEventListener('keydown',e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); AIBackgroundInspector.open(); }});
     document.body.appendChild(el);
   }
 
   async function aiOllamaJson(messages, signal){
+    aiThrowIfAborted(signal);
     const model=aiModel(); if(!model) throw new Error('Nessun modello Ollama selezionato.');
-    const res=await fetch(OllamaManager.baseUrl+'/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model,messages,stream:false,format:'json',options:{temperature:0.1}}),signal});
+    const res=await fetch(OllamaManager.baseUrl+'/api/chat',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({model,messages,stream:false,format:'json',options:{temperature:0.1}}),
+      signal
+    });
+    aiThrowIfAborted(signal);
     if(!res.ok){ const t=await res.text().catch(()=> ''); throw new Error('Ollama HTTP '+res.status+(t?': '+t.slice(0,160):'')); }
-    const data=await res.json(); const content=data&&data.message?String(data.message.content||''):'';
-    try{return JSON.parse(content);}catch(e){ const match=content.match(/\{[\s\S]*\}/); if(match) return JSON.parse(match[0]); throw new Error('Risposta AI non valida.'); }
-  }
-
-  async function aiPdfText(file,maxChars=AI_MAX_FULL_PDF_TEXT){
-    if(!file||file.kind!=='pdf') throw new Error('Il documento principale non è un PDF.');
-    if(!window.pdfjsLib&&typeof ensurePdfJs==='function') await ensurePdfJs();
-    if(!window.pdfjsLib) throw new Error('PDF.js non disponibile per leggere il PDF.');
-    const fileObj=await file.handle.getFile(); const buf=await fileObj.arrayBuffer();
-    const pdf=await window.pdfjsLib.getDocument({data:buf}).promise; const chunks=[]; let total=0;
-    for(let p=1;p<=pdf.numPages;p++){
-      const page=await pdf.getPage(p); const tc=await page.getTextContent(); const text=tc.items.map(it=>it&&it.str?it.str:'').join(' ').replace(/\s+/g,' ').trim();
-      if(text) chunks.push(`\n\n--- PAGINA ${p} ---\n${text}`); total+=text.length; if(total>=maxChars) break;
+    const data=await res.json();
+    aiThrowIfAborted(signal);
+    const content=data&&data.message?String(data.message.content||''):'';
+    try{return JSON.parse(content);}catch(e){
+      const match=content.match(/\{[\s\S]*\}/);
+      if(match) return JSON.parse(match[0]);
+      throw new Error('Risposta AI non valida.');
     }
+  }
+
+  async function aiPdfText(file,maxChars=AI_MAX_FULL_PDF_TEXT,signal){
+    if(!file||file.kind!=='pdf') throw new Error('Il documento principale non è un PDF.');
+    aiThrowIfAborted(signal);
+    if(!window.pdfjsLib&&typeof ensurePdfJs==='function') await ensurePdfJs();
+    aiThrowIfAborted(signal);
+    if(!window.pdfjsLib) throw new Error('PDF.js non disponibile per leggere il PDF.');
+    const fileObj=await file.handle.getFile();
+    const buf=await fileObj.arrayBuffer();
+    aiThrowIfAborted(signal);
+    const pdf=await window.pdfjsLib.getDocument({data:buf}).promise;
+    const chunks=[]; let total=0;
+    for(let p=1;p<=pdf.numPages;p++){
+      aiThrowIfAborted(signal);
+      const page=await pdf.getPage(p);
+      const tc=await page.getTextContent();
+      const text=tc.items.map(it=>it&&it.str?it.str:'').join(' ').replace(/\s+/g,' ').trim();
+      if(text) chunks.push(`\n\n--- PAGINA ${p} ---\n${text}`);
+      total+=text.length;
+      if(total>=maxChars) break;
+    }
+    aiThrowIfAborted(signal);
     return {pages:pdf.numPages,text:chunks.join('').slice(0,maxChars)};
-  }
-
-  async function aiFileContext(lesson,file){
-    const kind=file.kind||kindOf(file.name); let content='';
-    try{
-      if(kind==='pdf'){ const out=await aiPdfText(file,AI_MAX_RENAME_CONTEXT); content=`PDF di ${out.pages} pagine.\n${out.text}`; }
-      else if(kind==='text'||kind==='code') content=(await FileSystemManager.readTextFile(file.handle)).slice(0,AI_MAX_RENAME_CONTEXT);
-      else if(kind==='docx'&&window.mammoth){ const fileObj=await file.handle.getFile(); const buf=await fileObj.arrayBuffer(); const out=await window.mammoth.extractRawText({arrayBuffer:buf}); content=String(out.value||'').slice(0,AI_MAX_RENAME_CONTEXT); }
-      else if(kind==='audio'){ const tr=(lesson.files&&lesson.files.trascrizione||[])[0]; if(tr) content=(await FileSystemManager.readTextFile(tr.handle)).slice(0,AI_MAX_RENAME_CONTEXT); }
-    }catch(e){}
-    return content;
-  }
-
-  async function aiSuggestFileName(lesson,file,context){
-    const prompt=`Sei il gestore automatico dei file di Uni Notes.\nDevi proporre un nome file descrittivo e ordinato in italiano.\n\nRegole:\n- restituisci SOLO JSON con {"newName":"..."}.\n- mantieni ESATTAMENTE l'estensione originale: ${extOf(file.name)||'nessuna'}.\n- non usare "/" o "\\".\n- usa un nome breve ma informativo, basato SOLO sul contenuto disponibile.\n- non aggiungere spiegazioni.\n- se il nome attuale è già corretto, restituiscilo identico.\n\nMateria: ${lesson.subjectName}\nLezione: ${lesson.number??''} — ${lesson.title||lesson.folderName}\nNome attuale: ${file.name}\nTipo: ${file.kind||kindOf(file.name)}\n\nContenuto disponibile:\n${context||'(contenuto non disponibile; usa il nome attuale come riferimento)'}`;
-    const out=await aiOllamaJson([{role:'system',content:'Rispondi esclusivamente con JSON valido.'},{role:'user',content:prompt}]);
-    return aiUniqueName(lesson,file.name,out&&out.newName?out.newName:file.name);
   }
 
   function aiCleanMarkdown(md){ return aiSafeText(md).replace(/^```markdown\s*/i,'').replace(/^```\s*/,'').replace(/\s*```$/,'').trim(); }
 
-  async function aiSummarize(lesson,pdfData){
-    const baseInstruction=`Sei un tutor universitario. Devi creare un riassunto fedele di una lezione.\nUsa ESCLUSIVAMENTE il contenuto del PDF fornito. Non inventare esempi, definizioni o concetti assenti.\nIl risultato deve essere utile per ripassare velocemente.\n\nRestituisci SOLO JSON:\n{\n  "title": "titolo breve e preciso della lezione",\n  "summary": "documento Markdown completo"\n}\n\nIl Markdown deve avere:\n- un titolo H1;\n- una sezione di sintesi iniziale;\n- sezioni H2 per gli argomenti principali;\n- elenchi puntati dove utili;\n- formule o termini tecnici in inline code quando appropriato;\n- una sezione finale "Concetti chiave".\nNon citare la stringa "PDF" come se fosse un argomento della lezione.`;
-    if(pdfData.text.length<=60000) return await aiOllamaJson([{role:'system',content:baseInstruction},{role:'user',content:`Materia: ${lesson.subjectName}\nTitolo attuale: ${lesson.title||'(vuoto)'}\n\nTESTO DEL PDF:\n${pdfData.text}`}]);
+  async function aiSummarize(lesson,pdfData,signal){
+    aiThrowIfAborted(signal);
+    const lang = aiSummaryLanguageInfo();
+    const baseInstruction=`Sei un tutor universitario professionale. Devi creare un riassunto fedele e strutturato di una lezione universitaria.
+
+LINGUA OBBLIGATORIA: ${lang.instruction}.
+Tutto il contenuto generato deve essere ESCLUSIVAMENTE in ${lang.instruction}, inclusi titolo, intestazioni, testo, elenchi, callout ed etichette. Non usare altre lingue salvo nomi propri o terminologia tecnica indispensabile già presente nel PDF.
+
+Usa ESCLUSIVAMENTE il contenuto del PDF fornito. Non inventare esempi, definizioni, formule o concetti assenti.
+
+Restituisci SOLO JSON valido:
+{
+  "title": "titolo breve e preciso della lezione nella lingua richiesta",
+  "summary": "documento Markdown completo nella lingua richiesta"
+}
+
+Formato Markdown richiesto:
+- un titolo H1;
+- una sezione iniziale "Sintesi" o equivalente;
+- sezioni H2 per gli argomenti principali;
+- usa **grassetto** per definizioni e concetti da ricordare;
+- usa *corsivo* per precisazioni;
+- usa \`codice inline\` per termini tecnici;
+- usa \`==testo evidenziato==\` per 1-3 elementi essenziali;
+- usa elenchi e tabelle quando utili;
+- usa callout \`> [!KEY] testo\`, \`> [!NOTE] testo\`, \`> [!WARNING] testo\`, \`> [!TIP] testo\`, \`> [!EXAMPLE] testo\`;
+- termina con una sezione "Concetti chiave" o equivalente.
+Non inserire HTML.`;
+    if(pdfData.text.length<=60000){
+      return await aiOllamaJson(
+        [{role:'system',content:baseInstruction},{role:'user',content:`Materia: ${lesson.subjectName}\nTitolo attuale: ${lesson.title||'(vuoto)'}\n\nTESTO DEL PDF:\n${pdfData.text}`}],
+        signal
+      );
+    }
     const partials=[];
     for(let start=0,idx=1;start<pdfData.text.length;start+=AI_CHUNK_SIZE,idx++){
+      aiThrowIfAborted(signal);
       const chunk=pdfData.text.slice(start,start+AI_CHUNK_SIZE);
-      const out=await aiOllamaJson([{role:'system',content:'Riassumi fedelmente il segmento di una lezione universitaria. Rispondi SOLO JSON {"summary":"..."} e non inventare nulla.'},{role:'user',content:`Segmento ${idx}\nMateria: ${lesson.subjectName}\n${chunk}`}]);
-      if(out&&out.summary) partials.push(aiCleanMarkdown(out.summary)); await aiSleep(80);
+      const out=await aiOllamaJson(
+        [{role:'system',content:`Riassumi fedelmente questo segmento di una lezione universitaria esclusivamente in ${lang.instruction}. Rispondi SOLO JSON {"summary":"..."}. Usa Markdown leggibile con **grassetto**, *corsivo*, \`==evidenziato==\` e callout quando utili. Non inventare nulla.`},
+         {role:'user',content:`Segmento ${idx}\nMateria: ${lesson.subjectName}\n${chunk}`}],
+        signal
+      );
+      if(out&&out.summary) partials.push(aiCleanMarkdown(out.summary));
     }
-    return await aiOllamaJson([{role:'system',content:baseInstruction},{role:'user',content:`Materia: ${lesson.subjectName}\nTitolo attuale: ${lesson.title||'(vuoto)'}\n\nRIASSUNTI DEI SEGMENTI:\n${partials.join('\n\n---\n\n')}`}]);
+    aiThrowIfAborted(signal);
+    return await aiOllamaJson(
+      [{role:'system',content:baseInstruction},{role:'user',content:`Materia: ${lesson.subjectName}\nTitolo attuale: ${lesson.title||'(vuoto)'}\n\nRIASSUNTI DEI SEGMENTI:\n${partials.join('\n\n---\n\n')}`}],
+      signal
+    );
   }
 
-  async function aiCreateSummaryFile(lesson,summaryMarkdown){
-    const h=await FileSystemManager.getOrCreateFile(lesson.handle,AI_SUMMARY_FILE_NAME);
+  async function aiCreateSummaryFile(lesson,summaryMarkdown,signal){
+    aiThrowIfAborted(signal);
+    const h=await aiGetSummaryFile(lesson,{create:true,migrateLegacy:true});
+    if(!h) throw new Error('Impossibile creare la cartella dei riepiloghi AI.');
+    aiThrowIfAborted(signal);
     await FileSystemManager.writeTextFile(h,aiCleanMarkdown(summaryMarkdown));
-    lesson.aiSummaryFile={name:AI_SUMMARY_FILE_NAME,handle:h,kind:'text',folder:null}; lesson.aiSummaryFileName=AI_SUMMARY_FILE_NAME;
+    aiThrowIfAborted(signal);
+    lesson.aiSummaryFile={name:AI_SUMMARY_FILE_NAME,handle:h,kind:'text',folder:AI_SUMMARY_FOLDER_NAME};
+    lesson.aiSummaryFileName=AI_SUMMARY_FILE_NAME;
   }
 
   async function aiRefreshLessonView(lesson){
@@ -8543,91 +8707,229 @@ console.info('[Uni Notes AI Agent] Modulo caricato. Apri il pannello AI dalla to
     }catch(e){}
   }
 
-  async function aiProcessLesson(lesson,index,total){
-    let meta=await aiReadMeta(lesson); const doneState=meta.aiAutomation||lesson.aiAutomation;
-    if(doneState&&doneState.done===true) return {done:true,skipped:true};
+  async function aiProcessLesson(lesson,index,total,signal){
+    let meta=await aiReadMeta(lesson);
+    let doneState=meta.aiAutomation||lesson.aiAutomation;
+    const summaryHandle=await aiGetSummaryFile(lesson,{create:false,migrateLegacy:true});
+    const summaryExists=!!summaryHandle;
+    const summaryValid=await aiSummaryIsValid(lesson,summaryHandle);
+    if(doneState&&doneState.done===true && summaryValid) return {done:true,skipped:true};
+
     if(!lesson.mainFile||lesson.mainFile.kind!=='pdf'){
-      await aiPersist(lesson,{aiAutomation:Object.assign({},doneState||{},{version:AI_AUTOMATION_VERSION,status:'waiting-main-pdf',lastError:'Documento principale PDF non disponibile.'})});
+      await aiPersist(lesson,{aiAutomation:Object.assign({},doneState||{},{
+        version:AI_AUTOMATION_VERSION,status:'waiting-main-pdf',processing:false,done:false,
+        lastError:'Documento principale PDF non disponibile.'
+      })});
       return {done:false,waiting:true};
     }
-    if(doneState&&doneState.processing) lesson.aiAutomation=Object.assign({},doneState);
-    else{
-      lesson.aiAutomation=Object.assign({},doneState||{},{version:AI_AUTOMATION_VERSION,processing:true,status:'processing',model:aiModel(),startedAt:Date.now(),filesProcessed:(doneState&&doneState.filesProcessed)||[]});
-      await aiPersist(lesson,{aiAutomation:lesson.aiAutomation});
-    }
-    aiStatus({phase:'processing',currentLesson:`${lesson.subjectName} · Lezione ${lesson.number??''}`,currentSubject:lesson.subjectName,completed:index,total});
-    AIBackgroundInspector.push('start', `Inizio analisi: ${lesson.subjectName} · Lezione ${lesson.number??''}`, 'Controllo dei file, del PDF principale, del titolo e del riepilogo.');
 
-    const files=lessonFileEntries(lesson).filter(f=>f&&f.name&&f.name!==AI_SUMMARY_FILE_NAME&&!String(f.name).startsWith('.'));
-    const processed=new Set((lesson.aiAutomation.filesProcessed||[]).map(String));
-    for(const file of files){
-      if(processed.has(file.name)) continue;
-      AIBackgroundInspector.push('file', `Analizzo il file ${file.name}`, `Leggo il contenuto disponibile per capire quale nome descrittivo assegnargli.`);
-      try{
-        const context=await aiFileContext(lesson,file); const newName=await aiSuggestFileName(lesson,file,context);
-        if(newName&&newName!==file.name){
-          await UniNotesAPI.files.rename({subjectName:lesson.subjectName,lessonId:lesson.id,fileName:file.name,newName});
-          AIBackgroundInspector.push('file', `Rinominato: ${file.name} → ${newName}`, 'Il nuovo nome è stato scelto in base al contenuto letto, mantenendo l’estensione originale.');
-          if(lesson.mainFile&&file===lesson.mainFile){ const pages=typeof lesson.mainFilePages==='number'?lesson.mainFilePages:null; const patch={mainFile:newName}; if(pages!=null){patch.mainFilePages=pages;patch.mainFilePagesFor=newName;} await aiPersist(lesson,patch); }
-        }
-        if(newName===file.name) AIBackgroundInspector.push('file', `Nome già corretto: ${file.name}`, 'Non è stata necessaria alcuna rinomina.');
-        processed.add(file.name); if(newName) processed.add(newName); lesson.aiAutomation.filesProcessed=Array.from(processed); await aiPersist(lesson,{aiAutomation:{filesProcessed:lesson.aiAutomation.filesProcessed}}); await aiSleep(120);
-      }catch(err){ console.warn('[Uni Notes AI] rinomina file fallita:',file.name,err); }
-    }
+    aiThrowIfAborted(signal);
+    lesson.aiAutomation=Object.assign({},doneState||{},{
+      version:AI_AUTOMATION_VERSION,processing:true,status:'processing',model:aiModel(),
+      startedAt:Date.now(),lastError:null,analysisScope:'main-pdf-only',audioMode:'untouched'
+    });
+    await aiPersist(lesson,{aiAutomation:lesson.aiAutomation});
+
+    aiStatus({
+      phase:'processing',
+      currentLesson:`${lesson.subjectName} · Lezione ${lesson.number??''}`,
+      currentSubject:lesson.subjectName,
+      completed:index,total
+    });
+    AIBackgroundInspector.push('start',
+      `Inizio elaborazione: ${lesson.subjectName} · Lezione ${lesson.number??''}`,
+      'Verrà analizzato esclusivamente il PDF principale. Gli altri file resteranno invariati.'
+    );
 
     let pdfData;
     try{
-      AIBackgroundInspector.push('pdf', `Leggo il PDF principale: ${lesson.mainFile.name}`, 'Estraggo il testo pagina per pagina per costruire un riassunto fedele.');
-      pdfData=await aiPdfText(lesson.mainFile,AI_MAX_FULL_PDF_TEXT); lesson.mainFilePages=pdfData.pages;
-      AIBackgroundInspector.push('pdf', `PDF letto: ${pdfData.pages} pagine`, 'Il contenuto è pronto per titolo e riassunto.');
-      const metaNow=await aiReadMeta(lesson); metaNow.mainFilePages=pdfData.pages; metaNow.mainFilePagesFor=lesson.mainFile.name;
-      await FileSystemManager.writeTextFile(await FileSystemManager.getOrCreateFile(lesson.handle,'.lesson.json'),JSON.stringify(metaNow,null,2));
-    }catch(err){ await aiPersist(lesson,{aiAutomation:{processing:false,status:'error',lastError:'Lettura PDF fallita: '+(err.message||err)}}); throw err; }
+      AIBackgroundInspector.push('pdf', `Leggo il PDF principale: ${lesson.mainFile.name}`, 'Estraggo il testo pagina per pagina.');
+      pdfData=await aiPdfText(lesson.mainFile,AI_MAX_FULL_PDF_TEXT,signal);
+      aiThrowIfAborted(signal);
+      lesson.mainFilePages=pdfData.pages;
+      AIBackgroundInspector.push('pdf', `PDF letto: ${pdfData.pages} pagine`, 'Il contenuto è pronto per la generazione del riepilogo.');
 
-    AIBackgroundInspector.push('summary', 'Creo il riassunto della lezione', 'L’AI sta sintetizzando il PDF esclusivamente sulla base del suo contenuto.');
-    const summaryOut=await aiSummarize(lesson,pdfData); const summary=aiCleanMarkdown(summaryOut&&summaryOut.summary); const newTitle=aiSafeText(summaryOut&&summaryOut.title);
+      const metaNow=await aiReadMeta(lesson);
+      metaNow.mainFilePages=pdfData.pages;
+      metaNow.mainFilePagesFor=lesson.mainFile.name;
+      await FileSystemManager.writeTextFile(
+        await FileSystemManager.getOrCreateFile(lesson.handle,'.lesson.json'),
+        JSON.stringify(metaNow,null,2)
+      );
+    }catch(err){
+      if(err&&err.name==='AbortError') throw err;
+      await aiPersist(lesson,{aiAutomation:{processing:false,status:'error',done:false,lastError:'Lettura PDF fallita: '+(err.message||err)}});
+      throw err;
+    }
+
+    aiThrowIfAborted(signal);
+    AIBackgroundInspector.push('summary', 'Creo Riepilogo AI.md', `Lingua: ${aiSummaryLanguageInfo().label}. Il riepilogo sarà basato esclusivamente sul PDF.`);
+    const summaryOut=await aiSummarize(lesson,pdfData,signal);
+    aiThrowIfAborted(signal);
+    const summary=aiCleanMarkdown(summaryOut&&summaryOut.summary);
+    const newTitle=aiSafeText(summaryOut&&summaryOut.title);
     if(!summary) throw new Error('L’AI non ha restituito un riassunto valido.');
-    await aiCreateSummaryFile(lesson,summary);
-    AIBackgroundInspector.push('summary', 'Riepilogo AI.md creato', 'Il riassunto è stato salvato nella cartella della lezione.');
+
+    await aiCreateSummaryFile(lesson,summary,signal);
+    AIBackgroundInspector.push('summary','Riepilogo AI.md salvato','Il file è stato creato nella cartella della lezione.');
+
+    aiThrowIfAborted(signal);
     const title=newTitle||lesson.title||`Lezione ${lesson.number??''}`;
     await aiPersist(lesson,{title,aiSummaryFileName:AI_SUMMARY_FILE_NAME});
-    AIBackgroundInspector.push('title', `Titolo lezione aggiornato: ${title}`, 'Il titolo è stato scelto in base agli argomenti emersi dal PDF.');
-    lesson.aiAutomation=Object.assign({},lesson.aiAutomation,{version:AI_AUTOMATION_VERSION,processing:false,done:true,status:'done',completedAt:Date.now(),model:aiModel(),summaryFileName:AI_SUMMARY_FILE_NAME,filesProcessed:Array.from(processed)});
+    AIBackgroundInspector.push('title',`Titolo aggiornato: ${title}`,'Titolo ricavato esclusivamente dal contenuto del PDF.');
+
+    aiThrowIfAborted(signal);
+    lesson.aiAutomation=Object.assign({},lesson.aiAutomation,{
+      version:AI_AUTOMATION_VERSION,processing:false,done:true,status:'done',
+      completedAt:Date.now(),model:aiModel(),summaryFileName:AI_SUMMARY_FILE_NAME,summaryFolder:AI_SUMMARY_FOLDER_NAME,
+      analysisScope:'main-pdf-only',audioMode:'untouched'
+    });
     await aiPersist(lesson,{aiAutomation:lesson.aiAutomation});
-    AIBackgroundInspector.push('done', `Elaborazione completata: ${lesson.subjectName} · Lezione ${lesson.number??''}`, 'Da questo momento questa lezione non verrà elaborata nuovamente.');
-    await aiRefreshLessonView(lesson); return {done:true};
+    AIBackgroundInspector.push('done',
+      `Elaborazione completata: ${lesson.subjectName} · Lezione ${lesson.number??''}`,
+      'Il riepilogo è stato salvato in Riepiloghi AI/. Da ora questa lezione non verrà più elaborata finché il riepilogo resta valido.'
+    );
+    await aiRefreshLessonView(lesson);
+    return {done:true};
   }
 
+
   const AIBackgroundWorker={
-    running:false,timer:null,controller:null,stopped:false,
-    schedule(ms=3500){ clearTimeout(this.timer); this.timer=setTimeout(()=>this.tick().catch(()=>{}),ms); },
-    async tick(){
-      if(this.running||this.stopped||!aiEnabled()){ this.schedule(aiEnabled()?15000:30000); return; }
-      if(!AppState||!AppState.dirHandle){ this.schedule(3000); return; }
-      const connection=await OllamaManager.testConnection();
-      if(!connection.ok){ aiStatus({phase:'idle'}); this.schedule(60000); return; }
-      if(!OllamaManager.getModel()&&connection.models&&connection.models[0]) OllamaManager.setModel(connection.models[0]);
-      if(!OllamaManager.getModel()){ this.schedule(60000); return; }
-      this.running=true; this.stopped=false; this.controller=new AbortController();
-      try{
-        const lessons=allLessonsFlat(); let completed=0; const pending=[];
-        for(const lesson of lessons){ const meta=await aiReadMeta(lesson); if(meta.aiAutomation&&meta.aiAutomation.done===true) completed++; else pending.push(lesson); }
-        if(!pending.length){ aiStatus({phase:'idle',completed,total:lessons.length}); this.schedule(120000); return; }
-        for(let i=0;i<pending.length;i++){
-          if(this.stopped||!aiEnabled()) break; const lesson=pending[i];
-          try{ const result=await aiProcessLesson(lesson,completed,lessons.length); if(result&&result.done) completed++; }
-          catch(err){ console.warn('[Uni Notes AI] elaborazione lezione fallita:',lesson.subjectName,lesson.number,err); AIBackgroundInspector.push('error', `Elaborazione fallita: ${lesson.subjectName} · Lezione ${lesson.number??''}`, err.message||String(err)); aiStatus({phase:'error',error:err.message||String(err),completed,total:lessons.length}); }
-          await aiSleep(150);
-        }
-        aiStatus({phase:'idle',completed,total:lessons.length}); this.schedule(pending.length?5000:120000);
-      }finally{ this.running=false; this.controller=null; }
+    running:false,timer:null,controller:null,stopped:false,resumeRequested:false,currentLesson:null,
+    schedule(ms=3500){
+      clearTimeout(this.timer);
+      this.timer=setTimeout(()=>this.tick().catch(()=>{}),ms);
     },
-    start(){ this.stopped=false; aiEnsureIndicator(); this.schedule(2500); },
-    stop(){ this.stopped=true; if(this.controller) this.controller.abort(); clearTimeout(this.timer); aiStatus({phase:'idle'}); },
+    async tick(){
+      if(this.running||this.stopped||!aiEnabled()){
+        this.schedule(aiEnabled()?15000:30000);
+        return;
+      }
+      if(!AppState||!AppState.dirHandle){
+        this.schedule(3000);
+        return;
+      }
+
+      const connection=await OllamaManager.testConnection();
+      if(!connection.ok){
+        aiStatus({phase:'idle'});
+        this.schedule(60000);
+        return;
+      }
+      if(!OllamaManager.getModel()&&connection.models&&connection.models[0]) OllamaManager.setModel(connection.models[0]);
+      if(!OllamaManager.getModel()){
+        this.schedule(60000);
+        return;
+      }
+
+      this.running=true;
+      this.stopped=false;
+      this.resumeRequested=false;
+      this.controller=new AbortController();
+      let lessons=[];
+      let completed=0;
+
+      try{
+        lessons=allLessonsFlat();
+        const pending=[];
+        for(const lesson of lessons){
+          if(this.controller.signal.aborted) throw aiAbortError();
+          const meta=await aiReadMeta(lesson);
+          const summaryHandle=await aiGetSummaryFile(lesson,{create:false,migrateLegacy:true});
+          const summaryValid=await aiSummaryIsValid(lesson,summaryHandle);
+          if(meta.aiAutomation&&meta.aiAutomation.done===true&&summaryValid) completed++;
+          else pending.push(lesson);
+        }
+
+        if(!pending.length){
+          aiStatus({phase:'idle',completed,total:lessons.length});
+          this.schedule(120000);
+          return;
+        }
+
+        for(let i=0;i<pending.length;i++){
+          if(this.stopped||!this.controller||this.controller.signal.aborted) break;
+          const lesson=pending[i];
+          this.currentLesson=lesson;
+          try{
+            const result=await aiProcessLesson(lesson,completed,lessons.length,this.controller.signal);
+            if(result&&result.done) completed++;
+          }catch(err){
+            if(err&&err.name==='AbortError'){
+              this.stopped=true;
+              if(this.currentLesson){
+                try{
+                  await aiPersist(this.currentLesson,{aiAutomation:{
+                    processing:false,status:'stopped',done:false,
+                    stoppedAt:Date.now(),lastError:null,
+                    analysisScope:'main-pdf-only',audioMode:'untouched'
+                  }});
+                }catch(e){}
+              }
+              break;
+            }
+            console.warn('[Uni Notes AI] elaborazione lezione fallita:',lesson.subjectName,lesson.number,err);
+            AIBackgroundInspector.push('error',
+              `Elaborazione fallita: ${lesson.subjectName} · Lezione ${lesson.number??''}`,
+              err.message||String(err)
+            );
+            aiStatus({phase:'error',error:err.message||String(err),completed,total:lessons.length});
+          }
+          if(!this.stopped && this.controller && !this.controller.signal.aborted){
+            await new Promise(r=>setTimeout(r,150));
+          }
+          this.currentLesson=null;
+        }
+
+        if(this.stopped){
+          aiStatus({
+            phase:'stopped',
+            currentLesson:window.UniNotesAIBackgroundStatus&&window.UniNotesAIBackgroundStatus.currentLesson||null,
+            completed,total:lessons.length
+          });
+          AIBackgroundInspector.push('wait','Elaborazione interrotta','La lezione corrente non è stata marcata come completata. Premi “Riprendi” per continuare.');
+        }else{
+          aiStatus({phase:'idle',completed,total:lessons.length});
+        }
+
+        this.schedule(this.stopped?300000:(pending.length?5000:120000));
+      }finally{
+        this.currentLesson=null;
+        this.running=false;
+        this.controller=null;
+        AIBackgroundInspector.render();
+      }
+    },
+    start(immediate=false){
+      this.stopped=false;
+      this.resumeRequested=true;
+      aiEnsureIndicator();
+      clearTimeout(this.timer);
+      this.schedule(immediate?200:2500);
+    },
+    stop(){
+      this.stopped=true;
+      const current=this.currentLesson;
+      if(this.controller) this.controller.abort();
+      clearTimeout(this.timer);
+      const currentName=(window.UniNotesAIBackgroundStatus||{}).currentLesson||null;
+      aiStatus({phase:'stopped',currentLesson:currentName});
+      if(current){
+        aiPersist(current,{aiAutomation:{
+          processing:false,status:'stopped',done:false,
+          stoppedAt:Date.now(),lastError:null,
+          analysisScope:'main-pdf-only',audioMode:'untouched'
+        }}).catch(()=>{});
+      }
+      AIBackgroundInspector.push('wait','Richiesta di stop ricevuta','Interrompo l’operazione in corso senza segnare la lezione come completata. Puoi riprendere in seguito.');
+      AIBackgroundInspector.render();
+    },
     enabled:aiEnabled
   };
 
-  window.UniNotesAIBackground=AIBackgroundWorker; window.UniNotesAISummaryFile=AI_SUMMARY_FILE_NAME;
+  window.UniNotesAIBackground=AIBackgroundWorker;
+  window.UniNotesAISummaryFile=AI_SUMMARY_FILE_NAME;
+  window.UniNotesAISummaryFolder=AI_SUMMARY_FOLDER_NAME;
 
   if(typeof LibraryScanner!=='undefined'&&!LibraryScanner.__aiBackgroundPatched){
     const origScanLesson=LibraryScanner.scanLesson.bind(LibraryScanner);
@@ -8636,11 +8938,40 @@ console.info('[Uni Notes AI Agent] Modulo caricato. Apri il pannello AI dalla to
       try{
         const lessonHandle=args[1]; let meta={};
         try{ const mh=await lessonHandle.getFileHandle('.lesson.json'); meta=JSON.parse(await FileSystemManager.readTextFile(mh)); }catch(e){}
-        lesson.aiAutomation=meta.aiAutomation||null; lesson.aiSummaryFileName=meta.aiSummaryFileName||AI_SUMMARY_FILE_NAME;
-        const summaryHandle=await lessonHandle.getFileHandle(AI_SUMMARY_FILE_NAME); lesson.aiSummaryFile={name:AI_SUMMARY_FILE_NAME,handle:summaryHandle,kind:'text',folder:null};
+        lesson.aiAutomation=meta.aiAutomation||null;
+        lesson.aiSummaryFileName=meta.aiSummaryFileName||AI_SUMMARY_FILE_NAME;
+
+        // Sposta/recupera il riepilogo nella sottocartella dedicata e poi nascondi
+        // completamente quella cartella dal materiale della lezione.
+        const summaryHandle=await aiGetSummaryFile(lesson,{create:false,migrateLegacy:true});
+        if(summaryHandle){
+          lesson.aiSummaryFile={name:AI_SUMMARY_FILE_NAME,handle:summaryHandle,kind:'text',folder:AI_SUMMARY_FOLDER_NAME};
+        }
+
+        // Compatibilità con le versioni precedenti: se il vecchio riepilogo era
+        // stato erroneamente scelto come documento principale, ristabiliamo il PDF.
+        if(lesson.mainFile && lesson.mainFile.name===AI_SUMMARY_FILE_NAME){
+          try{
+            const rootEntries=await FileSystemManager.listEntries(lessonHandle);
+            const pdfCandidates=rootEntries.filter(e=>e.kind==='file' && e.name!==AI_SUMMARY_FILE_NAME && extOf(e.name)==='pdf')
+              .sort((a,b)=>{
+                const ah=MAIN_FILE_NAME_HINTS.some(h=>a.name.toLowerCase().includes(h)) ? 0 : 1;
+                const bh=MAIN_FILE_NAME_HINTS.some(h=>b.name.toLowerCase().includes(h)) ? 0 : 1;
+                return ah-bh || a.name.localeCompare(b.name,'it',{numeric:true});
+              });
+            if(pdfCandidates.length){
+              lesson.mainFile={name:pdfCandidates[0].name,handle:pdfCandidates[0].handle,kind:'pdf',folder:null};
+              await aiPersist(lesson,{mainFile:pdfCandidates[0].name});
+            }else lesson.mainFile=null;
+          }catch(e){ lesson.mainFile=null; }
+        }
+
         lesson.otherRootFiles=(lesson.otherRootFiles||[]).filter(f=>f.name!==AI_SUMMARY_FILE_NAME);
-        Object.keys(lesson.files||{}).forEach(k=>{ lesson.files[k]=(lesson.files[k]||[]).filter(f=>f.name!==AI_SUMMARY_FILE_NAME); });
-      }catch(e){}
+        Object.keys(lesson.files||{}).forEach(k=>{
+          lesson.files[k]=(lesson.files[k]||[]).filter(f=>f.name!==AI_SUMMARY_FILE_NAME && f.folder!==AI_SUMMARY_FOLDER_NAME);
+        });
+        lesson.subfolders=(lesson.subfolders||[]).filter(sf=>String(sf.name).toLowerCase()!==AI_SUMMARY_FOLDER_NAME.toLowerCase());
+      }catch(e){ console.warn('[Uni Notes AI] preparazione riepilogo fallita:',e); }
       return lesson;
     };
     LibraryScanner.__aiBackgroundPatched=true;
@@ -8653,7 +8984,7 @@ console.info('[Uni Notes AI Agent] Modulo caricato. Apri il pannello AI dalla to
         const el=document.getElementById('lesson-main-doc'); if(!el) return; let markdown=''; try{markdown=await FileSystemManager.readTextFile(summaryFile.handle);}catch(e){}
         if(markdown){
           let mainMeta={}; try{mainMeta=await FileSystemManager.getFileMeta(lesson.mainFile);}catch(e){}
-          el.innerHTML=`<div class="card ai-summary-shell"><div class="ai-summary-head"><div class="ai-summary-brand"><span class="ai-summary-icon">${icon('ai',16)}</span><div><div class="ai-summary-title">Riepilogo intelligente</div><div class="ai-summary-sub">Generato localmente con Ollama · fonte: ${esc(lesson.mainFile?lesson.mainFile.name:'PDF principale')}</div></div></div><div class="ai-summary-actions">${lesson.mainFile?`<button class="btn btn-sm" id="ai-summary-open-pdf">${icon('pdf',13)} Apri PDF</button>`:''}<button class="btn btn-sm" id="ai-summary-open-md">${icon('file',13)} Apri Markdown</button></div></div><div class="ai-summary-content">${MarkdownPreview.render(markdown)}</div></div>`;
+          el.innerHTML=`<div class="card ai-summary-shell"><div class="ai-summary-head"><div class="ai-summary-brand"><span class="ai-summary-icon">${icon('ai',16)}</span><div><div class="ai-summary-title">Riepilogo intelligente</div><div class="ai-summary-sub">Generato localmente con Ollama · lingua: ${esc(aiSummaryLanguageInfo().label)} · fonte: ${esc(lesson.mainFile?lesson.mainFile.name:'PDF principale')}</div></div></div><div class="ai-summary-actions">${lesson.mainFile?`<button class="btn btn-sm" id="ai-summary-open-pdf">${icon('pdf',13)} Apri PDF</button>`:''}<button class="btn btn-sm" id="ai-summary-open-md">${icon('file',13)} Apri Markdown</button></div></div><div class="ai-summary-content">${MarkdownPreview.render(markdown)}</div></div>`;
           const openPdf=el.querySelector('#ai-summary-open-pdf'); if(openPdf&&lesson.mainFile) openPdf.addEventListener('click',()=>PDFViewerModal.open(lesson,lesson.mainFile));
           const openMd=el.querySelector('#ai-summary-open-md'); if(openMd) openMd.addEventListener('click',()=>FileViewer.open(lesson,summaryFile)); return;
         }
@@ -8673,6 +9004,22 @@ console.info('[Uni Notes AI Agent] Modulo caricato. Apri il pannello AI dalla to
     .ai-summary-actions{display:flex;gap:7px;flex-shrink:0;}
     .ai-summary-content{padding:28px 34px;max-width:920px;margin:0 auto;font-size:14px;line-height:1.72;}
     .ai-summary-content h1,.ai-summary-content h2,.ai-summary-content h3{letter-spacing:-.02em;}
+    .ai-summary-content strong{font-weight:800;color:var(--text);}
+    .ai-summary-content em{color:var(--text-secondary);}
+    .ai-summary-content .md-mark{display:inline;padding:0 .2em;border-radius:.32em;background:linear-gradient(180deg,transparent 28%,rgba(255,221,87,.58) 28%,rgba(255,221,87,.58) 88%,transparent 88%);}
+    .ai-summary-content .md-callout{margin:14px 0;padding:12px 14px;border:1px solid var(--border);border-left:4px solid var(--accent);border-radius:12px;background:var(--surface-2);box-shadow:var(--shadow-sm);}
+    .ai-summary-content .md-callout-label{font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;color:var(--accent);}
+    .ai-summary-content .md-callout-text{font-size:13.5px;line-height:1.6;}
+    .ai-summary-content .md-callout-key{border-left-color:var(--accent);background:var(--accent-soft);}
+    .ai-summary-content .md-callout-key .md-callout-label{color:var(--accent);}
+    .ai-summary-content .md-callout-note{border-left-color:var(--success);background:var(--success-soft);}
+    .ai-summary-content .md-callout-note .md-callout-label{color:var(--success);}
+    .ai-summary-content .md-callout-warning{border-left-color:var(--warning);background:var(--warning-soft);}
+    .ai-summary-content .md-callout-warning .md-callout-label{color:var(--warning);}
+    .ai-summary-content .md-callout-tip{border-left-color:var(--accent-strong);background:var(--accent-soft);}
+    .ai-summary-content .md-callout-tip .md-callout-label{color:var(--accent-strong);}
+    .ai-summary-content .md-callout-example{border-left-color:#8b5cf6;background:rgba(139,92,246,.08);}
+    .ai-summary-content .md-callout-example .md-callout-label{color:#7c3aed;}
     @media(max-width:720px){.ai-summary-head{align-items:flex-start;flex-direction:column;}.ai-summary-actions{width:100%;}.ai-summary-actions .btn{flex:1;justify-content:center;}.ai-summary-content{padding:20px 18px;font-size:14px;}.ai-summary-sub{max-width:82vw;}}
   `; document.head.appendChild(style);
 
@@ -8681,7 +9028,7 @@ console.info('[Uni Notes AI Agent] Modulo caricato. Apri il pannello AI dalla to
     SettingsPage.render=function(){
       origSettings(); const card=document.getElementById('ai-settings-card'); if(!card||card.querySelector('#ai-bg-enable')) return;
       const wrap=document.createElement('div'); wrap.style.cssText='margin-top:14px;padding-top:14px;border-top:1px solid var(--border);';
-      wrap.innerHTML=`<label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;font-size:12.5px;"><input type="checkbox" id="ai-bg-enable" style="margin-top:2px;width:15px;height:15px;"><span><b>Automazione AI in background</b><br><span class="muted">Quando Ollama è disponibile, Uni Notes sistema automaticamente i file, il riepilogo PDF e il nome della lezione. Ogni lezione viene elaborata una sola volta.</span></span></label><div id="ai-bg-settings-status" class="muted" style="font-size:11.5px;margin-top:8px;"></div>`;
+      wrap.innerHTML=`<label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;font-size:12.5px;"><input type="checkbox" id="ai-bg-enable" style="margin-top:2px;width:15px;height:15px;"><span><b>Automazione AI in background</b><br><span class="muted">Quando Ollama è disponibile, Uni Notes analizza automaticamente esclusivamente il PDF principale e genera il riepilogo AI. Gli altri file non vengono modificati. Ogni lezione viene elaborata una sola volta.</span></span></label><div id="ai-bg-settings-status" class="muted" style="font-size:11.5px;margin-top:8px;"></div>`;
       card.appendChild(wrap); const cb=wrap.querySelector('#ai-bg-enable'); cb.checked=aiEnabled(); cb.addEventListener('change',()=>{localStorage.setItem('uninotes.aiBackgroundEnabled',cb.checked?'1':'0');if(cb.checked)AIBackgroundWorker.start();else AIBackgroundWorker.stop();wrap.querySelector('#ai-bg-settings-status').textContent=cb.checked?'Automazione attiva.':'Automazione disattivata.';}); wrap.querySelector('#ai-bg-settings-status').textContent=cb.checked?'Automazione attiva.':'Automazione disattivata.';
     }; SettingsPage.__aiBackgroundSettingsPatched=true;
   }
