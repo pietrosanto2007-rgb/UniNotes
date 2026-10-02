@@ -1651,6 +1651,63 @@ input:not([type]),select,textarea{color:var(--text);}
   .topbar-search{width:220px;}
 }
 
+
+/* ============================================================
+   EXPORT CENTER
+   ============================================================ */
+.export-hero{display:flex;justify-content:space-between;gap:18px;align-items:flex-end;margin-bottom:18px;}
+.export-kicker{font-size:11px;text-transform:uppercase;letter-spacing:.08em;font-weight:750;color:var(--accent);margin-bottom:6px;}
+.export-title{font-size:26px;line-height:1.1;font-weight:780;letter-spacing:-.035em;}
+.export-sub{font-size:13px;color:var(--text-secondary);max-width:760px;margin-top:7px;line-height:1.65;}
+.export-toolbar{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;}
+.export-grid{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(300px,.65fr);gap:14px;align-items:start;}
+.export-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;box-shadow:var(--shadow-sm);overflow:hidden;}
+.export-card-head{padding:15px 16px 12px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;gap:12px;align-items:center;}
+.export-card-title{font-size:13px;font-weight:760;letter-spacing:-.01em;}
+.export-card-sub{font-size:11.5px;color:var(--text-tertiary);margin-top:2px;}
+.export-card-body{padding:14px 16px;}
+.export-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+.export-chip-row{display:flex;gap:7px;flex-wrap:wrap;}
+.export-chip{border:1px solid var(--border-strong);background:var(--surface-2);color:var(--text-secondary);border-radius:999px;padding:7px 10px;font-size:11.5px;cursor:pointer;user-select:none;transition:all .16s var(--ease);}
+.export-chip:hover{border-color:var(--accent);color:var(--text);transform:translateY(-1px);}
+.export-chip.active{background:var(--accent-soft);border-color:rgba(52,87,213,.28);color:var(--accent);font-weight:700;}
+.export-list{display:flex;flex-direction:column;gap:7px;}
+.export-subject{border:1px solid var(--border);border-radius:12px;overflow:hidden;background:var(--surface-2);}
+.export-subject-head{display:flex;align-items:center;gap:9px;padding:10px 11px;cursor:pointer;}
+.export-subject-head:hover{background:var(--surface);}
+.export-subject-title{font-size:12.5px;font-weight:700;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.export-subject-meta{font-size:10.5px;color:var(--text-tertiary);white-space:nowrap;}
+.export-subject-lessons{padding:0 11px 10px 36px;display:grid;gap:4px;}
+.export-lesson-row{display:flex;align-items:center;gap:8px;padding:6px 7px;border-radius:8px;font-size:11.5px;color:var(--text-secondary);}
+.export-lesson-row:hover{background:var(--surface);color:var(--text);}
+.export-lesson-name{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.export-check{width:16px;height:16px;accent-color:var(--accent);cursor:pointer;flex:0 0 auto;}
+.export-type-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;}
+.export-type{display:flex;align-items:center;gap:9px;padding:9px 10px;border:1px solid var(--border);border-radius:10px;background:var(--surface-2);cursor:pointer;}
+.export-type:hover{background:var(--surface);border-color:var(--border-strong);}
+.export-type-info{min-width:0;flex:1;}
+.export-type-name{font-size:11.5px;font-weight:650;color:var(--text);}
+.export-type-meta{font-size:10px;color:var(--text-tertiary);margin-top:1px;}
+.export-ext-input{width:100%;margin-top:9px;}
+.export-summary{position:sticky;top:8px;}
+.export-stat-row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-bottom:12px;}
+.export-stat{padding:11px 12px;background:var(--surface-2);border:1px solid var(--border);border-radius:11px;}
+.export-stat-value{font-size:20px;font-weight:780;letter-spacing:-.03em;}
+.export-stat-label{font-size:10.5px;color:var(--text-tertiary);margin-top:1px;}
+.export-selected-preview{max-height:250px;overflow:auto;border-top:1px solid var(--border);margin-top:12px;padding-top:10px;}
+.export-preview-row{display:flex;gap:8px;align-items:center;padding:6px 0;font-size:10.5px;color:var(--text-secondary);border-bottom:1px solid color-mix(in srgb,var(--border) 55%,transparent);}
+.export-preview-row:last-child{border-bottom:0;}
+.export-preview-path{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.export-progress{display:none;margin-top:12px;border:1px solid var(--border);background:var(--surface-2);border-radius:11px;padding:10px 11px;}
+.export-progress.show{display:block;}
+.export-progress-bar{height:7px;background:var(--border);border-radius:999px;overflow:hidden;margin-top:8px;}
+.export-progress-fill{height:100%;width:0;background:var(--accent);transition:width .18s ease;}
+.export-progress-text{font-size:11px;color:var(--text-secondary);display:flex;justify-content:space-between;gap:10px;}
+.export-note{font-size:11px;color:var(--text-tertiary);line-height:1.55;}
+.export-select-all{font-size:10.5px;color:var(--accent);font-weight:650;cursor:pointer;}
+.export-empty{padding:18px 10px;text-align:center;color:var(--text-tertiary);font-size:12px;}
+@media(max-width:900px){.export-grid{grid-template-columns:1fr;}.export-summary{position:static;}.export-hero{align-items:flex-start;flex-direction:column;}.export-toolbar{justify-content:flex-start;}}
+@media(max-width:560px){.export-type-grid{grid-template-columns:1fr;}.export-stat-row{grid-template-columns:repeat(2,minmax(0,1fr));}.export-title{font-size:23px;}.export-card-head{padding:13px 13px 11px;}.export-card-body{padding:12px 13px;}}
 </style>
 </head>
 <body>
@@ -1743,7 +1800,10 @@ const ICONS = {
   arrowLeft: '<path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/>',
   cmd: '<path d="M9 3a3 3 0 00-3 3 3 3 0 003 3h9a3 3 0 003-3 3 3 0 00-3-3 3 3 0 00-3 3v9a3 3 0 003 3 3 3 0 003-3 3 3 0 00-3-3H9a3 3 0 00-3 3 3 3 0 003 3 3 3 0 003-3V9a3 3 0 00-3-3z"/>',
   star: '<path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>',
-  menu: '<path d="M4 6h16M4 12h16M4 18h16"/>'
+  menu: '<path d="M4 6h16M4 12h16M4 18h16"/>',
+  download: '<path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M4 21h16"/>',
+  archive: '<path d="M4 7h16v13H4z"/><path d="M4 7l2-4h12l2 4"/><path d="M9 12h6"/>',
+  filter: '<path d="M4 5h16L14 12v6l-4 2v-8z"/>'
 };
 function icon(name, size){
   size = size || 17;
@@ -3315,7 +3375,8 @@ const SidebarView = {
       { page:'tags', label:'Tag', icon:'tag' },
       { page:'calendar', label:'Calendario', icon:'calendar' },
       { page:'activity', label:'Attività', icon:'activity' },
-      { page:'statistics', label:'Statistiche', icon:'statistics' }
+      { page:'statistics', label:'Statistiche', icon:'statistics' },
+      { page:'export', label:'Esporta / Scarica', icon:'download' }
     ]},
     { section: null, items: [ { page:'settings', label:'Impostazioni', icon:'settings' } ] }
   ],
@@ -3514,6 +3575,7 @@ const Router = {
       'calendar': CalendarPage,
       'activity': ActivityPage,
       'statistics': StatisticsPage,
+      'export': ExportPage,
       'settings': SettingsPage,
       'editor': EditorPage
     };
@@ -6917,6 +6979,444 @@ const SettingsPage = {
 };
 
 /* ============================================================
+   EXPORT / DOWNLOAD CENTER — esportazione granulare in ZIP
+   ------------------------------------------------------------
+   Tutto avviene localmente nel browser. La funzione legge i file
+   già presenti nella cartella collegata, senza modificarli.
+   ============================================================ */
+const ExportPage = {
+  state: {
+    ready: false,
+    records: [],
+    subjectOpen: {},
+    selectedLessons: new Set(),
+    selectedExts: new Set(),
+    excludedFiles: new Set(),
+    includeAi: false,
+    includeSystem: false,
+    customExts: '',
+    structure: 'subject-lesson',
+    filename: ''
+  },
+
+  defaultFilename(){
+    const d = new Date();
+    const p = n => String(n).padStart(2,'0');
+    return `Uni Notes — Export ${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}`;
+  },
+
+  resetSelections(){
+    this.state.selectedLessons = new Set(this.state.records.filter(r => r.lessonId).map(r => r.lessonId));
+    this.state.selectedExts = new Set([...new Set(this.state.records.filter(r => !r.isSystem && !r.isAi).map(r => r.ext || '(nessuna estensione)'))]);
+    this.state.excludedFiles = new Set();
+    this.state.includeAi = false;
+    this.state.includeSystem = false;
+    this.state.customExts = '';
+    this.state.structure = 'subject-lesson';
+    this.state.filename = this.defaultFilename();
+  },
+
+  async buildIndex(){
+    if(!AppState.dirHandle || !AppState.library?.subjects?.length){
+      this.state.records = [];
+      this.state.ready = true;
+      return;
+    }
+    const records = [];
+    const walk = async (dirHandle, parts, subject, lessonId) => {
+      for await (const [name, handle] of dirHandle.entries()){
+        const nextParts = [...parts, name];
+        if(handle.kind === 'directory'){
+          await walk(handle, nextParts, subject, lessonId || subject.lessons.find(l => l.folderName === name)?.id || null);
+          continue;
+        }
+        const ext = extOf(name);
+        const hidden = name.startsWith('.');
+        const path = nextParts.join('/');
+        const lessonPart = nextParts.findIndex(x => subject.lessons.some(l => l.folderName === x));
+        let resolvedLessonId = lessonId;
+        if(!resolvedLessonId && lessonPart >= 0){
+          const folder = nextParts[lessonPart];
+          resolvedLessonId = subject.lessons.find(l => l.folderName === folder)?.id || null;
+        }
+        const lesson = resolvedLessonId ? subject.lessons.find(l=>l.id===resolvedLessonId) : null;
+        const isAi = nextParts.includes('Riepiloghi AI') && name.toLowerCase() === 'riepilogo ai.md';
+        const isSystem = hidden || nextParts.includes('config');
+        let size = null, modified = null, mime = '';
+        try{
+          const file = await handle.getFile();
+          size = file.size; modified = file.lastModified; mime = file.type || '';
+        }catch(e){}
+        records.push({
+          id: uid(), name, handle, subjectName: subject.name, subjectId: subject.id,
+          lessonId: resolvedLessonId, lessonFolder: lesson?.folderName || null,
+          lessonTitle: lesson ? (lesson.title || `Lezione ${lesson.number ?? ''}`) : null,
+          relPath: path, ext, size, modified, mime, hidden, isSystem, isAi
+        });
+      }
+    };
+    for(const subject of AppState.library.subjects){
+      this.state.subjectOpen[subject.id] = this.state.subjectOpen[subject.id] !== false;
+      await walk(subject.handle, [], subject, null);
+    }
+    this.state.records = records.sort((a,b)=>a.relPath.localeCompare(b.relPath,'it',{numeric:true}));
+    this.resetSelections();
+    this.state.ready = true;
+  },
+
+  extensionLabel(ext){
+    if(ext === '(nessuna estensione)') return 'Senza estensione';
+    return '.' + ext.toUpperCase();
+  },
+
+  extensionGroup(ext){
+    if(['pdf'].includes(ext)) return 'PDF';
+    if(['mp3','m4a','wav','aac','ogg','flac','opus'].includes(ext)) return 'Audio';
+    if(['png','jpg','jpeg','webp','gif','svg','heic','avif'].includes(ext)) return 'Immagini';
+    if(['doc','docx','txt','md','rtf','odt'].includes(ext)) return 'Documenti';
+    if(['tex','bib','css','html','js','ts','py','java','c','cpp','h','hpp','json','xml','yml','yaml'].includes(ext)) return 'Testo / codice';
+    if(['csv','xls','xlsx','ods'].includes(ext)) return 'Fogli di calcolo';
+    if(['ppt','pptx','odp'].includes(ext)) return 'Presentazioni';
+    if(['zip','rar','7z','tar','gz'].includes(ext)) return 'Archivi';
+    if(['mp4','mov','mkv','webm','avi'].includes(ext)) return 'Video';
+    return 'Altro';
+  },
+
+  allExtensions(){
+    const set = new Set(this.state.records.filter(r=>!r.isSystem && !r.isAi).map(r=>r.ext || '(nessuna estensione)'));
+    return [...set].sort((a,b)=>a.localeCompare(b,'it'));
+  },
+
+  parseCustomExtensions(){
+    return this.state.customExts.split(/[;,\s]+/).map(x=>x.trim().toLowerCase().replace(/^\./,'')).filter(Boolean);
+  },
+
+  isExtensionSelected(ext){
+    const customs = this.parseCustomExtensions();
+    return this.state.selectedExts.has(ext) || (ext && customs.includes(ext));
+  },
+
+  selectedRecords(){
+    const lessonSet = this.state.selectedLessons;
+    return this.state.records.filter(r => {
+      // I file speciali hanno controlli dedicati e non vengono bloccati dal filtro estensioni.
+      if(r.isAi) return !!this.state.includeAi && !!r.lessonId && lessonSet.has(r.lessonId);
+      if(r.isSystem) return !!this.state.includeSystem && !!r.lessonId && lessonSet.has(r.lessonId);
+      // L'export è pensato per materiale delle lezioni: i file tecnici fuori dalle lezioni
+      // vengono esportati solo quando si abilita esplicitamente l'opzione tecnica.
+      if(!r.lessonId) return false;
+      if(!lessonSet.has(r.lessonId)) return false;
+      if(this.state.excludedFiles.has(r.id)) return false;
+      return this.isExtensionSelected(r.ext || '(nessuna estensione)');
+    });
+  },
+
+  selectionSize(){ return this.selectedRecords().reduce((n,r)=>n+(Number(r.size)||0),0); },
+
+  setAllLessons(selected){
+    this.state.selectedLessons = new Set(selected ? this.state.records.filter(r=>r.lessonId).map(r=>r.lessonId) : []);
+    this.renderBody();
+  },
+
+  setSubjectLessons(subjectId, selected){
+    const subject = AppState.library.subjects.find(s=>s.id===subjectId);
+    if(!subject) return;
+    subject.lessons.forEach(l => selected ? this.state.selectedLessons.add(l.id) : this.state.selectedLessons.delete(l.id));
+    this.renderBody();
+  },
+
+  setPreset(kind){
+    const exts = this.allExtensions();
+    this.state.customExts = '';
+    if(kind === 'all') this.state.selectedExts = new Set(exts);
+    else if(kind === 'none') this.state.selectedExts = new Set();
+    else if(kind === 'pdf') this.state.selectedExts = new Set(exts.filter(e=>e==='pdf'));
+    else if(kind === 'audio') this.state.selectedExts = new Set(exts.filter(e=>['mp3','m4a','wav','aac','ogg','flac','opus'].includes(e)));
+    else if(kind === 'docs') this.state.selectedExts = new Set(exts.filter(e=>['doc','docx','txt','md','rtf','odt','tex','bib','json'].includes(e)));
+    else if(kind === 'images') this.state.selectedExts = new Set(exts.filter(e=>['png','jpg','jpeg','webp','gif','svg','heic','avif'].includes(e)));
+    this.renderBody();
+  },
+
+  filteredCandidates(){
+    const lessonSet=this.state.selectedLessons;
+    return this.state.records.filter(r=>{
+      if(r.isAi) return !!this.state.includeAi && !!r.lessonId && lessonSet.has(r.lessonId);
+      if(r.isSystem) return !!this.state.includeSystem && !!r.lessonId && lessonSet.has(r.lessonId);
+      if(!r.lessonId || !lessonSet.has(r.lessonId)) return false;
+      return this.isExtensionSelected(r.ext || '(nessuna estensione)');
+    });
+  },
+
+  selectedLessonSubjectIds(){
+    const set = new Set();
+    for(const s of AppState.library.subjects){ if(s.lessons.some(l=>this.state.selectedLessons.has(l.id))) set.add(s.id); }
+    return set;
+  },
+
+  buildZipName(){
+    const raw = (this.state.filename || this.defaultFilename()).trim().replace(/\.zip$/i,'');
+    return (raw || this.defaultFilename()).replace(/[\\/:*?"<>|]+/g,'-').trim() + '.zip';
+  },
+
+  zipDosTime(ms){
+    const d = new Date(ms || Date.now());
+    return ((d.getHours()<<11) | (d.getMinutes()<<5) | Math.floor(d.getSeconds()/2)) & 0xffff;
+  },
+  zipDosDate(ms){
+    const d = new Date(ms || Date.now());
+    const y = Math.max(1980, d.getFullYear());
+    return (((y-1980)<<9) | ((d.getMonth()+1)<<5) | d.getDate()) & 0xffff;
+  },
+  u16(n){ const a=new Uint8Array(2); new DataView(a.buffer).setUint16(0,n,true); return a; },
+  u32(n){ const a=new Uint8Array(4); new DataView(a.buffer).setUint32(0,n>>>0,true); return a; },
+
+  crcTable:null,
+  getCrcTable(){
+    if(this.crcTable) return this.crcTable;
+    const t = new Uint32Array(256);
+    for(let n=0;n<256;n++){
+      let c=n;
+      for(let k=0;k<8;k++) c=(c&1)?(0xedb88320^(c>>>1)):(c>>>1);
+      t[n]=c>>>0;
+    }
+    this.crcTable=t; return t;
+  },
+  async crc32File(file){
+    const table=this.getCrcTable(); let crc=0xffffffff;
+    if(file.stream){
+      const reader=file.stream().getReader();
+      try{
+        while(true){
+          const {value,done}=await reader.read();
+          if(done) break;
+          const bytes=value||new Uint8Array();
+          for(let i=0;i<bytes.length;i++) crc=table[(crc^bytes[i])&255]^(crc>>>8);
+        }
+      }finally{ try{reader.releaseLock();}catch(e){} }
+    }else{
+      const bytes=new Uint8Array(await file.arrayBuffer());
+      for(let i=0;i<bytes.length;i++) crc=table[(crc^bytes[i])&255]^(crc>>>8);
+    }
+    return (crc^0xffffffff)>>>0;
+  },
+
+  zipEntryPath(record){
+    const safe=(x)=>String(x||'').replace(/^[/\\]+/,'').replace(/\\/g,'/');
+    if(this.state.structure==='flat') return safe(record.name);
+    if(this.state.structure==='lesson'){
+      return record.lessonFolder ? safe(`${record.lessonFolder}/${record.name}`) : safe(record.name);
+    }
+    // default: subject / lesson / path dentro la lezione; preserva anche i file fuori dalle lezioni
+    return safe(`${record.subjectName}/${record.relPath}`);
+  },
+
+  async createZip(records, onProgress){
+    const parts=[]; const central=[]; let offset=0;
+    const usedPaths=new Map();
+    for(let i=0;i<records.length;i++){
+      const r=records[i];
+      const file=await r.handle.getFile();
+      if(file.size>0xffffffff) throw new Error(`Il file "${r.name}" supera il limite ZIP classico di 4 GB.`);
+      let name=this.zipEntryPath(r);
+      const originalName=name;
+      let collision=(usedPaths.get(originalName)||0);
+      if(collision){
+        const dot=originalName.lastIndexOf('.');
+        const stem=dot>originalName.lastIndexOf('/')?originalName.slice(0,dot):originalName;
+        const ext=dot>originalName.lastIndexOf('/')?originalName.slice(dot):'';
+        do { collision++; name=`${stem} (${collision})${ext}`; } while(usedPaths.has(name));
+      }
+      usedPaths.set(originalName,collision||1);
+      usedPaths.set(name,1);
+      const nameBytes=new TextEncoder().encode(name);
+      const crc=await this.crc32File(file);
+      const time=this.zipDosTime(r.modified || file.lastModified);
+      const date=this.zipDosDate(r.modified || file.lastModified);
+      const local=new Uint8Array(30+nameBytes.length);
+      const dv=new DataView(local.buffer);
+      dv.setUint32(0,0x04034b50,true); dv.setUint16(4,20,true); dv.setUint16(6,0x0800,true);
+      dv.setUint16(8,0,true); dv.setUint16(10,time,true); dv.setUint16(12,date,true);
+      dv.setUint32(14,crc,true); dv.setUint32(18,file.size,true); dv.setUint32(22,file.size,true);
+      dv.setUint16(26,nameBytes.length,true); dv.setUint16(28,0,true);
+      local.set(nameBytes,30);
+      parts.push(local,file);
+      const c=new Uint8Array(46+nameBytes.length); const cv=new DataView(c.buffer);
+      cv.setUint32(0,0x02014b50,true); cv.setUint16(4,20,true); cv.setUint16(6,20,true); cv.setUint16(8,0x0800,true);
+      cv.setUint16(10,0,true); cv.setUint16(12,time,true); cv.setUint16(14,date,true);
+      cv.setUint32(16,crc,true); cv.setUint32(20,file.size,true); cv.setUint32(24,file.size,true);
+      cv.setUint16(28,nameBytes.length,true); cv.setUint16(30,0,true); cv.setUint16(32,0,true); cv.setUint16(34,0,true); cv.setUint16(36,0,true); cv.setUint32(38,0,true); cv.setUint32(42,offset>>>0,true);
+      c.set(nameBytes,46); central.push(c);
+      offset += local.length + file.size;
+      if(offset > 0xffffffff) throw new Error("L'archivio supera 4 GB e il browser non può creare un ZIP classico per questa selezione. Riduci la selezione e riprova.");
+      onProgress?.(i+1, records.length, r, file.size);
+      await new Promise(requestAnimationFrame);
+    }
+    const centralOffset=offset;
+    const centralSize=central.reduce((n,b)=>n+b.length,0);
+    parts.push(...central);
+    const end=new Uint8Array(22); const ev=new DataView(end.buffer);
+    ev.setUint32(0,0x06054b50,true); ev.setUint16(4,0,true); ev.setUint16(6,0,true);
+    ev.setUint16(8,records.length,true); ev.setUint16(10,records.length,true); ev.setUint32(12,centralSize>>>0,true); ev.setUint32(16,centralOffset>>>0,true); ev.setUint16(20,0,true);
+    parts.push(end);
+    return new Blob(parts,{type:'application/zip'});
+  },
+
+  async download(){
+    const records=this.selectedRecords();
+    if(!records.length){ Toast.error('La selezione non contiene file. Controlla materie, lezioni e tipi di file.'); return; }
+    const btn=document.getElementById('export-download-btn');
+    const progress=document.getElementById('export-progress');
+    const fill=document.getElementById('export-progress-fill');
+    const ptxt=document.getElementById('export-progress-text');
+    if(btn) btn.disabled=true;
+    progress?.classList.add('show');
+    if(fill) fill.style.width='0%';
+    try{
+      const blob=await this.createZip(records,(done,total,r,size)=>{
+        const pct=Math.round(done/total*100);
+        if(fill) fill.style.width=pct+'%';
+        if(ptxt) ptxt.innerHTML=`<span>${done} / ${total} · ${esc(r.name)}</span><span>${fmtBytes(size)}</span>`;
+      });
+      const url=URL.createObjectURL(blob);
+      const a=document.createElement('a');
+      a.href=url; a.download=this.buildZipName(); document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(()=>URL.revokeObjectURL(url),15000);
+      Toast.success(`Export completato: ${records.length} file · ${fmtBytes(blob.size)}.`);
+      if(ptxt) ptxt.innerHTML=`<span>Esportazione completata</span><span>${fmtBytes(blob.size)}</span>`;
+      if(fill) fill.style.width='100%';
+    }catch(err){
+      console.error('[Uni Notes Export]',err);
+      Toast.error('Esportazione non riuscita: ' + (err.message || 'errore sconosciuto'));
+      if(ptxt) ptxt.innerHTML=`<span>Esportazione interrotta</span><span></span>`;
+    }finally{
+      if(btn) btn.disabled=false;
+    }
+  },
+
+  render(){
+    TopbarView.render(`<b>Esporta / Scarica</b>`, `<button class="btn btn-sm" id="export-refresh">${icon('refresh',14)} Aggiorna elenco</button>`);
+    const content=document.getElementById('content');
+    content.innerHTML=`<div class="page">
+      <div class="export-hero">
+        <div><div class="export-kicker">Centro esportazione</div><div class="export-title">Scarica esattamente ciò che ti serve.</div><div class="export-sub">Combina materie, singole lezioni ed estensioni. Uni Notes crea un unico ZIP mantenendo la struttura della libreria, senza modificare alcun file originale.</div></div>
+        <div class="export-toolbar"><button class="btn btn-sm" id="export-select-all">${icon('checkCircle',14)} Tutte le lezioni</button><button class="btn btn-sm" id="export-clear-all">${icon('x',14)} Nessuna lezione</button></div>
+      </div>
+      <div id="export-main"><div class="export-card"><div class="export-card-body"><div class="export-empty">Analizzo la libreria…</div></div></div></div>
+    </div>`;
+    content.querySelector('#export-refresh').onclick=async()=>{ await this.loadAndRender(); };
+    content.querySelector('#export-select-all').onclick=()=>this.setAllLessons(true);
+    content.querySelector('#export-clear-all').onclick=()=>this.setAllLessons(false);
+    this.loadAndRender();
+  },
+
+  async loadAndRender(){
+    const main=document.getElementById('export-main');
+    if(main) main.innerHTML=`<div class="export-card"><div class="export-card-body"><div class="export-empty">Analizzo la libreria…</div></div></div>`;
+    await this.buildIndex();
+    this.renderBody();
+  },
+
+  renderBody(){
+    const main=document.getElementById('export-main'); if(!main || !this.state.ready) return;
+    const exts=this.allExtensions();
+    const selected=this.selectedRecords();
+    const total=this.state.records.length;
+    const selectedSize=this.selectionSize();
+    const subjectLessonCount=this.state.selectedLessons.size;
+    const subjectCount=this.selectedLessonSubjectIds().size;
+    const subjectRows=AppState.library.subjects.map(s=>{
+      const count=s.lessons.filter(l=>this.state.selectedLessons.has(l.id)).length;
+      return `<div class="export-subject">
+        <div class="export-subject-head" data-subject-toggle="${esc(s.id)}">
+          <input class="export-check" type="checkbox" data-subject-check="${esc(s.id)}" ${count===s.lessons.length && s.lessons.length ? 'checked':''} ${count===0?'':'data-partial="1"'}>
+          <div class="export-subject-title">${esc(s.name)}</div><div class="export-subject-meta">${count}/${s.lessons.length} lezioni</div>${icon('chevronDown',14)}
+        </div>
+        <div class="export-subject-lessons" style="display:${this.state.subjectOpen[s.id]===false?'none':'grid'}">
+          ${s.lessons.map(l=>`<label class="export-lesson-row"><input class="export-check" type="checkbox" data-lesson-check="${esc(l.id)}" ${this.state.selectedLessons.has(l.id)?'checked':''}><span class="export-lesson-name">${esc(l.title || `Lezione ${l.number ?? ''}` || l.folderName)}</span><span style="font-size:10px;color:var(--text-tertiary);">${l.date?fmtDateShort(l.date):''}</span></label>`).join('')}
+        </div>
+      </div>`;
+    }).join('');
+    const presets=[['all','Tutto'],['pdf','Solo PDF'],['audio','Solo audio'],['docs','Documenti / testi'],['images','Immagini'],['none','Azzera']];
+    const typeRows=exts.map(ext=>{
+      const count=this.state.records.filter(r=>!r.isSystem && !r.isAi && (r.ext||'(nessuna estensione)')===ext).length;
+      const size=this.state.records.filter(r=>!r.isSystem && !r.isAi && (r.ext||'(nessuna estensione)')===ext).reduce((n,r)=>n+(r.size||0),0);
+      return `<label class="export-type"><input class="export-check" type="checkbox" data-ext-check="${esc(ext)}" ${this.state.selectedExts.has(ext)?'checked':''}><div class="export-type-info"><div class="export-type-name">${esc(this.extensionLabel(ext))}</div><div class="export-type-meta">${count} file · ${fmtBytes(size)}</div></div><span style="font-size:10px;color:var(--text-tertiary);">${esc(this.extensionGroup(ext))}</span></label>`;
+    }).join('');
+    const preview=selected.slice(0,12).map(r=>`<div class="export-preview-row">${icon(r.isAi?'notes':r.ext==='pdf'?'pdf':r.ext && ['mp3','m4a','wav','aac','ogg','flac','opus'].includes(r.ext)?'mic':'file',13)}<span class="export-preview-path" title="${esc(r.relPath)}">${esc(r.relPath)}</span><span>${fmtBytes(r.size)}</span></div>`).join('');
+    main.innerHTML=`<div class="export-grid">
+      <div style="display:flex;flex-direction:column;gap:14px;min-width:0;">
+        <section class="export-card">
+          <div class="export-card-head"><div><div class="export-card-title">1. Cosa esportare</div><div class="export-card-sub">Seleziona materie intere o singole lezioni.</div></div><span class="export-select-all" id="export-select-all-small">Seleziona tutto</span></div>
+          <div class="export-card-body"><div class="export-list">${subjectRows || '<div class="export-empty">Nessuna materia disponibile.</div>'}</div></div>
+        </section>
+        <section class="export-card">
+          <div class="export-card-head"><div><div class="export-card-title">2. Quali file</div><div class="export-card-sub">Puoi scegliere ogni estensione presente nella libreria.</div></div><div class="export-actions"><span class="export-select-all" id="export-ext-all">Tutte</span><span style="color:var(--text-tertiary)">·</span><span class="export-select-all" id="export-ext-none">Nessuna</span></div></div>
+          <div class="export-card-body">
+            <div class="export-chip-row" style="margin-bottom:10px;">${presets.map(([k,l])=>`<button class="export-chip ${((k==='all' && this.state.selectedExts.size===exts.length)||(k==='none'&&this.state.selectedExts.size===0))?'active':''}" data-export-preset="${k}">${l}</button>`).join('')}</div>
+            <div class="export-type-grid">${typeRows || '<div class="export-empty">Nessun tipo di file trovato.</div>'}</div>
+            <div class="field" style="margin-top:10px;"><label>Estensioni personalizzate</label><input id="export-custom-ext" class="export-ext-input" placeholder="es. pdf, mp3, md, csv" value="${esc(this.state.customExts)}"><div class="export-note" style="margin-top:6px;">Le estensioni qui indicate vengono aggiunte alla selezione. Separale con virgole, spazi o punto e virgola.</div></div>
+          </div>
+        </section>
+        <section class="export-card">
+          <div class="export-card-head"><div><div class="export-card-title">3. Opzioni avanzate</div><div class="export-card-sub">Decidi cosa fare dei file speciali e della struttura finale.</div></div></div>
+          <div class="export-card-body">
+            <div class="field"><label>Struttura nello ZIP</label><select id="export-structure"><option value="subject-lesson" ${this.state.structure==='subject-lesson'?'selected':''}>Materia / lezione / file</option><option value="lesson" ${this.state.structure==='lesson'?'selected':''}>Lezione / file</option><option value="flat" ${this.state.structure==='flat'?'selected':''}>Tutti i file in un'unica cartella</option></select></div>
+            <label style="display:flex;align-items:flex-start;gap:9px;cursor:pointer;margin-top:12px;font-size:12px;"><input id="export-include-ai" class="export-check" type="checkbox" ${this.state.includeAi?'checked':''}><span><b>Includi Riepiloghi AI</b><br><span class="muted" style="font-size:10.8px;">Aggiunge “Riepiloghi AI/Riepilogo AI.md” quando presente.</span></span></label>
+            <label style="display:flex;align-items:flex-start;gap:9px;cursor:pointer;margin-top:10px;font-size:12px;"><input id="export-include-system" class="export-check" type="checkbox" ${this.state.includeSystem?'checked':''}><span><b>Includi file tecnici</b><br><span class="muted" style="font-size:10.8px;">Comprende anche file nascosti come .lesson.json / .subject.json e contenuti tecnici.</span></span></label>
+            <div class="field" style="margin-top:12px;"><label>Nome del file ZIP</label><input id="export-filename" value="${esc(this.state.filename)}" placeholder="Uni Notes — Export"></div>
+          </div>
+        </section>
+        <section class="export-card">
+          <div class="export-card-head"><div><div class="export-card-title">4. Controllo singoli file</div><div class="export-card-sub">Qui puoi togliere o ripristinare file uno per uno, mantenendo intatti tutti gli altri filtri.</div></div><div class="export-actions"><span style="font-size:10.5px;color:var(--text-tertiary);">${this.state.excludedFiles.size} esclusi manualmente</span><span class="export-select-all" id="export-reset-file-exclusions">Ripristina tutti</span></div></div>
+          <div class="export-card-body">
+            ${this.filteredCandidates().length ? `<div style="max-height:330px;overflow:auto;border:1px solid var(--border);border-radius:11px;padding:5px 8px;">${this.filteredCandidates().map(r=>`<label class="export-lesson-row" style="margin:0;"><input class="export-check" type="checkbox" data-file-check="${esc(r.id)}" ${this.state.excludedFiles.has(r.id)?'':'checked'}><span class="export-preview-path" title="${esc(r.relPath)}">${esc(r.relPath)}</span><span style="font-size:10px;color:var(--text-tertiary);white-space:nowrap;">${fmtBytes(r.size)}</span></label>`).join('')}</div>` : `<div class="export-empty">Nessun file corrisponde ai filtri attuali.</div>`}
+            <div class="export-note" style="margin-top:8px;">Le caselle già selezionate verranno inserite nello ZIP. Togliendo una casella escludi solo quel file dall'export corrente.</div>
+          </div>
+        </section>
+      </div>
+      <aside class="export-summary">
+        <section class="export-card">
+          <div class="export-card-head"><div><div class="export-card-title">Riepilogo</div><div class="export-card-sub">Anteprima aggiornata in tempo reale.</div></div>${icon('archive',16)}</div>
+          <div class="export-card-body">
+            <div class="export-stat-row"><div class="export-stat"><div class="export-stat-value" id="export-selected-count">${selected.length}</div><div class="export-stat-label">file selezionati</div></div><div class="export-stat"><div class="export-stat-value" id="export-selected-size">${fmtBytes(selectedSize)}</div><div class="export-stat-label">dimensione stimata</div></div></div>
+            <div style="display:flex;justify-content:space-between;gap:12px;font-size:11px;color:var(--text-secondary);"><span>${subjectCount} materie · ${subjectLessonCount} lezioni</span><span>${total} file in libreria</span></div>
+            <div class="export-selected-preview">${preview || '<div class="export-empty">Nessun file nella selezione.</div>'}${selected.length>12?`<div class="export-note" style="padding-top:8px;">+ ${selected.length-12} altri file</div>`:''}</div>
+            <div class="export-actions" style="margin-top:12px;"><button class="btn btn-primary" id="export-download-btn" style="flex:1;min-height:42px;">${icon('download',16)} Scarica ZIP</button></div>
+            <div class="export-note" style="margin-top:9px;">I file originali vengono solo letti. L'export è locale e non invia contenuti a server esterni.</div>
+            <div class="export-progress" id="export-progress"><div id="export-progress-text" class="export-progress-text"><span>Preparazione…</span><span>0 / ${selected.length}</span></div><div class="export-progress-bar"><div class="export-progress-fill" id="export-progress-fill"></div></div></div>
+          </div>
+        </section>
+      </aside>
+    </div>`;
+
+    main.querySelectorAll('[data-subject-toggle]').forEach(el=>el.onclick=e=>{
+      if(e.target.closest('input')) return;
+      const id=el.dataset.subjectToggle; this.state.subjectOpen[id]=this.state.subjectOpen[id]===false; this.renderBody();
+    });
+    main.querySelectorAll('[data-subject-check]').forEach(el=>{
+      el.indeterminate = el.dataset.partial === '1';
+      el.onchange=()=>this.setSubjectLessons(el.dataset.subjectCheck,el.checked);
+    });
+    main.querySelectorAll('[data-lesson-check]').forEach(el=>el.onchange=()=>{ if(el.checked) this.state.selectedLessons.add(el.dataset.lessonCheck); else this.state.selectedLessons.delete(el.dataset.lessonCheck); this.renderBody(); });
+    main.querySelectorAll('[data-ext-check]').forEach(el=>el.onchange=()=>{ if(el.checked) this.state.selectedExts.add(el.dataset.extCheck); else this.state.selectedExts.delete(el.dataset.extCheck); this.renderBody(); });
+    main.querySelectorAll('[data-file-check]').forEach(el=>el.onchange=()=>{ if(el.checked) this.state.excludedFiles.delete(el.dataset.fileCheck); else this.state.excludedFiles.add(el.dataset.fileCheck); this.renderBody(); });
+    main.querySelector('#export-reset-file-exclusions')?.addEventListener('click',()=>{ this.state.excludedFiles.clear(); this.renderBody(); });
+    main.querySelectorAll('[data-export-preset]').forEach(el=>el.onclick=()=>this.setPreset(el.dataset.exportPreset));
+    main.querySelector('#export-select-all-small')?.addEventListener('click',()=>this.setAllLessons(true));
+    main.querySelector('#export-ext-all')?.addEventListener('click',()=>this.setPreset('all'));
+    main.querySelector('#export-ext-none')?.addEventListener('click',()=>this.setPreset('none'));
+    main.querySelector('#export-custom-ext')?.addEventListener('input',e=>{ this.state.customExts=e.target.value; });
+    main.querySelector('#export-custom-ext')?.addEventListener('change',()=>this.renderBody());
+    main.querySelector('#export-custom-ext')?.addEventListener('blur',()=>this.renderBody());
+    main.querySelector('#export-structure')?.addEventListener('change',e=>{this.state.structure=e.target.value; this.renderBody();});
+    main.querySelector('#export-include-ai')?.addEventListener('change',e=>{this.state.includeAi=e.target.checked; this.renderBody();});
+    main.querySelector('#export-include-system')?.addEventListener('change',e=>{this.state.includeSystem=e.target.checked; this.renderBody();});
+    main.querySelector('#export-filename')?.addEventListener('input',e=>{this.state.filename=e.target.value;});
+    main.querySelector('#export-download-btn')?.addEventListener('click',()=>this.download());
+  }
+};
+
+/* ============================================================
    COMMAND PALETTE
    ============================================================ */
 const CommandPalette = {
@@ -6944,6 +7444,7 @@ const CommandPalette = {
       { label:'Vai a Prompt', icon:'prompt', action:()=>Router.go('prompts') },
       { label:'Vai ad Attività', icon:'activity', action:()=>Router.go('activity') },
       { label:'Vai a Statistiche', icon:'statistics', action:()=>Router.go('statistics') },
+      { label:'Esporta / Scarica file', icon:'download', action:()=>Router.go('export') },
       { label:'Vai a Lezioni preferite', icon:'star', action:()=>Router.go('lessons-pinned') },
       { label:'Vai a Impostazioni', icon:'settings', action:()=>Router.go('settings') },
       { label:'Sincronizza libreria', icon:'refresh', action:()=>Router.resync() }
@@ -8765,55 +9266,45 @@ const AI_SUMMARY_FOLDER_NAME = 'Riepiloghi AI';
     return null;
   }
 
-  function aiParseModelPayload(data){
-    const parts=[];
-    if(data&&data.message){
-      if(typeof data.message.content==='string') parts.push(data.message.content);
-      if(typeof data.message.output==='string') parts.push(data.message.output);
-    }
-    if(typeof data?.response==='string') parts.push(data.response);
-    if(typeof data?.output==='string') parts.push(data.output);
-    return parts.find(x=>String(x||'').trim()) || '';
-  }
-
   async function aiOllamaJson(messages, signal, schema){
     aiThrowIfAborted(signal);
     const model=aiModel(); if(!model) throw new Error('Nessun modello Ollama selezionato.');
     const profile=aiResourceProfile();
-    const baseOptions={temperature:0.1,num_ctx:profile.numCtx,num_predict:profile.numPredict};
+    const requestBody={
+      model, messages, stream:false, format: schema || 'json', think:false, keep_alive:profile.keepAlive,
+      options:{temperature:0.1,num_ctx:profile.numCtx,num_predict:profile.numPredict}
+    };
     const doRequest=async(body)=>{
       const res=await fetch(OllamaManager.baseUrl+'/api/chat',{
-        method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),signal
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify(body),
+        signal
       });
       aiThrowIfAborted(signal);
       if(!res.ok){ const t=await res.text().catch(()=> ''); throw new Error('Ollama HTTP '+res.status+(t?': '+t.slice(0,160):'')); }
       const data=await res.json();
       aiThrowIfAborted(signal);
-      return aiParseModelPayload(data);
+      return data&&data.message?String(data.message.content||''):'';
     };
 
-    // Prima prova con JSON strutturato quando il modello lo supporta.
-    let content=await doRequest({model,messages,stream:false,format:schema||'json',think:false,keep_alive:profile.keepAlive,options:baseOptions});
+    let content=await doRequest(requestBody);
     let parsed=aiExtractJsonObject(content);
     if(parsed) return parsed;
 
-    // Fallback: stesso contesto, ma senza JSON schema. Questo evita che modelli/versioni
-    // Ollama che supportano solo format:'json' restituiscano un risultato vuoto.
-    await aiYield(250);
+    // Alcuni modelli dichiarano supporto JSON ma occasionalmente restituiscono testo non conforme.
+    // Un singolo retry più vincolante evita di bloccare l'intera coda senza moltiplicare il carico.
+    await aiYield(350);
     aiThrowIfAborted(signal);
-    const retryMessages=[...messages,{role:'user',content:'Rispondi esclusivamente con JSON valido, senza ``` e senza testo fuori dal JSON. Mantieni esattamente le chiavi richieste.'}];
-    content=await doRequest({model,messages:retryMessages,stream:false,format:'json',think:false,keep_alive:profile.keepAlive,options:{...baseOptions,temperature:0,num_predict:Math.min(baseOptions.num_predict,1400)}});
+    const retryMessages=[...messages];
+    const last=retryMessages.length-1;
+    retryMessages.push({
+      role:'user',
+      content:'ATTENZIONE: la risposta precedente non era JSON valido. Rispondi ADESSO esclusivamente con un oggetto JSON valido, senza markdown fence, testo introduttivo o spiegazioni esterne al JSON.'
+    });
+    content=await doRequest(Object.assign({},requestBody,{messages:retryMessages,options:Object.assign({},requestBody.options,{temperature:0,num_predict:Math.min(requestBody.options.num_predict,1400)})}));
     parsed=aiExtractJsonObject(content);
     if(parsed) return parsed;
-
-    // Ultimo fallback solo per risposte che contengono già un documento Markdown utile:
-    // non ripetiamo la richiesta se il modello ha restituito testo vuoto.
-    const cleaned=aiCleanMarkdown(content);
-    const wantsSummary=!!schema?.properties?.summary;
-    const wantsTitle=!!schema?.properties?.title;
-    if(cleaned && wantsSummary && cleaned.length>=80){
-      return wantsTitle ? {title:'',summary:cleaned} : {summary:cleaned};
-    }
     throw new Error('Risposta AI non valida dopo 2 tentativi.');
   }
 
@@ -8890,81 +9381,62 @@ const AI_SUMMARY_FOLDER_NAME = 'Riepiloghi AI';
     return fixed;
   }
 
-  function aiSummaryInputBudget(profile){
-    // Manteniamo abbastanza spazio nel contesto per l'output del modello.
-    return Math.max(7000, Math.min(18000, Math.floor((profile.numCtx||4096)*2.5)));
-  }
-
-  async function aiReducePartialSummaries(partials, lesson, signal, lang, profile){
-    const budget=aiSummaryInputBudget(profile);
-    let current=partials.filter(Boolean).map(aiCleanMarkdown).filter(Boolean);
-    while(current.length>1){
-      aiThrowIfAborted(signal);
-      const next=[];
-      let batch=[]; let chars=0;
-      const flush=async()=>{
-        if(!batch.length) return;
-        const body=batch.join('\n\n---\n\n');
-        const out=await aiOllamaJson([
-          {role:'system',content:`Unisci e compatta questi appunti di una lezione universitaria esclusivamente in ${lang.instruction}. Conserva tutte le informazioni importanti, formule e relazioni. Usa Markdown con **grassetto**, *corsivo*, tabelle quando utili e formule $...$ o $$...$$. Restituisci SOLO JSON {"summary":"..."}.`},
-          {role:'user',content:body}
-        ],signal,{type:'object',properties:{summary:{type:'string'}},required:['summary']});
-        if(out&&out.summary) next.push(aiCleanMarkdown(out.summary).slice(0,5000));
-        batch=[]; chars=0;
-        await aiYield(profile.betweenRequests);
-      };
-      for(const part of current){
-        const add=(part||'');
-        if(batch.length && chars+add.length>budget) await flush();
-        batch.push(add); chars+=add.length;
-      }
-      await flush();
-      if(!next.length) throw new Error('Impossibile compattare i segmenti del riepilogo.');
-      current=next;
-    }
-    return current[0]||'';
-  }
-
   async function aiSummarize(lesson,pdfData,signal,languageKey){
     aiThrowIfAborted(signal);
-    const profile=aiResourceProfile();
-    const chosenLanguage=languageKey || aiSummaryLanguage();
-    const lang=AI_SUMMARY_LANGUAGES[chosenLanguage] || AI_SUMMARY_LANGUAGES.it;
+    const profile = aiResourceProfile();
+    const langKey = languageKey || langKey;
+    const lang = AI_SUMMARY_LANGUAGES[langKey] || AI_SUMMARY_LANGUAGES.it;
     const baseInstruction=`Sei un tutor universitario professionale. Devi creare un riassunto fedele e strutturato di una lezione universitaria.
 
 LINGUA OBBLIGATORIA E VINCOLANTE: ${lang.instruction}.
-Tutto il testo generato deve essere esclusivamente in ${lang.instruction}. Sono ammessi solo nomi propri e terminologia tecnica indispensabile già presente nel PDF.
+NON cambiare lingua. NON alternare lingue. NON usare inglese per intestazioni, formule spiegate a parole, callout o conclusioni. Tutto il contenuto testuale generato deve essere ESCLUSIVAMENTE in ${lang.instruction}, inclusi titolo, intestazioni, testo, elenchi, callout ed etichette. Sono ammessi solo nomi propri e terminologia tecnica indispensabile già presente nel PDF.
 
-Usa ESCLUSIVAMENTE il contenuto del PDF fornito. Non inventare esempi, definizioni o concetti assenti.
+Usa ESCLUSIVAMENTE il contenuto del PDF fornito. Non inventare esempi, definizioni, formule o concetti assenti.
 
 Restituisci SOLO JSON valido:
-{"title":"titolo breve e preciso nella lingua richiesta","summary":"documento Markdown completo nella lingua richiesta"}
+{
+  "title": "titolo breve e preciso della lezione nella lingua richiesta",
+  "summary": "documento Markdown completo nella lingua richiesta"
+}
 
-Formato Markdown richiesto: titolo H1, sezioni H2, **grassetto** per concetti fondamentali, *corsivo* per precisazioni, \`codice\` per termini tecnici, ==evidenziato== per 1-3 elementi essenziali, elenchi e tabelle quando utili, callout > [!KEY]/[!NOTE]/[!WARNING]/[!TIP]/[!EXAMPLE], formule inline $...$ e a blocco $$...$$ quando presenti nel PDF.`;
-    const budget=aiSummaryInputBudget(profile);
-    if(pdfData.text.length<=budget){
-      return await aiOllamaJson([
-        {role:'system',content:baseInstruction},
-        {role:'user',content:`Materia: ${lesson.subjectName}\nTitolo attuale: ${lesson.title||'(vuoto)'}\n\nTESTO DEL PDF:\n${pdfData.text}`}
-      ],signal,{type:'object',properties:{title:{type:'string'},summary:{type:'string'}},required:['title','summary']});
+Formato Markdown richiesto:
+- un titolo H1;
+- una sezione iniziale "Sintesi" o equivalente;
+- sezioni H2 per gli argomenti principali;
+- usa **grassetto** per definizioni e concetti da ricordare;
+- usa *corsivo* per precisazioni;
+- usa \`codice inline\` per termini tecnici;
+- usa \`==testo evidenziato==\` per 1-3 elementi essenziali;
+- usa elenchi e tabelle quando utili;
+- usa callout \`> [!KEY] testo\`, \`> [!NOTE] testo\`, \`> [!WARNING] testo\`, \`> [!TIP] testo\`, \`> [!EXAMPLE] testo\`;
+- termina con una sezione "Concetti chiave" o equivalente.
+Non inserire HTML.`;
+    if(pdfData.text.length<=60000){
+      return await aiOllamaJson(
+        [{role:'system',content:baseInstruction},{role:'user',content:`Materia: ${lesson.subjectName}\nTitolo attuale: ${lesson.title||'(vuoto)'}\n\nTESTO DEL PDF:\n${pdfData.text}`}],
+        signal,
+        {type:'object',properties:{title:{type:'string'},summary:{type:'string'}},required:['title','summary']}
+      );
     }
-
     const partials=[];
-    for(let start=0,idx=1;start<pdfData.text.length;start+=budget,idx++){
+    for(let start=0,idx=1;start<pdfData.text.length;start+=profile.chunkChars,idx++){
       aiThrowIfAborted(signal);
-      const chunk=pdfData.text.slice(start,start+budget);
-      const out=await aiOllamaJson([
-        {role:'system',content:`Riassumi fedelmente questo segmento di una lezione universitaria esclusivamente in ${lang.instruction}. Conserva definizioni, formule, esempi e relazioni presenti. Usa **grassetto**, *corsivo*, tabelle e formule Markdown quando utili. Restituisci SOLO JSON {"summary":"..."}.`},
-        {role:'user',content:`Segmento ${idx}\nMateria: ${lesson.subjectName}\n${chunk}`}
-      ],signal,{type:'object',properties:{summary:{type:'string'}},required:['summary']});
-      if(out&&out.summary) partials.push(aiCleanMarkdown(out.summary).slice(0,5000));
+      const chunk=pdfData.text.slice(start,start+AI_CHUNK_SIZE);
+      const out=await aiOllamaJson(
+        [{role:'system',content:`Riassumi fedelmente questo segmento di una lezione universitaria esclusivamente in ${lang.instruction}. Rispondi SOLO JSON {"summary":"..."}. Usa Markdown leggibile con **grassetto**, *corsivo*, \`==evidenziato==\` e callout quando utili. Non inventare nulla.`},
+         {role:'user',content:`Segmento ${idx}\nMateria: ${lesson.subjectName}\n${chunk}`}],
+        signal,
+        {type:'object',properties:{summary:{type:'string'}},required:['summary']}
+      );
+      if(out&&out.summary) partials.push(aiCleanMarkdown(out.summary).slice(0,7000));
       await aiYield(profile.betweenRequests);
     }
-    const compacted=await aiReducePartialSummaries(partials,lesson,signal,lang,profile);
-    return await aiOllamaJson([
-      {role:'system',content:baseInstruction},
-      {role:'user',content:`Materia: ${lesson.subjectName}\nTitolo attuale: ${lesson.title||'(vuoto)'}\n\nSINTESI COMPATTATA DEI SEGMENTI:\n${compacted}`}
-    ],signal,{type:'object',properties:{title:{type:'string'},summary:{type:'string'}},required:['title','summary']});
+    aiThrowIfAborted(signal);
+    return await aiOllamaJson(
+      [{role:'system',content:baseInstruction},{role:'user',content:`Materia: ${lesson.subjectName}\nTitolo attuale: ${lesson.title||'(vuoto)'}\n\nRIASSUNTI DEI SEGMENTI:\n${partials.join('\n\n---\n\n')}`}],
+      signal,
+      {type:'object',properties:{title:{type:'string'},summary:{type:'string'}},required:['title','summary']}
+    );
   }
 
   async function aiCreateSummaryFile(lesson,summaryMarkdown,signal){
@@ -9054,7 +9526,7 @@ Formato Markdown richiesto: titolo H1, sezioni H2, **grassetto** per concetti fo
 
     aiThrowIfAborted(signal);
     lesson.aiAutomation=Object.assign({},lesson.aiAutomation,{
-      version:AI_AUTOMATION_VERSION,processing:false,done:true,status:'done',attempts:0,nextRetryAt:null,lastError:null,
+      version:AI_AUTOMATION_VERSION,processing:false,done:true,status:'done',
       completedAt:Date.now(),model:aiModel(),summaryFileName:AI_SUMMARY_FILE_NAME,summaryFolder:AI_SUMMARY_FOLDER_NAME,language:summaryLanguage,
       analysisScope:'main-pdf-only',audioMode:'untouched',resourceProfile:localStorage.getItem('uninotes.aiBackgroundLowPower') !== '0' ? 'eco' : 'normal'
     });
@@ -9067,18 +9539,6 @@ Formato Markdown richiesto: titolo H1, sezioni H2, **grassetto** per concetti fo
     return {done:true};
   }
 
-
-  async function aiRecordFailure(lesson, err){
-    let meta={}; try{ meta=await aiReadMeta(lesson); }catch(e){}
-    const prev=meta.aiAutomation||lesson.aiAutomation||{};
-    const attempts=Number(prev.attempts||0)+1;
-    const message=err&&err.message?err.message:String(err||'Errore AI');
-    const status=attempts>=3?'needs-attention':'error';
-    const nextRetryAt=attempts===1?Date.now()+30000:attempts===2?Date.now()+120000:null;
-    const state=Object.assign({},prev,{version:AI_AUTOMATION_VERSION,processing:false,done:false,status,attempts,lastError:message,updatedAt:Date.now(),nextRetryAt});
-    await aiPersist(lesson,{aiAutomation:state});
-    return state;
-  }
 
   const AIBackgroundWorker={
     running:false,timer:null,controller:null,stopped:false,resumeRequested:false,currentLesson:null,
@@ -9139,13 +9599,7 @@ Formato Markdown richiesto: titolo H1, sezioni H2, **grassetto** per concetti fo
           const summaryHandle=await aiGetSummaryFile(lesson,{create:false,migrateLegacy:true});
           const summaryValid=await aiSummaryIsValid(lesson,summaryHandle);
           if(meta.aiAutomation&&meta.aiAutomation.done===true&&summaryValid) completed++;
-          else {
-            const st=meta.aiAutomation||{};
-            const waitUntil=Number(st.nextRetryAt||0);
-            if(st.status==='needs-attention' && waitUntil===0) continue;
-            if(waitUntil>0 && Date.now()<waitUntil) continue;
-            pending.push(lesson);
-          }
+          else pending.push(lesson);
         }
 
         if(!pending.length){
@@ -9176,11 +9630,9 @@ Formato Markdown richiesto: titolo H1, sezioni H2, **grassetto** per concetti fo
               }
             }else{
               console.warn('[Uni Notes AI] elaborazione lezione fallita:',lesson.subjectName,lesson.number,err);
-              const failure=await aiRecordFailure(lesson,err);
-              const wait=failure.status==='needs-attention'?'La lezione è stata messa in “Richiede intervento” dopo 3 tentativi. Premi Riprova per forzare una nuova elaborazione.':`Tentativo ${failure.attempts}/3 fallito. ${failure.nextRetryAt?'Verrà ritentata automaticamente più tardi.':'Riprova manualmente.'}`;
               AIBackgroundInspector.push('error',
                 `Elaborazione fallita: ${lesson.subjectName} · Lezione ${lesson.number??''}`,
-                (err.message||String(err))+'\n'+wait
+                err.message||String(err)
               );
               aiStatus({phase:'error',error:err.message||String(err),completed,total:lessons.length});
             }
