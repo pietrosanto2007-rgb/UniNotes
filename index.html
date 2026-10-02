@@ -1766,7 +1766,7 @@ const LibraryScanner = {
       }
     }
     lessons.sort((a,b)=> (a.number||0) - (b.number||0));
-    return {
+    const subject = {
       id: 'subj_' + name,
       name,
       handle,
@@ -1774,8 +1774,27 @@ const LibraryScanner = {
       codice: configMeta.codice || '',
       aula: configMeta.aula || '',
       color: configMeta.color || pickColor(name),
+      // Il semestre è un'attribuzione della materia, non uno stato temporaneo.
+      // Se manca nei vecchi dati, viene inferito una sola volta dalle lezioni e
+      // immediatamente persistito in .subject.json.
+      semester: normalizeSemester(configMeta.semester),
+      academicYear: configMeta.academicYear || '',
       lessons
     };
+    if(!subject.semester){
+      subject.semester = inferSubjectSemester(subject.lessons);
+      subject._semesterNeedsPersist = true;
+    }
+    if(!subject.academicYear){
+      const datedLesson = subject.lessons.find(l => l.date);
+      subject.academicYear = datedLesson ? academicYearForDate(datedLesson.date) : getCurrentSemesterContext().academicYear;
+      subject._semesterNeedsPersist = true;
+    }
+    if(subject._semesterNeedsPersist){
+      try{ await persistSubjectMeta(subject); }catch(e){}
+      delete subject._semesterNeedsPersist;
+    }
+    return subject;
   },
 
   async scanLesson(folderName, handle, subjectName){
@@ -3164,6 +3183,28 @@ const DashboardPage = {
       .sort((a,b) => (b.l.date?.getTime()||0) - (a.l.date?.getTime()||0)).slice(0,5);
     const pinnedLessons = lessons.filter(l => l.pinned);
     const recentLessons = lessons.slice().sort((a,b) => (b.date?.getTime()||0) - (a.date?.getTime()||0)).slice(0,6);
+
+    // Consigli personalizzati: per prima cosa le lezioni del semestre corrente
+    // non ancora segnate come evidenziate. Una lezione già stampata ma non
+    // evidenziata viene portata in alto perché è già presente sui fogli.
+    const semesterGroups = visibleSubjectGroups(AppState.library.subjects);
+    const currentNames = new Set(semesterGroups.current.map(s => s.name));
+    const previousNames = new Set(semesterGroups.previous.map(s => s.name));
+    const highlightAdvice = lessons
+      .filter(l => !l.highlightedOnPaper)
+      .map(l => ({
+        l,
+        current: currentNames.has(l.subjectName),
+        previous: previousNames.has(l.subjectName),
+        printed: !!l.printed
+      }))
+      .sort((a,b) => {
+        const pa = (a.current ? 100 : 0) + (a.printed ? 30 : 0) + (a.previous ? -10 : 0);
+        const pb = (b.current ? 100 : 0) + (b.printed ? 30 : 0) + (b.previous ? -10 : 0);
+        if(pb !== pa) return pb-pa;
+        return (a.l.date?.getTime()||0) - (b.l.date?.getTime()||0);
+      })
+      .slice(0,6);
     const content = document.getElementById('content');
     content.innerHTML = `
       <div class="page">
@@ -3194,6 +3235,19 @@ const DashboardPage = {
           <div class="section-head" style="margin-top:8px;"><div><div style="font-size:16px; font-weight:700;">Continua da dove hai lasciato</div></div></div>
           ${inProgress.length === 0 ? `<div class="card muted" style="margin-bottom:30px;">Nessuna lezione in lavorazione. Ottimo lavoro!</div>` : `<div style="margin-bottom:30px;">${inProgress.map(({l,status}) => this.progressCard(l,status)).join('')}</div>`}
 
+          <div class="section-head"><div><div style="font-size:16px;font-weight:700;">${icon('highlighter',15)} Cosa ti manca da evidenziare</div><div class="section-sub">Lezioni non ancora segnate sui tuoi fogli, con priorità a quelle del semestre corrente.</div></div></div>
+          ${highlightAdvice.length === 0
+            ? `<div class="card" style="margin-bottom:30px;display:flex;align-items:center;gap:12px;">${icon('checkCircle',24)}<div><div style="font-size:14px;font-weight:700;">Tutto evidenziato</div><div class="muted" style="font-size:12px;margin-top:2px;">Non risultano lezioni da segnare come già evidenziate.</div></div></div>`
+            : `<div class="card" style="padding:6px 14px;margin-bottom:30px;">${highlightAdvice.map(({l,current,printed}) => `
+              <div class="lesson-row" data-open-lesson="${esc(l.subjectName)}::${esc(l.id)}" style="padding-left:0;padding-right:0;">
+                <div class="lesson-num">${l.number!=null?String(l.number).padStart(2,'0'):'—'}</div>
+                <div class="lesson-info">
+                  <div class="lesson-title">${esc(l.title || l.folderName)} <span class="muted" style="font-weight:500;">— ${esc(l.subjectName)}</span></div>
+                  <div class="lesson-date">${l.date ? fmtDateShort(l.date) : 'Data non impostata'} · ${current ? 'Semestre corrente' : 'Archivio'}${printed ? ' · Già stampata' : ''}</div>
+                </div>
+                <button class="paper-status-btn" data-advice-highlight="${esc(l.subjectName)}::${esc(l.id)}" title="Segna come già evidenziata">${icon('highlighter',13)}<span>Segna evidenziata</span></button>
+              </div>`).join('')}</div>`}
+
           ${pinnedLessons.length ? `<div class="section-head"><div><div style="font-size:16px; font-weight:700;">${icon('star',15)} Preferite</div></div></div><div class="card" style="padding:6px 14px; margin-bottom:30px;">${pinnedLessons.map(l => LessonRow.render(l)).join('')}</div>` : ''}
 
           <div class="section-head"><div><div style="font-size:16px; font-weight:700;">Lezioni recenti</div></div><a href="#" data-nav="lessons-all" style="font-size:12.5px; color:var(--accent); font-weight:600;">Vedi tutte</a></div>
@@ -3204,6 +3258,19 @@ const DashboardPage = {
     content.querySelectorAll('[data-nav]').forEach(a => a.addEventListener('click', e=>{ e.preventDefault(); if(e.target.closest('button')) return; Router.go(a.dataset.nav); }));
     document.getElementById('db-open-statistics')?.addEventListener('click', e => { e.stopPropagation(); Router.go('statistics'); });
     LessonRow.bind(content);
+    content.querySelectorAll('[data-advice-highlight]').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const [subjectName, lessonId] = btn.dataset.adviceHighlight.split('::');
+        const lesson = findLesson(subjectName, lessonId);
+        if(!lesson) return;
+        try{
+          await LibraryScanner.togglePaperStatus(lesson, 'highlightedOnPaper');
+          Toast.success('Lezione segnata come già evidenziata sui fogli.');
+          Router.render();
+        }catch(err){ console.error(err); Toast.error('Impossibile aggiornare lo stato evidenziato.'); }
+      });
+    });
     const newBtn = document.getElementById('db-new-lesson');
     if(newBtn) newBtn.addEventListener('click', () => LessonFormModal.open());
     const emptyBtn = document.getElementById('db-empty-new-lesson');
