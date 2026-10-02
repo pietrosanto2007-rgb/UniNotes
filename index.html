@@ -8665,6 +8665,11 @@ const AI_SUMMARY_FOLDER_NAME = 'Riepiloghi AI';
         </div>`;
       const stopBtn=this.modal.querySelector('#ai-bg-stop');
       const resumeBtn=this.modal.querySelector('#ai-bg-resume');
+      const retryBtn=this.modal.querySelector('#ai-bg-retry');
+      if(retryBtn){
+        const canRetry=!!(window.UniNotesAIBackground&&window.UniNotesAIBackground.lastFailedLesson&&s.phase==='error');
+        retryBtn.style.display=canRetry?'inline-flex':'none';
+      }
       if(stopBtn){
         stopBtn.disabled=!canStop;
         stopBtn.style.display=canStop?'inline-flex':'none';
@@ -8684,6 +8689,7 @@ const AI_SUMMARY_FOLDER_NAME = 'Riepiloghi AI';
           <div style="display:flex;align-items:center;gap:6px;">
             <button class="btn btn-sm btn-danger" id="ai-bg-stop" style="display:none;">${icon('stopcircle',13)} Stop</button>
             <button class="btn btn-sm" id="ai-bg-resume" style="display:none;">${icon('play',13)} Riprendi</button>
+            <button class="btn btn-sm" id="ai-bg-retry" style="display:none;">${icon('refresh',13)} Riprova lezione</button>
             <button class="icon-btn" id="ai-bg-inspector-close">${icon('x',15)}</button>
           </div>
         </div>
@@ -8692,6 +8698,7 @@ const AI_SUMMARY_FOLDER_NAME = 'Riepiloghi AI';
       const close=this.modal.querySelector('#ai-bg-inspector-close'); if(close) close.onclick=()=>this.close();
       const stop=this.modal.querySelector('#ai-bg-stop'); if(stop) stop.onclick=()=>window.UniNotesAIBackground&&window.UniNotesAIBackground.stop();
       const resume=this.modal.querySelector('#ai-bg-resume'); if(resume) resume.onclick=()=>window.UniNotesAIBackground&&window.UniNotesAIBackground.start(true);
+      const retry=this.modal.querySelector('#ai-bg-retry'); if(retry) retry.onclick=()=>window.UniNotesAIBackground&&window.UniNotesAIBackground.retryLast();
       this.render();
       clearInterval(this.refreshTimer); this.refreshTimer=setInterval(()=>this.render(),400);
     },
@@ -8765,6 +8772,36 @@ const AI_SUMMARY_FOLDER_NAME = 'Riepiloghi AI';
     return null;
   }
 
+  const AI_MAX_LESSON_RETRIES = 3;
+  const AI_RETRY_BACKOFF_MS = [30_000, 120_000, 600_000];
+  function aiRetryState(meta){
+    const a=(meta&&meta.aiAutomation)||{};
+    return { attempts: Number(a.retryCount)||0, nextRetryAt:Number(a.nextRetryAt)||0, status:a.status||'' };
+  }
+  function aiRetryAllowed(meta, force=false){
+    if(force) return true;
+    const st=aiRetryState(meta);
+    if(st.status==='blocked' && st.attempts>=AI_MAX_LESSON_RETRIES) return false;
+    if(st.status==='retry-wait' && st.nextRetryAt && Date.now()<st.nextRetryAt) return false;
+    return st.attempts < AI_MAX_LESSON_RETRIES;
+  }
+  async function aiRecordLessonFailure(lesson,err){
+    const meta=await aiReadMeta(lesson);
+    const prev=aiRetryState(meta);
+    const attempts=prev.attempts+1;
+    const blocked=attempts>=AI_MAX_LESSON_RETRIES;
+    const nextRetryAt=blocked?0:Date.now()+AI_RETRY_BACKOFF_MS[Math.min(attempts-1,AI_RETRY_BACKOFF_MS.length-1)];
+    const state=Object.assign({},meta.aiAutomation||{}, {
+      version:AI_AUTOMATION_VERSION, processing:false, done:false,
+      status:blocked?'blocked':'retry-wait', retryCount:attempts, nextRetryAt,
+      lastError:err&&err.message?err.message:String(err), failedAt:Date.now(),
+      analysisScope:'main-pdf-only', audioMode:'untouched',
+      resourceProfile:localStorage.getItem('uninotes.aiBackgroundLowPower')!=='0'?'eco':'normal'
+    });
+    await aiPersist(lesson,{aiAutomation:state});
+    return state;
+  }
+
   async function aiOllamaJson(messages, signal, schema){
     aiThrowIfAborted(signal);
     const model=aiModel(); if(!model) throw new Error('Nessun modello Ollama selezionato.');
@@ -8789,7 +8826,11 @@ const AI_SUMMARY_FOLDER_NAME = 'Riepiloghi AI';
 
     let content=await doRequest(requestBody);
     let parsed=aiExtractJsonObject(content);
-    if(parsed) return parsed;
+    if(parsed){
+      if(typeof parsed.summary!=='string' && typeof parsed.content==='string') parsed.summary=parsed.content;
+      if(typeof parsed.summary!=='string' && typeof parsed.response==='string') parsed.summary=parsed.response;
+      return parsed;
+    }
 
     // Alcuni modelli dichiarano supporto JSON ma occasionalmente restituiscono testo non conforme.
     // Un singolo retry più vincolante evita di bloccare l'intera coda senza moltiplicare il carico.
@@ -8803,7 +8844,11 @@ const AI_SUMMARY_FOLDER_NAME = 'Riepiloghi AI';
     });
     content=await doRequest(Object.assign({},requestBody,{messages:retryMessages,options:Object.assign({},requestBody.options,{temperature:0,num_predict:Math.min(requestBody.options.num_predict,1400)})}));
     parsed=aiExtractJsonObject(content);
-    if(parsed) return parsed;
+    if(parsed){
+      if(typeof parsed.summary!=='string' && typeof parsed.content==='string') parsed.summary=parsed.content;
+      if(typeof parsed.summary!=='string' && typeof parsed.response==='string') parsed.summary=parsed.response;
+      return parsed;
+    }
     throw new Error('Risposta AI non valida dopo 2 tentativi.');
   }
 
@@ -8920,7 +8965,7 @@ Non inserire HTML.`;
     const partials=[];
     for(let start=0,idx=1;start<pdfData.text.length;start+=profile.chunkChars,idx++){
       aiThrowIfAborted(signal);
-      const chunk=pdfData.text.slice(start,start+AI_CHUNK_SIZE);
+      const chunk=pdfData.text.slice(start,start+profile.chunkChars);
       const out=await aiOllamaJson(
         [{role:'system',content:`Riassumi fedelmente questo segmento di una lezione universitaria esclusivamente in ${lang.instruction}. Rispondi SOLO JSON {"summary":"..."}. Usa Markdown leggibile con **grassetto**, *corsivo*, \`==evidenziato==\` e callout quando utili. Non inventare nulla.`},
          {role:'user',content:`Segmento ${idx}\nMateria: ${lesson.subjectName}\n${chunk}`}],
@@ -9011,8 +9056,10 @@ Non inserire HTML.`;
     let summaryOut=await aiSummarize(lesson,pdfData,signal,summaryLanguage);
     summaryOut=await aiLocalizeSummaryIfNeeded(lesson,summaryOut,signal,summaryLanguage);
     aiThrowIfAborted(signal);
-    const summary=aiCleanMarkdown(summaryOut&&summaryOut.summary);
+    let summary=aiCleanMarkdown(summaryOut&&summaryOut.summary);
     const newTitle=aiSafeText(summaryOut&&summaryOut.title);
+    if(!summary && summaryOut && typeof summaryOut.content==='string') summary=aiCleanMarkdown(summaryOut.content);
+    if(!summary && summaryOut && typeof summaryOut.response==='string') summary=aiCleanMarkdown(summaryOut.response);
     if(!summary) throw new Error('L’AI non ha restituito un riassunto valido.');
 
     await aiCreateSummaryFile(lesson,summary,signal);
@@ -9040,7 +9087,7 @@ Non inserire HTML.`;
 
 
   const AIBackgroundWorker={
-    running:false,timer:null,controller:null,stopped:false,resumeRequested:false,currentLesson:null,
+    running:false,timer:null,controller:null,stopped:false,resumeRequested:false,currentLesson:null,lastFailedLesson:null,forceRetry:false,
     connectionCache:null,
     schedule(ms=7000){
       clearTimeout(this.timer);
@@ -9097,12 +9144,22 @@ Non inserire HTML.`;
           const meta=await aiReadMeta(lesson);
           const summaryHandle=await aiGetSummaryFile(lesson,{create:false,migrateLegacy:true});
           const summaryValid=await aiSummaryIsValid(lesson,summaryHandle);
-          if(meta.aiAutomation&&meta.aiAutomation.done===true&&summaryValid) completed++;
-          else pending.push(lesson);
+          if(meta.aiAutomation&&meta.aiAutomation.done===true&&summaryValid){
+            completed++;
+          }else if(aiRetryAllowed(meta,this.forceRetry)){
+            pending.push(lesson);
+          }
         }
 
         if(!pending.length){
-          aiStatus({phase:'idle',completed,total:lessons.length});
+          if(this.lastFailedLesson){
+            const failedMeta=await aiReadMeta(this.lastFailedLesson);
+            const fs=aiRetryState(failedMeta);
+            if(fs.status==='blocked') aiStatus({phase:'error',currentLesson:`${this.lastFailedLesson.subjectName} · Lezione ${this.lastFailedLesson.number??''}`,error:failedMeta.aiAutomation&&failedMeta.aiAutomation.lastError||'Tentativi esauriti',completed,total:lessons.length,blocked:true});
+            else aiStatus({phase:'idle',completed,total:lessons.length});
+          }else{
+            aiStatus({phase:'idle',completed,total:lessons.length});
+          }
           this.schedule(120000);
           return;
         }
@@ -9115,6 +9172,7 @@ Non inserire HTML.`;
             await aiIdleYield();
             const result=await aiProcessLesson(lesson,completed,lessons.length,this.controller.signal);
             if(result&&result.done) completed++;
+            this.forceRetry=false;
           }catch(err){
             if(err&&err.name==='AbortError'){
               this.stopped=true;
@@ -9129,11 +9187,16 @@ Non inserire HTML.`;
               }
             }else{
               console.warn('[Uni Notes AI] elaborazione lezione fallita:',lesson.subjectName,lesson.number,err);
+              this.lastFailedLesson=lesson;
+              const failureState=await aiRecordLessonFailure(lesson,err).catch(()=>null);
+              const blocked=!!(failureState&&failureState.status==='blocked');
               AIBackgroundInspector.push('error',
                 `Elaborazione fallita: ${lesson.subjectName} · Lezione ${lesson.number??''}`,
-                err.message||String(err)
+                blocked
+                  ? `Tentativi esauriti (${AI_MAX_LESSON_RETRIES}/${AI_MAX_LESSON_RETRIES}). ${err.message||String(err)}\nLa lezione non verrà più riprovata automaticamente.`
+                  : `Tentativo ${failureState&&failureState.retryCount||'?'} di ${AI_MAX_LESSON_RETRIES}. ${err.message||String(err)}\nVerrà ritentata dopo un breve intervallo.`
               );
-              aiStatus({phase:'error',error:err.message||String(err),completed,total:lessons.length});
+              aiStatus({phase:'error',error:err.message||String(err),currentLesson:`${lesson.subjectName} · Lezione ${lesson.number??''}`,completed,total:lessons.length,blocked});
             }
           }
           this.currentLesson=null;
@@ -9182,6 +9245,16 @@ Non inserire HTML.`;
       }
       AIBackgroundInspector.push('wait','Richiesta di stop ricevuta','Interrompo l’operazione in corso senza segnare la lezione come completata. Puoi riprendere in seguito.');
       AIBackgroundInspector.render();
+    },
+    async retryLast(){
+      const lesson=this.lastFailedLesson;
+      if(!lesson) return;
+      const meta=await aiReadMeta(lesson);
+      const state=Object.assign({},meta.aiAutomation||{},{retryCount:0,nextRetryAt:0,status:'queued',done:false,processing:false,lastError:null});
+      await aiPersist(lesson,{aiAutomation:state});
+      this.stopped=false; this.forceRetry=true; this.resumeRequested=true;
+      AIBackgroundInspector.push('wait',`Riprovo: ${lesson.subjectName} · Lezione ${lesson.number??''}`,'Il contatore dei tentativi è stato azzerato su richiesta.');
+      this.start(true);
     },
     enabled:aiEnabled
   };
