@@ -8464,17 +8464,28 @@ const AI_SUMMARY_FOLDER_NAME = 'Riepiloghi AI';
 
   async function aiGetSummaryFile(lesson, {create=false, migrateLegacy=true}={}){
     let folder=null, summary=null;
-    try{
-      folder = await (create
-        ? lesson.handle.getDirectoryHandle(AI_SUMMARY_FOLDER_NAME,{create:true})
-        : lesson.handle.getDirectoryHandle(AI_SUMMARY_FOLDER_NAME));
-    }catch(e){ folder=null; }
 
-    if(folder){
-      try{ summary=await folder.getFileHandle(AI_SUMMARY_FILE_NAME); }catch(e){ summary=null; }
+    // Prima prova a ottenere la cartella dedicata. In modalità create=true
+    // viene creata in modo esplicito; non consideriamo la sua sola creazione
+    // come creazione del file Markdown.
+    try{
+      folder = await lesson.handle.getDirectoryHandle(AI_SUMMARY_FOLDER_NAME,{create:!!create});
+    }catch(e){
+      folder=null;
     }
 
-    // Migrazione trasparente dei vecchi riepiloghi che si trovavano nella root della lezione.
+    if(folder){
+      try{
+        // Questo è il punto corretto per creare davvero il riepilogo.
+        summary = await folder.getFileHandle(AI_SUMMARY_FILE_NAME,{create:!!create});
+      }catch(e){
+        summary=null;
+      }
+    }
+
+    // Migrazione trasparente dei vecchi riepiloghi che si trovavano nella
+    // root della lezione. La migrazione avviene anche quando la cartella non
+    // esiste ancora. Non perdiamo mai il file originale se la copia fallisce.
     if(!summary && migrateLegacy){
       let legacy=null;
       try{ legacy=await lesson.handle.getFileHandle(AI_SUMMARY_FILE_NAME); }catch(e){ legacy=null; }
@@ -8482,12 +8493,18 @@ const AI_SUMMARY_FOLDER_NAME = 'Riepiloghi AI';
         try{
           if(!folder) folder=await lesson.handle.getDirectoryHandle(AI_SUMMARY_FOLDER_NAME,{create:true});
           const fileObj=await legacy.getFile();
-          summary=await folder.getFileHandle(AI_SUMMARY_FILE_NAME,{create:true});
-          const writable=await summary.createWritable();
-          await writable.write(await fileObj.arrayBuffer());
-          await writable.close();
-          await lesson.handle.removeEntry(AI_SUMMARY_FILE_NAME);
-        }catch(e){ summary=null; }
+          const target=await folder.getFileHandle(AI_SUMMARY_FILE_NAME,{create:true});
+          const writable=await target.createWritable();
+          try{
+            await writable.write(await fileObj.arrayBuffer());
+          }finally{
+            try{ await writable.close(); }catch(e){}
+          }
+          summary=target;
+          try{ await lesson.handle.removeEntry(AI_SUMMARY_FILE_NAME); }catch(e){ /* la copia valida resta comunque disponibile */ }
+        }catch(e){
+          summary=null;
+        }
       }
     }
 
@@ -8504,6 +8521,23 @@ const AI_SUMMARY_FOLDER_NAME = 'Riepiloghi AI';
       const text=await FileSystemManager.readTextFile(handle);
       return aiSafeText(text).length >= 200;
     }catch(e){ return false; }
+  }
+
+
+  async function aiEnsureSummaryFile(lesson, markdown, signal){
+    aiThrowIfAborted(signal);
+    const handle=await aiGetSummaryFile(lesson,{create:true,migrateLegacy:true});
+    if(!handle) throw new Error('Impossibile creare il file Riepilogo AI.md nella cartella Riepiloghi AI.');
+    const clean=aiCleanMarkdown(markdown);
+    if(clean.length < 200) throw new Error('Il riepilogo generato è troppo breve o vuoto.');
+    aiThrowIfAborted(signal);
+    await FileSystemManager.writeTextFile(handle,clean);
+    aiThrowIfAborted(signal);
+    const verify=await FileSystemManager.readTextFile(handle);
+    if(aiSafeText(verify).length < 200) throw new Error('Riepilogo AI.md creato ma la verifica del contenuto non è riuscita.');
+    lesson.aiSummaryFile={name:AI_SUMMARY_FILE_NAME,handle,kind:'text',folder:AI_SUMMARY_FOLDER_NAME};
+    lesson.aiSummaryFileName=AI_SUMMARY_FILE_NAME;
+    return handle;
   }
 
   const AIBackgroundInspector = {
@@ -8797,14 +8831,7 @@ Non inserire HTML.`;
   }
 
   async function aiCreateSummaryFile(lesson,summaryMarkdown,signal){
-    aiThrowIfAborted(signal);
-    const h=await aiGetSummaryFile(lesson,{create:true,migrateLegacy:true});
-    if(!h) throw new Error('Impossibile creare la cartella dei riepiloghi AI.');
-    aiThrowIfAborted(signal);
-    await FileSystemManager.writeTextFile(h,aiCleanMarkdown(summaryMarkdown));
-    aiThrowIfAborted(signal);
-    lesson.aiSummaryFile={name:AI_SUMMARY_FILE_NAME,handle:h,kind:'text',folder:AI_SUMMARY_FOLDER_NAME};
-    lesson.aiSummaryFileName=AI_SUMMARY_FILE_NAME;
+    return aiEnsureSummaryFile(lesson,summaryMarkdown,signal);
   }
 
   async function aiRefreshLessonView(lesson){
