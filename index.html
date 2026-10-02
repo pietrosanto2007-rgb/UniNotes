@@ -3007,17 +3007,31 @@ const StatisticsView = {
   }
 };
 
+window.UniNotesUserActivityAt = Date.now();
+['pointerdown','keydown','input','touchstart'].forEach(evt => document.addEventListener(evt, () => { window.UniNotesUserActivityAt = Date.now(); }, {passive:true}));
+
 async function ensureStatsPageCounts(lessons, onChange){
   const targets = (lessons||[]).filter(l => l.mainFile && l.mainFile.kind === 'pdf' && typeof l.mainFilePages !== 'number');
   if(!targets.length) return;
   let changed = false;
-  await Promise.all(targets.map(async l => {
-    try{
-      await LibraryScanner.cacheMainFilePages(l);
-      changed = true;
-      if(typeof onChange === 'function') onChange();
-    }catch(e){ console.warn('Statistiche: conteggio pagine fallito', l.title || l.folderName, e); }
-  }));
+  window.UniNotesPageCountBusy = true;
+  try{
+    // Un PDF alla volta: evita che le statistiche aprano decine di documenti PDF.js
+    // contemporaneamente mentre l'AI o il lettore stanno lavorando.
+    for(const l of targets){
+      while(window.UniNotesAIBackground && window.UniNotesAIBackground.running){
+        await new Promise(r=>setTimeout(r,750));
+      }
+      try{
+        await LibraryScanner.cacheMainFilePages(l);
+        changed = true;
+        if(typeof onChange === 'function') onChange();
+      }catch(e){ console.warn('Statistiche: conteggio pagine fallito', l.title || l.folderName, e); }
+      await new Promise(r=>setTimeout(r,60));
+    }
+  }finally{
+    window.UniNotesPageCountBusy = false;
+  }
   if(changed && typeof onChange === 'function') onChange();
 }
 
@@ -7242,7 +7256,12 @@ const PdfIndex = {
 
   async build(){
     if(this.building) return;
+    // L'indicizzazione PDF è pesante: non deve competere con l'automazione AI.
+    while(window.UniNotesAIBackground && window.UniNotesAIBackground.running){
+      await new Promise(r=>setTimeout(r,600));
+    }
     this.building = true;
+    window.UniNotesPdfIndexBusy = true;
     const targets = this.allPdfTargets();
     const newEntries = [];
     for(const { l, f } of targets){
@@ -7273,9 +7292,13 @@ const PdfIndex = {
     this.entries = newEntries;
     this.ready = true;
     this.building = false;
+    window.UniNotesPdfIndexBusy = false;
   },
   invalidate(){ this.ready = false; this.build(); },
-  async ensureFresh(){ if(!this.ready && !this.building) await this.build(); },
+  async ensureFresh(){
+    if(this.ready || this.building) return;
+    try{ await this.build(); }finally{ this.building=false; window.UniNotesPdfIndexBusy=false; }
+  },
 
   search(query){
     const q = (query||'').trim().toLowerCase();
@@ -8382,11 +8405,19 @@ console.info('[Uni Notes AI Agent] Modulo caricato. Apri il pannello AI dalla to
   'use strict';
 
 
-  const AI_SUMMARY_FOLDER_NAME = 'Riepiloghi AI';
+  const AI_SUMMARY_LANGUAGES = {
+  it: { label:'Italiano', instruction:'italiano' },
+  en: { label:'English', instruction:'inglese' },
+  es: { label:'Español', instruction:'spagnolo' },
+  fr: { label:'Français', instruction:'francese' },
+  de: { label:'Deutsch', instruction:'tedesco' }
+};
+
+const AI_SUMMARY_FOLDER_NAME = 'Riepiloghi AI';
   const AI_SUMMARY_FILE_NAME = 'Riepilogo AI.md';
   const AI_AUTOMATION_VERSION = 4;
-  const AI_MAX_FULL_PDF_TEXT = 90000;
-  const AI_CHUNK_SIZE = 36000;
+  const AI_MAX_FULL_PDF_TEXT = 64000;
+  const AI_CHUNK_SIZE = 18000;
 
   function aiEnabled(){ return localStorage.getItem('uninotes.aiBackgroundEnabled') !== '0'; }
   function aiModel(){ return typeof OllamaManager !== 'undefined' ? OllamaManager.getModel() : ''; }
@@ -8497,7 +8528,7 @@ console.info('[Uni Notes AI Agent] Modulo caricato. Apri il pannello AI dalla to
         <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-bottom:14px;">
           <div class="card" style="padding:10px 12px;">
             <div class="muted" style="font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;">Stato</div>
-            <div style="font-weight:750;font-size:13px;margin-top:3px;">${esc(s.phase==='processing'?'In elaborazione':s.phase==='error'?'Errore':s.phase==='stopped'||stopped?'Interrotto':'In attesa')}</div>
+            <div style="font-weight:750;font-size:13px;margin-top:3px;">${esc(s.phase==='processing'?'In elaborazione':s.phase==='paused'?'In pausa — app in uso':s.phase==='error'?'Errore':s.phase==='stopped'||stopped?'Interrotto':'In attesa')}</div>
           </div>
           <div class="card" style="padding:10px 12px;">
             <div class="muted" style="font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;">Avanzamento</div>
@@ -8567,6 +8598,10 @@ console.info('[Uni Notes AI Agent] Modulo caricato. Apri il pannello AI dalla to
       el.style.display='flex';
       el.innerHTML=`${icon('ai',13)} <span>AI in background · ${esc(s.currentLesson||'')}</span>`;
       el.title=`${s.completed||0}/${s.total||0} lezioni completate · clicca per aprire`;
+    }else if(s.phase==='paused'){
+      el.style.display='flex';
+      el.innerHTML=`${icon('clock',13)} <span>AI in pausa · app in uso</span>`;
+      el.title='L’AI riprenderà quando le operazioni dell’app saranno libere.';
     }else if(s.phase==='error'){
       el.style.display='flex';
       el.innerHTML=`${icon('alert',13)} <span>AI in pausa</span>`;
@@ -8590,13 +8625,28 @@ console.info('[Uni Notes AI Agent] Modulo caricato. Apri il pannello AI dalla to
     document.body.appendChild(el);
   }
 
+  const AI_RESOURCE_PROFILES = {
+    eco: { maxPdfChars: 48000, chunkChars: 14000, numCtx: 6144, numPredict: 1700, keepAlive: '1m', betweenRequests: 1200, betweenLessons: 5000 },
+    normal: { maxPdfChars: 64000, chunkChars: 18000, numCtx: 8192, numPredict: 2200, keepAlive: '3m', betweenRequests: 700, betweenLessons: 2500 }
+  };
+  function aiResourceProfile(){ return localStorage.getItem('uninotes.aiBackgroundLowPower') !== '0' ? AI_RESOURCE_PROFILES.eco : AI_RESOURCE_PROFILES.normal; }
+  function aiYield(ms=0){ return new Promise(resolve=>setTimeout(resolve,Math.max(0,ms))); }
+  async function aiIdleYield(){
+    if(typeof requestIdleCallback === 'function') await new Promise(resolve=>requestIdleCallback(()=>resolve(),{timeout:1500}));
+    else await aiYield(100);
+  }
+
   async function aiOllamaJson(messages, signal){
     aiThrowIfAborted(signal);
     const model=aiModel(); if(!model) throw new Error('Nessun modello Ollama selezionato.');
+    const profile=aiResourceProfile();
     const res=await fetch(OllamaManager.baseUrl+'/api/chat',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({model,messages,stream:false,format:'json',options:{temperature:0.1}}),
+      body:JSON.stringify({
+        model, messages, stream:false, format:'json', think:false, keep_alive:profile.keepAlive,
+        options:{temperature:0.1,num_ctx:profile.numCtx,num_predict:profile.numPredict}
+      }),
       signal
     });
     aiThrowIfAborted(signal);
@@ -8611,28 +8661,39 @@ console.info('[Uni Notes AI Agent] Modulo caricato. Apri il pannello AI dalla to
     }
   }
 
-  async function aiPdfText(file,maxChars=AI_MAX_FULL_PDF_TEXT,signal){
+  async function aiPdfText(file,maxChars=aiResourceProfile().maxPdfChars,signal){
     if(!file||file.kind!=='pdf') throw new Error('Il documento principale non è un PDF.');
     aiThrowIfAborted(signal);
     if(!window.pdfjsLib&&typeof ensurePdfJs==='function') await ensurePdfJs();
     aiThrowIfAborted(signal);
     if(!window.pdfjsLib) throw new Error('PDF.js non disponibile per leggere il PDF.');
     const fileObj=await file.handle.getFile();
-    const buf=await fileObj.arrayBuffer();
+    let buf=await fileObj.arrayBuffer();
     aiThrowIfAborted(signal);
     const pdf=await window.pdfjsLib.getDocument({data:buf}).promise;
     const chunks=[]; let total=0;
-    for(let p=1;p<=pdf.numPages;p++){
+    try{
+      for(let p=1;p<=pdf.numPages;p++){
+        aiThrowIfAborted(signal);
+        const page=await pdf.getPage(p);
+        try{
+          const tc=await page.getTextContent();
+          const text=tc.items.map(it=>it&&it.str?it.str:'').join(' ').replace(/\s+/g,' ').trim();
+          if(text) chunks.push(`\n\n--- PAGINA ${p} ---\n${text}`);
+          total+=text.length;
+        }finally{
+          try{ if(page.cleanup) page.cleanup(); }catch(e){}
+        }
+        if(p % 3 === 0){ await aiIdleYield(); }
+        if(total>=maxChars) break;
+      }
       aiThrowIfAborted(signal);
-      const page=await pdf.getPage(p);
-      const tc=await page.getTextContent();
-      const text=tc.items.map(it=>it&&it.str?it.str:'').join(' ').replace(/\s+/g,' ').trim();
-      if(text) chunks.push(`\n\n--- PAGINA ${p} ---\n${text}`);
-      total+=text.length;
-      if(total>=maxChars) break;
+      return {pages:pdf.numPages,text:chunks.join('').slice(0,maxChars)};
+    }finally{
+      try{ if(pdf.cleanup) await pdf.cleanup(); }catch(e){}
+      try{ if(pdf.destroy) await pdf.destroy(); }catch(e){}
+      buf=null;
     }
-    aiThrowIfAborted(signal);
-    return {pages:pdf.numPages,text:chunks.join('').slice(0,maxChars)};
   }
 
   function aiCleanMarkdown(md){ return aiSafeText(md).replace(/^```markdown\s*/i,'').replace(/^```\s*/,'').replace(/\s*```$/,'').trim(); }
@@ -8672,7 +8733,7 @@ Non inserire HTML.`;
       );
     }
     const partials=[];
-    for(let start=0,idx=1;start<pdfData.text.length;start+=AI_CHUNK_SIZE,idx++){
+    for(let start=0,idx=1;start<pdfData.text.length;start+=profile.chunkChars,idx++){
       aiThrowIfAborted(signal);
       const chunk=pdfData.text.slice(start,start+AI_CHUNK_SIZE);
       const out=await aiOllamaJson(
@@ -8680,7 +8741,8 @@ Non inserire HTML.`;
          {role:'user',content:`Segmento ${idx}\nMateria: ${lesson.subjectName}\n${chunk}`}],
         signal
       );
-      if(out&&out.summary) partials.push(aiCleanMarkdown(out.summary));
+      if(out&&out.summary) partials.push(aiCleanMarkdown(out.summary).slice(0,7000));
+      await aiYield(profile.betweenRequests);
     }
     aiThrowIfAborted(signal);
     return await aiOllamaJson(
@@ -8726,7 +8788,7 @@ Non inserire HTML.`;
     aiThrowIfAborted(signal);
     lesson.aiAutomation=Object.assign({},doneState||{},{
       version:AI_AUTOMATION_VERSION,processing:true,status:'processing',model:aiModel(),
-      startedAt:Date.now(),lastError:null,analysisScope:'main-pdf-only',audioMode:'untouched'
+      startedAt:Date.now(),lastError:null,analysisScope:'main-pdf-only',audioMode:'untouched',resourceProfile:localStorage.getItem('uninotes.aiBackgroundLowPower') !== '0' ? 'eco' : 'normal'
     });
     await aiPersist(lesson,{aiAutomation:lesson.aiAutomation});
 
@@ -8782,7 +8844,7 @@ Non inserire HTML.`;
     lesson.aiAutomation=Object.assign({},lesson.aiAutomation,{
       version:AI_AUTOMATION_VERSION,processing:false,done:true,status:'done',
       completedAt:Date.now(),model:aiModel(),summaryFileName:AI_SUMMARY_FILE_NAME,summaryFolder:AI_SUMMARY_FOLDER_NAME,
-      analysisScope:'main-pdf-only',audioMode:'untouched'
+      analysisScope:'main-pdf-only',audioMode:'untouched',resourceProfile:localStorage.getItem('uninotes.aiBackgroundLowPower') !== '0' ? 'eco' : 'normal'
     });
     await aiPersist(lesson,{aiAutomation:lesson.aiAutomation});
     AIBackgroundInspector.push('done',
@@ -8796,21 +8858,41 @@ Non inserire HTML.`;
 
   const AIBackgroundWorker={
     running:false,timer:null,controller:null,stopped:false,resumeRequested:false,currentLesson:null,
-    schedule(ms=3500){
+    connectionCache:null,
+    schedule(ms=7000){
       clearTimeout(this.timer);
       this.timer=setTimeout(()=>this.tick().catch(()=>{}),ms);
     },
+    async getConnection(){
+      const now=Date.now();
+      if(this.connectionCache && now-this.connectionCache.at<30000) return this.connectionCache.value;
+      const value=await OllamaManager.testConnection();
+      this.connectionCache={at:now,value};
+      return value;
+    },
     async tick(){
       if(this.running||this.stopped||!aiEnabled()){
-        this.schedule(aiEnabled()?15000:30000);
+        this.schedule(aiEnabled()?20000:30000);
         return;
       }
       if(!AppState||!AppState.dirHandle){
-        this.schedule(3000);
+        this.schedule(5000);
+        return;
+      }
+      // Non competere con le altre operazioni CPU/PDF dell'app.
+      if(window.UniNotesPageCountBusy || window.UniNotesPdfIndexBusy || (typeof ContentIndex!=='undefined'&&ContentIndex.building) || (typeof PdfIndex!=='undefined'&&PdfIndex.building)){
+        aiStatus({phase:'paused',currentLesson:null});
+        this.schedule(10000);
+        return;
+      }
+      const lastActivity=Number(window.UniNotesUserActivityAt||0);
+      if(Date.now()-lastActivity<7000){
+        aiStatus({phase:'paused',currentLesson:null});
+        this.schedule(5000);
         return;
       }
 
-      const connection=await OllamaManager.testConnection();
+      const connection=await this.getConnection();
       if(!connection.ok){
         aiStatus({phase:'idle'});
         this.schedule(60000);
@@ -8847,11 +8929,12 @@ Non inserire HTML.`;
           return;
         }
 
-        for(let i=0;i<pending.length;i++){
-          if(this.stopped||!this.controller||this.controller.signal.aborted) break;
-          const lesson=pending[i];
+        // Una sola lezione per ciclo: evita sessioni CPU continue e rende il browser reattivo.
+        if(pending.length && !this.stopped && this.controller && !this.controller.signal.aborted){
+          const lesson=pending[0];
           this.currentLesson=lesson;
           try{
+            await aiIdleYield();
             const result=await aiProcessLesson(lesson,completed,lessons.length,this.controller.signal);
             if(result&&result.done) completed++;
           }catch(err){
@@ -8862,21 +8945,18 @@ Non inserire HTML.`;
                   await aiPersist(this.currentLesson,{aiAutomation:{
                     processing:false,status:'stopped',done:false,
                     stoppedAt:Date.now(),lastError:null,
-                    analysisScope:'main-pdf-only',audioMode:'untouched'
+                    analysisScope:'main-pdf-only',audioMode:'untouched',resourceProfile:localStorage.getItem('uninotes.aiBackgroundLowPower') !== '0' ? 'eco' : 'normal'
                   }});
                 }catch(e){}
               }
-              break;
+            }else{
+              console.warn('[Uni Notes AI] elaborazione lezione fallita:',lesson.subjectName,lesson.number,err);
+              AIBackgroundInspector.push('error',
+                `Elaborazione fallita: ${lesson.subjectName} · Lezione ${lesson.number??''}`,
+                err.message||String(err)
+              );
+              aiStatus({phase:'error',error:err.message||String(err),completed,total:lessons.length});
             }
-            console.warn('[Uni Notes AI] elaborazione lezione fallita:',lesson.subjectName,lesson.number,err);
-            AIBackgroundInspector.push('error',
-              `Elaborazione fallita: ${lesson.subjectName} · Lezione ${lesson.number??''}`,
-              err.message||String(err)
-            );
-            aiStatus({phase:'error',error:err.message||String(err),completed,total:lessons.length});
-          }
-          if(!this.stopped && this.controller && !this.controller.signal.aborted){
-            await new Promise(r=>setTimeout(r,150));
           }
           this.currentLesson=null;
         }
@@ -8892,7 +8972,8 @@ Non inserire HTML.`;
           aiStatus({phase:'idle',completed,total:lessons.length});
         }
 
-        this.schedule(this.stopped?300000:(pending.length?5000:120000));
+        const profile=aiResourceProfile();
+        this.schedule(this.stopped?300000:(pending.length?profile.betweenLessons:120000));
       }finally{
         this.currentLesson=null;
         this.running=false;
@@ -8918,7 +8999,7 @@ Non inserire HTML.`;
         aiPersist(current,{aiAutomation:{
           processing:false,status:'stopped',done:false,
           stoppedAt:Date.now(),lastError:null,
-          analysisScope:'main-pdf-only',audioMode:'untouched'
+          analysisScope:'main-pdf-only',audioMode:'untouched',resourceProfile:localStorage.getItem('uninotes.aiBackgroundLowPower') !== '0' ? 'eco' : 'normal'
         }}).catch(()=>{});
       }
       AIBackgroundInspector.push('wait','Richiesta di stop ricevuta','Interrompo l’operazione in corso senza segnare la lezione come completata. Puoi riprendere in seguito.');
@@ -9028,14 +9109,14 @@ Non inserire HTML.`;
     SettingsPage.render=function(){
       origSettings(); const card=document.getElementById('ai-settings-card'); if(!card||card.querySelector('#ai-bg-enable')) return;
       const wrap=document.createElement('div'); wrap.style.cssText='margin-top:14px;padding-top:14px;border-top:1px solid var(--border);';
-      wrap.innerHTML=`<label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;font-size:12.5px;"><input type="checkbox" id="ai-bg-enable" style="margin-top:2px;width:15px;height:15px;"><span><b>Automazione AI in background</b><br><span class="muted">Quando Ollama è disponibile, Uni Notes analizza automaticamente esclusivamente il PDF principale e genera il riepilogo AI. Gli altri file non vengono modificati. Ogni lezione viene elaborata una sola volta.</span></span></label><div id="ai-bg-settings-status" class="muted" style="font-size:11.5px;margin-top:8px;"></div>`;
-      card.appendChild(wrap); const cb=wrap.querySelector('#ai-bg-enable'); cb.checked=aiEnabled(); cb.addEventListener('change',()=>{localStorage.setItem('uninotes.aiBackgroundEnabled',cb.checked?'1':'0');if(cb.checked)AIBackgroundWorker.start();else AIBackgroundWorker.stop();wrap.querySelector('#ai-bg-settings-status').textContent=cb.checked?'Automazione attiva.':'Automazione disattivata.';}); wrap.querySelector('#ai-bg-settings-status').textContent=cb.checked?'Automazione attiva.':'Automazione disattivata.';
+      wrap.innerHTML=`<label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;font-size:12.5px;"><input type="checkbox" id="ai-bg-enable" style="margin-top:2px;width:15px;height:15px;"><span><b>Automazione AI in background</b><br><span class="muted">Quando Ollama è disponibile, Uni Notes analizza automaticamente esclusivamente il PDF principale e genera il riepilogo AI. Gli altri file non vengono modificati.</span></span></label><label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;font-size:12.5px;margin-top:12px;"><input type="checkbox" id="ai-bg-lowpower" style="margin-top:2px;width:15px;height:15px;"><span><b>Modalità risparmio risorse</b><br><span class="muted">Riduce memoria e carico del modello: una sola lezione per ciclo, contesto più contenuto, pause tra le richieste e rilascio del modello dopo l'inattività.</span></span></label><div id="ai-bg-settings-status" class="muted" style="font-size:11.5px;margin-top:8px;"></div>`;
+      card.appendChild(wrap); const cb=wrap.querySelector('#ai-bg-enable'); const lp=wrap.querySelector('#ai-bg-lowpower'); cb.checked=aiEnabled(); lp.checked=localStorage.getItem('uninotes.aiBackgroundLowPower') !== '0'; cb.addEventListener('change',()=>{localStorage.setItem('uninotes.aiBackgroundEnabled',cb.checked?'1':'0');if(cb.checked)AIBackgroundWorker.start();else AIBackgroundWorker.stop();wrap.querySelector('#ai-bg-settings-status').textContent=cb.checked?'Automazione attiva.':'Automazione disattivata.';}); lp.addEventListener('change',()=>{localStorage.setItem('uninotes.aiBackgroundLowPower',lp.checked?'1':'0');AIBackgroundInspector.push('wait',lp.checked?'Modalità risparmio risorse attivata':'Modalità prestazioni AI attivata','La modifica sarà applicata alla prossima richiesta Ollama.');}); wrap.querySelector('#ai-bg-settings-status').textContent=cb.checked?(lp.checked?'Automazione attiva · risparmio risorse.':'Automazione attiva · prestazioni.'):'Automazione disattivata.';
     }; SettingsPage.__aiBackgroundSettingsPatched=true;
   }
 
   aiEnsureIndicator();
   setTimeout(()=>AIBackgroundWorker.start(),1200);
-  console.info('[Uni Notes AI] Automazione background pronta: attiva solo con Ollama disponibile; ogni lezione viene elaborata una sola volta.');
+  console.info('[Uni Notes AI] Automazione background pronta: coda seriale, una lezione per ciclo, risparmio risorse predefinito, PDF analizzato senza concorrenza e modello rilasciato dopo inattività.');
 })();
 </script>
 </body>
