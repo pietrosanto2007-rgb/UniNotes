@@ -1018,6 +1018,14 @@ a{ color:inherit; text-decoration:none; }
   .sidebar-title{font-size:15px;font-weight:760;letter-spacing:-.02em;}
   .sidebar-collapse-btn{width:30px;height:30px;border-radius:9px;background:rgba(255,255,255,.55);border:1px solid rgba(22,28,45,.06);}
   .sidebar-collapse-btn:hover{background:#fff;border-color:var(--desktop-line-strong);box-shadow:0 5px 12px rgba(25,33,52,.05);}
+.sidebar-expand-btn{
+  display:none; width:34px; height:34px; border-radius:11px; border:1px solid var(--desktop-line);
+  background:rgba(255,255,255,.82); color:var(--desktop-text); align-items:center; justify-content:center;
+  box-shadow:0 5px 14px rgba(25,33,52,.045);
+}
+.sidebar-expand-btn:hover{background:#fff;border-color:var(--desktop-line-strong);box-shadow:0 7px 16px rgba(25,33,52,.07);transform:translateY(-1px);}
+#sidebar.collapsed + #main .sidebar-expand-btn{display:flex;}
+@media(max-width:700px){.sidebar-expand-btn{display:none !important;}}
   .sidebar-scroll{padding:13px 11px 16px;}
   .nav-section{margin-top:20px;}
   .nav-section:first-child{margin-top:2px;}
@@ -2211,12 +2219,18 @@ const LibraryScanner = {
     const entries = await FileSystemManager.listEntries(handle);
     const lessons = [];
     let configMeta = {};
+    // .subject.json è nascosto e listEntries() lo esclude: leggilo direttamente
+    // così semestre e anno accademico della materia restano davvero persistenti.
+    try{
+      const metaHandle = await handle.getFileHandle('.subject.json');
+      configMeta = JSON.parse(await FileSystemManager.readTextFile(metaHandle));
+    }catch(e){}
+    const storedSemester = normalizeSemester(configMeta.semester);
+    const storedAcademicYear = configMeta.academicYear || '';
     for(const entry of entries){
       if(entry.kind === 'directory'){
-        const lesson = await this.scanLesson(entry.name, entry.handle, name);
+        const lesson = await this.scanLesson(entry.name, entry.handle, name, storedSemester, storedAcademicYear);
         if(lesson) lessons.push(lesson);
-      } else if(entry.name === '.subject.json'){
-        try{ configMeta = JSON.parse(await FileSystemManager.readTextFile(entry.handle)); }catch(e){}
       }
     }
     lessons.sort((a,b)=> (a.number||0) - (b.number||0));
@@ -2251,7 +2265,7 @@ const LibraryScanner = {
     return subject;
   },
 
-  async scanLesson(folderName, handle, subjectName){
+  async scanLesson(folderName, handle, subjectName, subjectSemester=null, subjectAcademicYear=''){
     let number = null, date = null, title = '';
     const m = LESSON_FOLDER_RE.exec(folderName);
     if(m){
@@ -2349,6 +2363,22 @@ const LibraryScanner = {
     // Tutti gli altri file in root che non sono il documento principale finiscono comunque visibili come "extra in root"
     const otherRootFiles = rootFiles.filter(f => !mainFile || f.name !== mainFile.name);
 
+    // Il semestre della lezione è IMMUTABILE una volta assegnato.
+    // Priorità: metadato della lezione -> inferenza dalla data -> semestre della materia.
+    // In questo modo modificare il semestre della materia in futuro non sposta
+    // retroattivamente le lezioni già archiviate.
+    const resolvedAcademicYear = metaOverride.academicYear || (date ? academicYearForDate(date) : subjectAcademicYear || '');
+    const resolvedSemester = normalizeSemester(metaOverride.semester) ||
+      (date ? semesterForDate(date, resolvedAcademicYear || academicYearForDate(date)) : null) ||
+      normalizeSemester(subjectSemester) || null;
+    if(!metaOverride.semester || !metaOverride.academicYear){
+      try{
+        const metaHandle = await FileSystemManager.getOrCreateFile(handle, '.lesson.json');
+        const existing = { ...metaOverride, semester: resolvedSemester, academicYear: resolvedAcademicYear };
+        await FileSystemManager.writeTextFile(metaHandle, JSON.stringify(existing, null, 2));
+      }catch(e){ console.warn('Salvataggio semestre lezione fallito', e); }
+    }
+
     return {
       id: 'lesson_' + subjectName + '_' + folderName,
       folderName,
@@ -2360,6 +2390,8 @@ const LibraryScanner = {
       docente: metaOverride.docente || '',
       tags: metaOverride.tags || [],
       notes: metaOverride.notes || '',
+      semester: resolvedSemester,
+      academicYear: resolvedAcademicYear,
       pinned: !!metaOverride.pinned,
       highlightedOnPaper: !!metaOverride.highlightedOnPaper,
       printed: !!metaOverride.printed,
@@ -3343,6 +3375,7 @@ const TopbarView = {
     const el = document.getElementById('topbar');
     el.innerHTML = `
       <button class="icon-btn mobile-menu-btn" id="mobile-menu-btn" aria-label="Apri menu" title="Menu">${icon('menu',19)}</button>
+      <button class="sidebar-expand-btn" id="btn-expand-sidebar" aria-label="Espandi barra laterale" title="Espandi barra laterale">${icon('chevronRight',17)}</button>
       <div class="topbar-crumbs">${crumbs}</div>
       <div class="topbar-spacer"></div>
       <div class="topbar-search" id="topbar-search-btn">
@@ -3353,6 +3386,13 @@ const TopbarView = {
       ${actionsHtml||''}
     `;
     el.querySelector('#mobile-menu-btn')?.addEventListener('click', () => MobileNav.toggle());
+    el.querySelector('#btn-expand-sidebar')?.addEventListener('click', () => {
+      AppState.sidebarCollapsed = false;
+      localStorage.setItem('uninotes.sidebarCollapsed', '0');
+      document.getElementById('sidebar')?.classList.remove('collapsed');
+      SidebarView.render();
+      TopbarView.render(crumbs, actionsHtml);
+    });
     el.querySelector('#topbar-search-btn').addEventListener('click', () => CommandPalette.open(''));
     el.querySelector('#topbar-sync-btn').addEventListener('click', () => Router.resync());
     el.querySelector('#topbar-theme-btn').addEventListener('click', (e) => ThemeMenu.toggle(e.currentTarget));
@@ -4352,9 +4392,11 @@ const LessonFormModal = {
     try{
       const handle = await FileSystemManager.createSubDir(s.handle, folderName);
       const metaHandle = await FileSystemManager.getOrCreateFile(handle, '.lesson.json');
-      const meta = { number, date: date.toISOString(), title, docente, tags, notes };
+      const semester = normalizeSemester(s.semester) || getCurrentSemesterContext().semester;
+      const academicYear = s.academicYear || getCurrentSemesterContext().academicYear;
+      const meta = { number, date: date.toISOString(), title, docente, tags, notes, semester, academicYear };
       await FileSystemManager.writeTextFile(metaHandle, JSON.stringify(meta, null, 2));
-      const lesson = { id: 'lesson_'+subjectName+'_'+folderName, folderName, handle, subjectName, number, date, title, docente, tags, notes, files: {}, subfolders: [], mainFile: null, otherRootFiles: [], rawFolderHandle: null };
+      const lesson = { id: 'lesson_'+subjectName+'_'+folderName, folderName, handle, subjectName, number, date, title, docente, tags, notes, semester, academicYear, files: {}, subfolders: [], mainFile: null, otherRootFiles: [], rawFolderHandle: null };
       s.lessons.push(lesson);
       s.lessons.sort((a,b)=>(a.number||0)-(b.number||0));
       AppState.logActivity(subjectName, `Lezione "${title||folderName}" creata`);
@@ -4395,7 +4437,7 @@ const LessonPage = {
         <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:16px; flex-wrap:wrap;">
           <div>
             <div class="section-title">Lezione ${lesson.number ?? '—'}${lesson.title ? ' — '+esc(lesson.title) : ''}</div>
-            <div class="section-sub">${lesson.date ? fmtDate(lesson.date) : 'Data non impostata'} · <span class="status-pill ${meta.cls}" style="margin-left:4px;">${icon(meta.icon,10)} ${meta.label}</span></div>
+            <div class="section-sub">${lesson.date ? fmtDate(lesson.date) : 'Data non impostata'} · ${lesson.semester ? `${semesterLabel(lesson.semester)}${lesson.academicYear ? ' · '+esc(lesson.academicYear) : ''}` : 'Semestre non assegnato'} · <span class="status-pill ${meta.cls}" style="margin-left:4px;">${icon(meta.icon,10)} ${meta.label}</span></div>
             <div class="lesson-paper-actions detail">
               <button class="paper-status-btn ${lesson.highlightedOnPaper?'is-done':''}" id="btn-toggle-highlighted-paper" aria-pressed="${!!lesson.highlightedOnPaper}" title="${lesson.highlightedOnPaper?'Segna come non evidenziata sui fogli':'Segna come già evidenziata sui fogli'}">
                 ${icon(lesson.highlightedOnPaper?'check':'highlighter',13)}<span>${lesson.highlightedOnPaper?'Già evidenziata sui fogli':'Segna già evidenziata'}</span>
@@ -4783,7 +4825,8 @@ const LessonEditModal = {
     try{
       const metaHandle = await FileSystemManager.getOrCreateFile(lesson.handle, '.lesson.json');
       await FileSystemManager.writeTextFile(metaHandle, JSON.stringify({
-        number: lesson.number, date: lesson.date ? lesson.date.toISOString() : null, title: lesson.title, docente: lesson.docente, tags: lesson.tags, notes: lesson.notes
+        number: lesson.number, date: lesson.date ? lesson.date.toISOString() : null, title: lesson.title, docente: lesson.docente, tags: lesson.tags, notes: lesson.notes,
+        semester: normalizeSemester(lesson.semester), academicYear: lesson.academicYear || ''
       }, null, 2));
       ModalManager.close();
       Toast.success('Lezione aggiornata');
