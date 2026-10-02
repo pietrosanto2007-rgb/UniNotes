@@ -2452,6 +2452,7 @@ const LibraryScanner = {
       notes: metaOverride.notes || '',
       semester: resolvedSemester,
       academicYear: resolvedAcademicYear,
+      createdAt: metaOverride.createdAt || null,
       pinned: !!metaOverride.pinned,
       highlightedOnPaper: !!metaOverride.highlightedOnPaper,
       printed: !!metaOverride.printed,
@@ -2599,6 +2600,7 @@ function pickColor(seed){
 
 /* ============================================================
    LESSON STATUS — calcolato SOLO dai file realmente presenti
+   Per le nuove lezioni è obbligatorio anche un .tex nel Materiale grezzo.
    ============================================================ */
 const REQUIRED_STEPS = [
   { key: 'registrazione', label: 'Registrazione', icon: 'mic' },
@@ -2606,14 +2608,39 @@ const REQUIRED_STEPS = [
   { key: 'appunti', label: 'Appunti', icon: 'notes' },
   { key: 'mainFile', label: 'Documento finale', icon: 'pdf' }
 ];
+// Da questa build in poi, le nuove lezioni richiedono anche almeno un file .tex
+// nel materiale grezzo. Le lezioni già presenti non hanno un createdAt e restano
+// volutamente esenti, così l'introduzione del requisito non modifica lo storico.
+const LATEX_REQUIREMENT_CUTOFF = Date.parse('2026-10-02T16:05:00+02:00');
+function lessonCreationTime(lesson){
+  const raw = lesson?.createdAt ?? null;
+  const ts = raw ? Date.parse(raw) : NaN;
+  return Number.isFinite(ts) ? ts : null;
+}
+function lessonNeedsLatex(lesson){
+  const ts = lessonCreationTime(lesson);
+  return ts !== null && ts >= LATEX_REQUIREMENT_CUTOFF;
+}
+function lessonHasLatex(lesson){
+  return !!(lesson?.files?.latex && lesson.files.latex.length > 0);
+}
 function lessonStepDone(lesson, key){
   if(key === 'mainFile') return !!lesson.mainFile;
+  if(key === 'latex') return lessonHasLatex(lesson);
   return !!(lesson.files[key] && lesson.files[key].length > 0);
+}
+function lessonRequiredSteps(lesson){
+  return lessonNeedsLatex(lesson)
+    ? [...REQUIRED_STEPS, { key: 'latex', label: 'File .tex', icon: 'latex' }]
+    : REQUIRED_STEPS;
 }
 function lessonStatus(lesson){
   const has = k => lessonStepDone(lesson, k);
+  // Per le nuove lezioni il .tex è obbligatorio nel materiale grezzo.
+  // La mancanza del .tex rende la lezione incompleta anche quando esiste il PDF.
+  if(lessonNeedsLatex(lesson) && !has('latex')) return 'missing';
   if(has('mainFile')) return 'complete';
-  if(has('registrazione') || has('trascrizione') || has('appunti')) return 'progress';
+  if(has('registrazione') || has('trascrizione') || has('appunti') || has('latex')) return 'progress';
   return 'missing';
 }
 function lessonStatusMeta(status){
@@ -3849,7 +3876,7 @@ const DashboardPage = {
   progressCard(l, status){
     const meta = lessonStatusMeta(status);
     return `<div class="card card-hover" data-open-lesson="${l.subjectName}::${l.id}" style="display:flex; align-items:center; justify-content:space-between; gap:16px; margin-bottom:10px; cursor:pointer;">
-      <div style="min-width:0;"><div style="font-size:11.5px; color:var(--text-tertiary); font-weight:600; text-transform:uppercase; letter-spacing:0.02em;">${esc(l.subjectName)}</div><div style="font-size:14.5px; font-weight:650; margin-top:2px;">Lezione ${l.number ?? '—'}${l.title ? ' · '+esc(l.title) : ''}</div><div style="display:flex; gap:6px; margin-top:8px; flex-wrap:wrap;">${REQUIRED_STEPS.map(s => `<span class="status-pill ${lessonStepDone(l,s.key)?'status-complete':'status-missing'}">${icon(lessonStepDone(l,s.key)?'check':'x',10)} ${s.label}</span>`).join('')}${l.printed?`<span class="status-pill status-complete">${icon('print',10)} Stampata</span>`:''}</div></div>
+      <div style="min-width:0;"><div style="font-size:11.5px; color:var(--text-tertiary); font-weight:600; text-transform:uppercase; letter-spacing:0.02em;">${esc(l.subjectName)}</div><div style="font-size:14.5px; font-weight:650; margin-top:2px;">Lezione ${l.number ?? '—'}${l.title ? ' · '+esc(l.title) : ''}</div><div style="display:flex; gap:6px; margin-top:8px; flex-wrap:wrap;">${lessonRequiredSteps(l).map(s => `<span class="status-pill ${lessonStepDone(l,s.key)?'status-complete':'status-missing'}">${icon(lessonStepDone(l,s.key)?'check':'x',10)} ${s.label}</span>`).join('')}${l.printed?`<span class="status-pill status-complete">${icon('print',10)} Stampata</span>`:''}</div></div>
       <button class="btn btn-sm btn-primary" style="flex-shrink:0;">Continua</button>
     </div>`;
   }
@@ -3877,7 +3904,7 @@ const LessonRow = {
           </button>
         </div>
         <div class="lesson-files">
-          ${REQUIRED_STEPS.map(s => `<div class="file-chip ${lessonStepDone(l,s.key)?'on':'off'}" title="${s.label}">${icon(s.icon,12)}</div>`).join('')}
+          ${lessonRequiredSteps(l).map(s => `<div class="file-chip ${lessonStepDone(l,s.key)?'on':'off'}" title="${s.label}">${icon(s.icon,12)}</div>`).join('')}
         </div>
         <span class="status-pill ${meta.cls}">${icon(meta.icon,10)} ${meta.label}</span>
       </div>
@@ -4470,9 +4497,10 @@ const LessonFormModal = {
       const metaHandle = await FileSystemManager.getOrCreateFile(handle, '.lesson.json');
       const semester = normalizeSemester(s.semester) || getCurrentSemesterContext().semester;
       const academicYear = s.academicYear || getCurrentSemesterContext().academicYear;
-      const meta = { number, date: date.toISOString(), title, docente, tags, notes, semester, academicYear };
+      const createdAt = new Date().toISOString();
+      const meta = { number, date: date.toISOString(), createdAt, title, docente, tags, notes, semester, academicYear };
       await FileSystemManager.writeTextFile(metaHandle, JSON.stringify(meta, null, 2));
-      const lesson = { id: 'lesson_'+subjectName+'_'+folderName, folderName, handle, subjectName, number, date, title, docente, tags, notes, semester, academicYear, files: {}, subfolders: [], mainFile: null, otherRootFiles: [], rawFolderHandle: null };
+      const lesson = { id: 'lesson_'+subjectName+'_'+folderName, folderName, handle, subjectName, number, date, createdAt, title, docente, tags, notes, semester, academicYear, files: {}, subfolders: [], mainFile: null, otherRootFiles: [], rawFolderHandle: null };
       s.lessons.push(lesson);
       s.lessons.sort((a,b)=>(a.number||0)-(b.number||0));
       AppState.logActivity(subjectName, `Lezione "${title||folderName}" creata`);
@@ -4495,6 +4523,9 @@ const LessonPage = {
     if(!lesson){ Router.go('subjects'); return; }
     const status = lessonStatus(lesson);
     const meta = lessonStatusMeta(status);
+    const latexNotice = lessonNeedsLatex(lesson) && !lessonHasLatex(lesson)
+      ? '<div style="margin-top:8px;font-size:11.5px;color:var(--danger,#c4361f);font-weight:600;">Manca il file .tex nel Materiale grezzo: per le nuove lezioni questo requisito rende la lezione incompleta.</div>'
+      : '';
 
     TopbarView.render(
       `<a href="#" data-nav="subjects" style="color:var(--text-secondary)">Materie</a><span class="sep">/</span>
@@ -4514,6 +4545,7 @@ const LessonPage = {
           <div>
             <div class="section-title">Lezione ${lesson.number ?? '—'}${lesson.title ? ' — '+esc(lesson.title) : ''}</div>
             <div class="section-sub">${lesson.date ? fmtDate(lesson.date) : 'Data non impostata'} · ${lesson.semester ? `${semesterLabel(lesson.semester)}${lesson.academicYear ? ' · '+esc(lesson.academicYear) : ''}` : 'Semestre non assegnato'} · <span class="status-pill ${meta.cls}" style="margin-left:4px;">${icon(meta.icon,10)} ${meta.label}</span></div>
+            ${latexNotice ? `<div style="margin-top:8px;padding:9px 11px;border:1px solid color-mix(in srgb, var(--danger,#c4361f) 22%, var(--border));background:color-mix(in srgb, var(--danger,#c4361f) 6%, var(--surface));border-radius:10px;font-size:11.5px;color:var(--danger,#c4361f);font-weight:600;">${icon('alert',13)} ${latexNotice.replace(/<[^>]+>/g,'')}</div>` : ''}
             <div class="lesson-paper-actions detail">
               <button class="paper-status-btn ${lesson.highlightedOnPaper?'is-done':''}" id="btn-toggle-highlighted-paper" aria-pressed="${!!lesson.highlightedOnPaper}" title="${lesson.highlightedOnPaper?'Segna come non evidenziata sui fogli':'Segna come già evidenziata sui fogli'}">
                 ${icon(lesson.highlightedOnPaper?'check':'highlighter',13)}<span>${lesson.highlightedOnPaper?'Già evidenziata sui fogli':'Segna già evidenziata'}</span>
@@ -4901,7 +4933,7 @@ const LessonEditModal = {
     try{
       const metaHandle = await FileSystemManager.getOrCreateFile(lesson.handle, '.lesson.json');
       await FileSystemManager.writeTextFile(metaHandle, JSON.stringify({
-        number: lesson.number, date: lesson.date ? lesson.date.toISOString() : null, title: lesson.title, docente: lesson.docente, tags: lesson.tags, notes: lesson.notes,
+        number: lesson.number, date: lesson.date ? lesson.date.toISOString() : null, createdAt: lesson.createdAt || null, title: lesson.title, docente: lesson.docente, tags: lesson.tags, notes: lesson.notes,
         semester: normalizeSemester(lesson.semester), academicYear: lesson.academicYear || ''
       }, null, 2));
       ModalManager.close();
@@ -7303,7 +7335,7 @@ const ExportPage = {
       </div>
       <div id="export-main"><div class="export-card"><div class="export-card-body"><div class="export-empty">Analizzo la libreria…</div></div></div></div>
     </div>`;
-    content.querySelector('#export-refresh').onclick=async()=>{ await this.loadAndRender(); };
+    document.getElementById('export-refresh')?.addEventListener('click', async()=>{ await this.loadAndRender(); });
     content.querySelector('#export-select-all').onclick=()=>this.setAllLessons(true);
     content.querySelector('#export-clear-all').onclick=()=>this.setAllLessons(false);
     this.loadAndRender();
