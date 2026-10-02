@@ -5928,30 +5928,101 @@ const HtmlToDocx = {
 };
 
 const MarkdownPreview = {
-  render(src){
-    let html = esc(src);
-    html = html.replace(/> \[!(KEY|NOTE|WARNING|TIP|EXAMPLE)\] ?(.*)$/gm, (_, type, text) => {
-      const labels = { KEY:'Essenziale', NOTE:'Nota', WARNING:'Attenzione', TIP:'Suggerimento', EXAMPLE:'Esempio' };
-      const cls = type.toLowerCase();
-      return `<div class="md-callout md-callout-${cls}"><div class="md-callout-label">${labels[type]}</div><div class="md-callout-text">${text}</div></div>`;
+  _katexPromise: null,
+  _escapeAttr(value){ return esc(value).replace(/`/g,'&#96;'); },
+  _loadKatex(){
+    if(this._katexPromise) return this._katexPromise;
+    this._katexPromise=new Promise(resolve=>{
+      if(window.katex){ resolve(window.katex); return; }
+      const link=document.createElement('link');
+      link.rel='stylesheet';
+      link.href='https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css';
+      link.dataset.uninotesKatex='1';
+      document.head.appendChild(link);
+      const script=document.createElement('script');
+      script.src='https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js';
+      script.defer=true;
+      script.onload=()=>resolve(window.katex||null);
+      script.onerror=()=>resolve(null);
+      document.head.appendChild(script);
     });
-    html = html.replace(/^### (.*)$/gm,'<h3>$1</h3>').replace(/^## (.*)$/gm,'<h2>$1</h2>').replace(/^# (.*)$/gm,'<h1>$1</h1>');
-    html = html.replace(/\*\*([^*\n]+?)\*\*/g,'<strong>$1</strong>').replace(/(?<!\*)\*([^*\n]+?)\*(?!\*)/g,'<em>$1</em>');
-    html = html.replace(/==([^=\n]+)==/g,'<mark class="md-mark">$1</mark>');
-    html = html.replace(/`([^`\n]+)`/g,'<code style="background:var(--surface-2); padding:2px 6px; border-radius:6px; font-family:var(--mono); font-size:0.9em; color:var(--accent-strong);">$1</code>');
-    html = html.replace(/^- (.*)$/gm,'<li>$1</li>');
-    html = html.replace(/(^|\n)(\d+)\. (.*)$/gm,'$1<li class="md-ol-item"><span>$2.</span> $3</li>');
-    html = html.replace(/(<li(?! class="md-ol-item").*<\/li>\n?)+/g, m => `<ul style="padding-left:22px;">${m}</ul>`);
-    html = html.replace(/(<li class="md-ol-item".*<\/li>\n?)+/g, m => `<ol style="padding-left:22px;">${m}</ol>`);
-    html = html.split('\n\n').map(p => {
-      const t=p.trim();
-      if(!t) return '';
-      if(t.startsWith('<h')||t.startsWith('<ul')||t.startsWith('<ol')||t.startsWith('<div class="md-callout')) return p;
-      return `<p>${p}</p>`;
-    }).join('\n');
-    return html;
+    return this._katexPromise;
+  },
+  _inline(text){
+    let t=esc(text);
+    const code=[];
+    t=t.replace(/`([^`\n]+)`/g,(m,c)=>{const i=code.length;code.push(`<code>${c}</code>`);return `\u0000CODE${i}\u0000`;});
+    t=t.replace(/\*\*\*([^\n]+?)\*\*\*/g,'<strong><em>$1</em></strong>');
+    t=t.replace(/\*\*([^\n]+?)\*\*/g,'<strong>$1</strong>');
+    t=t.replace(/__([^\n]+?)__/g,'<strong>$1</strong>');
+    t=t.replace(/(?<!\*)\*([^*\n]+?)\*(?!\*)/g,'<em>$1</em>');
+    t=t.replace(/(?<!_)_([^_\n]+?)_(?!_)/g,'<em>$1</em>');
+    t=t.replace(/==([^=\n]+)==/g,'<mark class="md-mark">$1</mark>');
+    t=t.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g,'<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
+    t=t.replace(/\u0000CODE(\d+)\u0000/g,(m,i)=>code[Number(i)]||'');
+    return t;
+  },
+  render(src){
+    const lines=String(src||'').replace(/\r\n?/g,'\n').split('\n');
+    const html=[]; let i=0; const mathBlocks=[]; const codeBlocks=[];
+    const pushParagraph=(buf)=>{
+      const text=buf.join('\n').trim();
+      if(!text) return;
+      const withMath=text.replace(/\\$\\$([\\s\\S]*?)\\$\\$/g,(_,m)=>{const id=mathBlocks.length;mathBlocks.push({display:true,tex:m.trim()});return `\u0000MATH${id}\u0000`;});
+      const inlineMath=withMath.replace(/\$([^$\n]+)\$/g,(_,m)=>{const id=mathBlocks.length;mathBlocks.push({display:false,tex:m.trim()});return `\u0000MATH${id}\u0000`;});
+      html.push(`<p>${this._inline(inlineMath).replace(/\u0000MATH(\d+)\u0000/g,(m,id)=>`<span class="md-math" data-math-index="${id}"></span>`)}</p>`);
+    };
+    while(i<lines.length){
+      const line=lines[i];
+      if(/^\s*$/.test(line)){ i++; continue; }
+      const fence=line.match(/^```(?:([\w+-]+))?\s*$/);
+      if(fence){
+        const lang=fence[1]||''; i++; const buf=[]; while(i<lines.length && !/^```\s*$/.test(lines[i])){buf.push(lines[i]);i++;} if(i<lines.length)i++; const id=codeBlocks.length;codeBlocks.push({lang,code:buf.join('\n')}); html.push(`\u0000BLOCKCODE${id}\u0000`); continue;
+      }
+      const mathFence=line.match(/^\\\\\[\s*$/);
+      if(mathFence){
+        i++; const buf=[]; while(i<lines.length && !/^\\\\\]\s*$/.test(lines[i])){buf.push(lines[i]);i++;} if(i<lines.length)i++; const id=mathBlocks.length;mathBlocks.push({display:true,tex:buf.join('\n').trim()}); html.push(`<div class="md-math md-math-block" data-math-index="${id}"></div>`); continue;
+      }
+      const call=line.match(/^>\s*\[!(KEY|NOTE|WARNING|TIP|EXAMPLE)\]\s*(.*)$/i);
+      if(call){
+        const type=call[1].toUpperCase(); const label={KEY:'Essenziale',NOTE:'Nota',WARNING:'Attenzione',TIP:'Suggerimento',EXAMPLE:'Esempio'}[type];
+        const body=[call[2]]; i++;
+        while(i<lines.length && /^>\s?/.test(lines[i])){body.push(lines[i].replace(/^>\s?/,''));i++;}
+        html.push(`<div class="md-callout md-callout-${type.toLowerCase()}"><div class="md-callout-label">${label}</div><div class="md-callout-text">${this._inline(body.join('\n')).replace(/\n/g,'<br>')}</div></div>`); continue;
+      }
+      const heading=line.match(/^(#{1,4})\s+(.+)$/); if(heading){const level=Math.min(4,heading[1].length);html.push(`<h${level}>${this._inline(heading[2])}</h${level}>`);i++;continue;}
+      // Markdown table
+      if(/^\s*\|?.+\|.+\|?\s*$/.test(line) && i+1<lines.length && /^\s*\|?\s*:?-{2,}:?\s*(\|\s*:?-{2,}:?\s*)+\|?\s*$/.test(lines[i+1])){
+        const splitRow=(row)=>row.trim().replace(/^\||\|$/g,'').split('|').map(c=>c.trim()); const head=splitRow(line); i+=2; const rows=[]; while(i<lines.length && /^\s*\|?.+\|.+\|?\s*$/.test(lines[i]) && !/^\s*$/.test(lines[i])){rows.push(splitRow(lines[i]));i++;}
+        let t='<div class="md-table-wrap"><table class="md-table"><thead><tr>'+head.map(c=>`<th>${this._inline(c)}</th>`).join('')+'</tr></thead><tbody>';
+        for(const r of rows)t+='<tr>'+head.map((_,j)=>`<td>${this._inline(r[j]??'')}</td>`).join('')+'</tr>'; t+='</tbody></table></div>'; html.push(t); continue;
+      }
+      if(/^\s*[-*+]\s+/.test(line)){const items=[];while(i<lines.length && /^\s*[-*+]\s+/.test(lines[i])){items.push(lines[i].replace(/^\s*[-*+]\s+/,''));i++;}html.push('<ul>'+items.map(x=>`<li>${this._inline(x)}</li>`).join('')+'</ul>');continue;}
+      if(/^\s*\d+\.\s+/.test(line)){const items=[];while(i<lines.length && /^\s*\d+\.\s+/.test(lines[i])){items.push(lines[i].replace(/^\s*\d+\.\s+/,''));i++;}html.push('<ol>'+items.map(x=>`<li>${this._inline(x)}</li>`).join('')+'</ol>');continue;}
+      const pbuf=[line]; i++; while(i<lines.length && lines[i].trim() && !/^#{1,4}\s/.test(lines[i]) && !/^```/.test(lines[i]) && !/^>\s*\[!/.test(lines[i]) && !/^\s*[-*+]\s+/.test(lines[i]) && !/^\s*\d+\.\s+/.test(lines[i])){pbuf.push(lines[i]);i++;} pushParagraph(pbuf);
+    }
+    let result=html.join('\n').replace(/\u0000BLOCKCODE(\d+)\u0000/g,(m,id)=>{const c=codeBlocks[Number(id)];return `<pre class="md-code"><code>${c.code}</code></pre>`;});
+    result=result.replace(/\u0000MATH(\d+)\u0000/g,(m,id)=>`<span class="md-math" data-math-index="${id}"></span>`);
+    return {html:result,math:mathBlocks};
+  },
+  renderAsync(src,container){
+    const rendered=this.render(src);
+    container.innerHTML=rendered.html;
+    if(!rendered.math.length) return;
+    this._loadKatex().then(katex=>{
+      const nodes=Array.from(container.querySelectorAll('.md-math'));
+      nodes.forEach(node=>{
+        const idx=Number(node.dataset.mathIndex); const item=rendered.math[idx]; if(!item) return;
+        if(katex){
+          try{ node.innerHTML=katex.renderToString(item.tex,{displayMode:item.display,throwOnError:false,strict:false}); return; }catch(e){}
+        }
+        node.classList.add('md-math-fallback'); node.textContent=item.display?'$$ '+item.tex+' $$':'$ '+item.tex+' $';
+      });
+    });
   }
 };
+window.MarkdownPreview=MarkdownPreview;
+
 
 const LatexPreview = {
   render(src){
@@ -8333,7 +8404,7 @@ if(typeof SettingsPage !== 'undefined' && !SettingsPage.__aiPatched){
       <div class="muted" style="font-size:12.5px; margin-bottom:10px;" id="ai-set-status">Verifica in corso…</div>
       <div class="field"><label>Modello predefinito</label><select id="ai-set-model"></select></div>
       <div class="field"><label>Lingua dei riepiloghi AI</label><select id="ai-set-summary-language"></select></div>
-      <div class="muted" style="font-size:11.5px; line-height:1.5; margin-top:-4px; margin-bottom:10px;">I riepiloghi vengono generati esclusivamente nella lingua selezionata. L'audio non viene analizzato: viene solo rinominato in base al titolo della lezione e all'ordine temporale di creazione.</div>
+      <div class="muted" style="font-size:11.5px; line-height:1.5; margin-top:-4px; margin-bottom:10px;">La lingua selezionata è obbligatoria per ogni riepilogo. La lingua viene fissata all'avvio dell'elaborazione della singola lezione, così un cambio successivo non può creare riepiloghi misti. L'audio non viene analizzato.</div>
       <div class="field"><label>Modalità permessi AI</label>
         <select id="ai-set-mode">
           <option value="conservative">Conservativa — conferma ogni operazione distruttiva</option>
@@ -8641,7 +8712,7 @@ const AI_SUMMARY_FOLDER_NAME = 'Riepiloghi AI';
     }else if(s.phase==='paused'){
       el.style.display='flex';
       el.innerHTML=`${icon('clock',13)} <span>AI in pausa · app in uso</span>`;
-      el.title='L’AI riprenderà quando le operazioni dell’app saranno libere.';
+      el.title='L’AI continua a lavorare mentre usi normalmente l’app; si mette in pausa solo durante elaborazioni CPU/PDF esplicitamente incompatibili.';
     }else if(s.phase==='error'){
       el.style.display='flex';
       el.innerHTML=`${icon('alert',13)} <span>AI in pausa</span>`;
@@ -8773,14 +8844,51 @@ const AI_SUMMARY_FOLDER_NAME = 'Riepiloghi AI';
 
   function aiCleanMarkdown(md){ return aiSafeText(md).replace(/^```markdown\s*/i,'').replace(/^```\s*/,'').replace(/\s*```$/,'').trim(); }
 
-  async function aiSummarize(lesson,pdfData,signal){
+  const AI_LANGUAGE_MARKERS = {
+    it:[' il ',' la ',' e ',' di ',' che ',' per ',' una ',' un ',' del ',' della ',' con ',' sono ',' come ',' questo ',' questa ',' anche ',' quindi ',' gli ',' le '],
+    en:[' the ',' and ',' of ',' to ',' in ',' is ',' a ',' an ',' for ',' with ',' are ',' this ',' that ',' also ',' therefore ',' from ',' into '],
+    es:[' el ',' la ',' y ',' de ',' que ',' para ',' una ',' un ',' del ',' con ',' son ',' como ',' este ',' esta ',' también ',' por lo tanto ',' los ',' las '],
+    fr:[' le ',' la ',' et ',' de ',' que ',' pour ',' une ',' un ',' du ',' avec ',' sont ',' comme ',' cette ',' aussi ',' donc ',' les ',' des '],
+    de:[' der ',' die ',' und ',' von ',' zu ',' in ',' ist ',' ein ',' eine ',' für ',' mit ',' sind ',' wie ',' diese ',' auch ',' daher ',' den ',' das ']
+  };
+
+  function aiLanguageLooksCorrect(text, langKey){
+    const normalized=' '+aiSafeText(text).toLowerCase().replace(/[^\p{L}\p{N}]+/gu,' ')+' ';
+    if(normalized.trim().length<40) return true;
+    const markers=AI_LANGUAGE_MARKERS[langKey]||[];
+    const hits=markers.reduce((n,m)=>n+(normalized.includes(m)?1:0),0);
+    return hits >= (normalized.length > 1200 ? 4 : normalized.length > 500 ? 3 : 2);
+  }
+
+  async function aiLocalizeSummaryIfNeeded(lesson,out,signal,languageKey){
+    const langKey=languageKey||aiSummaryLanguage();
+    const lang=AI_SUMMARY_LANGUAGES[langKey]||AI_SUMMARY_LANGUAGES.it;
+    const currentSummary=aiCleanMarkdown(out&&out.summary);
+    const currentTitle=aiSafeText(out&&out.title);
+    if(!currentSummary) return {title:currentTitle,summary:currentSummary};
+    if(aiLanguageLooksCorrect(currentSummary+' '+currentTitle,langKey)) return {title:currentTitle,summary:currentSummary};
+
+    aiThrowIfAborted(signal);
+    AIBackgroundInspector.push('summary','Controllo lingua del riepilogo',`Il testo non rispetta completamente ${lang.label}. Lo uniformo senza cambiare le informazioni.`);
+    const localized=await aiOllamaJson([
+      {role:'system',content:`Riscrivi fedelmente il titolo e il riepilogo forniti, senza aggiungere o togliere informazioni. LINGUA OBBLIGATORIA: ${lang.instruction}. Ogni parola generata deve essere esclusivamente in ${lang.instruction}, salvo nomi propri e terminologia tecnica indispensabile già presente. Mantieni il Markdown completo e valido: #, ##, ###, **grassetto**, *corsivo*, ==evidenziato==, elenchi, tabelle Markdown, formule inline $...$, formule su blocco $$...$$ e callout > [!KEY], > [!NOTE], > [!WARNING], > [!TIP], > [!EXAMPLE]. Non usare HTML. Restituisci SOLO JSON valido con le chiavi title e summary.`},
+      {role:'user',content:`Titolo:\n${currentTitle}\n\nRiepilogo Markdown:\n${currentSummary}`}
+    ],signal,{type:'object',properties:{title:{type:'string'},summary:{type:'string'}},required:['title','summary']});
+    const fixed={title:aiSafeText(localized&&localized.title),summary:aiCleanMarkdown(localized&&localized.summary)};
+    if(!fixed.summary) throw new Error(`Il riepilogo non è stato restituito nella lingua ${lang.label}.`);
+    if(!aiLanguageLooksCorrect(fixed.summary+' '+fixed.title,langKey)) throw new Error(`Il riepilogo continua a non rispettare la lingua ${lang.label}.`);
+    return fixed;
+  }
+
+  async function aiSummarize(lesson,pdfData,signal,languageKey){
     aiThrowIfAborted(signal);
     const profile = aiResourceProfile();
-    const lang = aiSummaryLanguageInfo();
+    const langKey = languageKey || langKey;
+    const lang = AI_SUMMARY_LANGUAGES[langKey] || AI_SUMMARY_LANGUAGES.it;
     const baseInstruction=`Sei un tutor universitario professionale. Devi creare un riassunto fedele e strutturato di una lezione universitaria.
 
-LINGUA OBBLIGATORIA: ${lang.instruction}.
-Tutto il contenuto generato deve essere ESCLUSIVAMENTE in ${lang.instruction}, inclusi titolo, intestazioni, testo, elenchi, callout ed etichette. Non usare altre lingue salvo nomi propri o terminologia tecnica indispensabile già presente nel PDF.
+LINGUA OBBLIGATORIA E VINCOLANTE: ${lang.instruction}.
+NON cambiare lingua. NON alternare lingue. NON usare inglese per intestazioni, formule spiegate a parole, callout o conclusioni. Tutto il contenuto testuale generato deve essere ESCLUSIVAMENTE in ${lang.instruction}, inclusi titolo, intestazioni, testo, elenchi, callout ed etichette. Sono ammessi solo nomi propri e terminologia tecnica indispensabile già presente nel PDF.
 
 Usa ESCLUSIVAMENTE il contenuto del PDF fornito. Non inventare esempi, definizioni, formule o concetti assenti.
 
@@ -8858,9 +8966,11 @@ Non inserire HTML.`;
     }
 
     aiThrowIfAborted(signal);
+    const summaryLanguage = aiSummaryLanguage();
+    const summaryLanguageInfo = AI_SUMMARY_LANGUAGES[summaryLanguage] || AI_SUMMARY_LANGUAGES.it;
     lesson.aiAutomation=Object.assign({},doneState||{},{
       version:AI_AUTOMATION_VERSION,processing:true,status:'processing',model:aiModel(),
-      startedAt:Date.now(),lastError:null,analysisScope:'main-pdf-only',audioMode:'untouched',resourceProfile:localStorage.getItem('uninotes.aiBackgroundLowPower') !== '0' ? 'eco' : 'normal'
+      startedAt:Date.now(),lastError:null,analysisScope:'main-pdf-only',audioMode:'untouched',resourceProfile:localStorage.getItem('uninotes.aiBackgroundLowPower') !== '0' ? 'eco' : 'normal', language:summaryLanguage
     });
     await aiPersist(lesson,{aiAutomation:lesson.aiAutomation});
 
@@ -8897,8 +9007,9 @@ Non inserire HTML.`;
     }
 
     aiThrowIfAborted(signal);
-    AIBackgroundInspector.push('summary', 'Creo Riepilogo AI.md', `Lingua: ${aiSummaryLanguageInfo().label}. Il riepilogo sarà basato esclusivamente sul PDF.`);
-    const summaryOut=await aiSummarize(lesson,pdfData,signal);
+    AIBackgroundInspector.push('summary', 'Creo Riepilogo AI.md', `Lingua: ${summaryLanguageInfo.label}. Il riepilogo sarà basato esclusivamente sul PDF.`);
+    let summaryOut=await aiSummarize(lesson,pdfData,signal,summaryLanguage);
+    summaryOut=await aiLocalizeSummaryIfNeeded(lesson,summaryOut,signal,summaryLanguage);
     aiThrowIfAborted(signal);
     const summary=aiCleanMarkdown(summaryOut&&summaryOut.summary);
     const newTitle=aiSafeText(summaryOut&&summaryOut.title);
@@ -8915,7 +9026,7 @@ Non inserire HTML.`;
     aiThrowIfAborted(signal);
     lesson.aiAutomation=Object.assign({},lesson.aiAutomation,{
       version:AI_AUTOMATION_VERSION,processing:false,done:true,status:'done',
-      completedAt:Date.now(),model:aiModel(),summaryFileName:AI_SUMMARY_FILE_NAME,summaryFolder:AI_SUMMARY_FOLDER_NAME,
+      completedAt:Date.now(),model:aiModel(),summaryFileName:AI_SUMMARY_FILE_NAME,summaryFolder:AI_SUMMARY_FOLDER_NAME,language:summaryLanguage,
       analysisScope:'main-pdf-only',audioMode:'untouched',resourceProfile:localStorage.getItem('uninotes.aiBackgroundLowPower') !== '0' ? 'eco' : 'normal'
     });
     await aiPersist(lesson,{aiAutomation:lesson.aiAutomation});
@@ -8957,12 +9068,7 @@ Non inserire HTML.`;
         this.schedule(10000);
         return;
       }
-      const lastActivity=Number(window.UniNotesUserActivityAt||0);
-      if(Date.now()-lastActivity<7000){
-        aiStatus({phase:'paused',currentLesson:null});
-        this.schedule(5000);
-        return;
-      }
+      // L'uso normale dell'app non blocca il worker AI: viene eseguito in background.
 
       const connection=await this.getConnection();
       if(!connection.ok){
@@ -9137,7 +9243,8 @@ Non inserire HTML.`;
         const el=document.getElementById('lesson-main-doc'); if(!el) return; let markdown=''; try{markdown=await FileSystemManager.readTextFile(summaryFile.handle);}catch(e){}
         if(markdown){
           let mainMeta={}; try{mainMeta=await FileSystemManager.getFileMeta(lesson.mainFile);}catch(e){}
-          el.innerHTML=`<div class="card ai-summary-shell"><div class="ai-summary-head"><div class="ai-summary-brand"><span class="ai-summary-icon">${icon('ai',16)}</span><div><div class="ai-summary-title">Riepilogo intelligente</div><div class="ai-summary-sub">Generato localmente con Ollama · lingua: ${esc(aiSummaryLanguageInfo().label)} · fonte: ${esc(lesson.mainFile?lesson.mainFile.name:'PDF principale')}</div></div></div><div class="ai-summary-actions">${lesson.mainFile?`<button class="btn btn-sm" id="ai-summary-open-pdf">${icon('pdf',13)} Apri PDF</button>`:''}<button class="btn btn-sm" id="ai-summary-open-md">${icon('file',13)} Apri Markdown</button></div></div><div class="ai-summary-content">${MarkdownPreview.render(markdown)}</div></div>`;
+          el.innerHTML=`<div class="card ai-summary-shell"><div class="ai-summary-head"><div class="ai-summary-brand"><span class="ai-summary-icon">${icon('ai',16)}</span><div><div class="ai-summary-title">Riepilogo intelligente</div><div class="ai-summary-sub">Generato localmente con Ollama · lingua: ${esc(aiSummaryLanguageInfo().label)} · fonte: ${esc(lesson.mainFile?lesson.mainFile.name:'PDF principale')}</div></div></div><div class="ai-summary-actions">${lesson.mainFile?`<button class="btn btn-sm" id="ai-summary-open-pdf">${icon('pdf',13)} Apri PDF</button>`:''}<button class="btn btn-sm" id="ai-summary-open-md">${icon('file',13)} Apri Markdown</button></div></div><div class="ai-summary-content" id="ai-summary-markdown"></div></div>`;
+          const markdownHost=el.querySelector('#ai-summary-markdown'); if(markdownHost) MarkdownPreview.renderAsync(markdown,markdownHost);
           const openPdf=el.querySelector('#ai-summary-open-pdf'); if(openPdf&&lesson.mainFile) openPdf.addEventListener('click',()=>PDFViewerModal.open(lesson,lesson.mainFile));
           const openMd=el.querySelector('#ai-summary-open-md'); if(openMd) openMd.addEventListener('click',()=>FileViewer.open(lesson,summaryFile)); return;
         }
@@ -9173,6 +9280,15 @@ Non inserire HTML.`;
     .ai-summary-content .md-callout-tip .md-callout-label{color:var(--accent-strong);}
     .ai-summary-content .md-callout-example{border-left-color:#8b5cf6;background:rgba(139,92,246,.08);}
     .ai-summary-content .md-callout-example .md-callout-label{color:#7c3aed;}
+    .ai-summary-content .md-table-wrap{overflow-x:auto;margin:16px 0;border:1px solid var(--border);border-radius:12px;}
+    .ai-summary-content .md-table{width:100%;border-collapse:collapse;min-width:520px;font-size:13px;}
+    .ai-summary-content .md-table th,.ai-summary-content .md-table td{padding:10px 12px;border-bottom:1px solid var(--border);text-align:left;vertical-align:top;}
+    .ai-summary-content .md-table th{background:var(--surface-2);font-weight:800;color:var(--text);}
+    .ai-summary-content .md-table tr:last-child td{border-bottom:none;}
+    .ai-summary-content .md-code{margin:14px 0;padding:14px 16px;overflow:auto;border:1px solid var(--border);border-radius:12px;background:var(--surface-2);font-family:var(--mono);font-size:12.5px;line-height:1.65;}
+    .ai-summary-content .md-math{display:inline-flex;align-items:center;justify-content:center;margin:0 2px;}
+    .ai-summary-content .md-math-block{display:flex;width:100%;margin:18px 0;padding:14px 12px;border:1px solid var(--border);border-radius:12px;background:var(--surface-2);overflow-x:auto;}
+    .ai-summary-content .md-math-fallback{font-family:var(--mono);font-size:13px;color:var(--text-secondary);}
     @media(max-width:720px){.ai-summary-head{align-items:flex-start;flex-direction:column;}.ai-summary-actions{width:100%;}.ai-summary-actions .btn{flex:1;justify-content:center;}.ai-summary-content{padding:20px 18px;font-size:14px;}.ai-summary-sub{max-width:82vw;}}
   `; document.head.appendChild(style);
 
