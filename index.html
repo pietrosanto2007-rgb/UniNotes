@@ -5234,11 +5234,37 @@ const PDFReader = {
         const textLayerDiv = document.createElement('div');
         textLayerDiv.className = 'pdfr-textlayer textLayer';
         textLayerDiv.style.cssText = `position:absolute; left:0; top:0; right:0; bottom:0; width:${viewport.width}px; height:${viewport.height}px; overflow:hidden; opacity:1; line-height:1; z-index:1;`;
+        // PDF.js richiede che il fattore CSS coincida esattamente con viewport.scale.
+        // Impostiamo entrambe le variabili per compatibilita con le versioni che usano
+        // rispettivamente --scale-factor (v3/v4) e --total-scale-factor (v5+).
+        textLayerDiv.style.setProperty('--scale-factor', String(viewport.scale));
+        textLayerDiv.style.setProperty('--total-scale-factor', String(viewport.scale));
+        wrap.style.setProperty('--scale-factor', String(viewport.scale));
+        wrap.style.setProperty('--total-scale-factor', String(viewport.scale));
         wrap.appendChild(textLayerDiv);
-        window.pdfjsLib.renderTextLayer({
-          textContent, container: textLayerDiv, viewport, textDivs: []
-        });
-      }catch(e){ /* Se il text layer non è disponibile per questo PDF, resta comunque visibile il canvas */ }
+
+        // API moderna PDF.js: TextLayer. Evita il warning di deprecazione di renderTextLayer.
+        if(typeof window.pdfjsLib.TextLayer === 'function'){
+          const textLayer = new window.pdfjsLib.TextLayer({
+            textContentSource: textContent,
+            container: textLayerDiv,
+            viewport
+          });
+          await textLayer.render();
+        }else if(typeof window.pdfjsLib.renderTextLayer === 'function'){
+          // Fallback per PDF.js 3.x: usa il parametro moderno textContentSource.
+          const task = window.pdfjsLib.renderTextLayer({
+            textContentSource: textContent,
+            container: textLayerDiv,
+            viewport,
+            textDivs: []
+          });
+          if(task && task.promise) await task.promise;
+        }
+      }catch(e){
+        console.warn('[PDFReader] text layer non disponibile per la pagina', n, e);
+        // Se il text layer non è disponibile per questo PDF, resta comunque visibile il canvas.
+      }
     }
 
     // IntersectionObserver: renderizza solo le pagine vicine allo schermo (performance con PDF lunghi),
