@@ -2249,7 +2249,29 @@ const KNOWN_FILE_ROLES = {
   appunti_tex: [],
   appunti_pdf: []
 };
-const LESSON_FOLDER_RE = /^Lezione\s*0*(\d+)\s*-\s*(\d{2}-\d{2}-\d{4})(?:\s*[-–]\s*(.+))?$/i;
+const LESSON_FOLDER_RE = /^Lezione\s*0*(\d+)\s*-\s*(?:(\d{2}-\d{2}-\d{4})(?:\s*[-–]\s*(.+))?|(.+))$/i;
+
+/** Convenzione ufficiale dei nomi delle lezioni: "Lezione X - argomento".
+ * Il campo title contiene solo l'argomento; la parte "Lezione X -" viene
+ * sempre generata dall'app. Le cartelle storiche restano leggibili per compatibilità.
+ */
+function lessonDisplayName(lesson){
+  const n = Number(lesson?.number);
+  const prefix = Number.isFinite(n) && n > 0 ? `Lezione ${n}` : 'Lezione';
+  const topic = String(lesson?.title || '').trim().replace(/^Lezione\s*0*\d+\s*[-–:]\s*/i,'').trim();
+  return topic ? `${prefix} - ${topic}` : prefix;
+}
+
+function requiredLessonTitle(title){
+  return String(title || '').trim().replace(/^Lezione\s*0*\d+\s*[-–:]\s*/i,'').trim();
+}
+
+function canonicalLessonPdfName(lesson, ext='pdf'){
+  const base = lessonDisplayName(lesson);
+  const safe = base.replace(/[\\/:*?"<>|]/g,' - ').replace(/\s+/g,' ').trim();
+  return `${safe}.${String(ext).replace(/^\./,'').toLowerCase()}`;
+}
+
 
 const RAW_FOLDER_NAME = 'Materiale grezzo';
 const CATEGORY_FOLDERS = {
@@ -2330,9 +2352,14 @@ const LibraryScanner = {
     const m = LESSON_FOLDER_RE.exec(folderName);
     if(m){
       number = parseInt(m[1], 10);
-      const [dd,mm,yyyy] = m[2].split('-').map(Number);
-      date = new Date(yyyy, mm-1, dd);
-      title = m[3] || '';
+      if(m[2]){
+        const [dd,mm,yyyy] = m[2].split('-').map(Number);
+        date = new Date(yyyy, mm-1, dd);
+        title = m[3] || '';
+      } else {
+        // Nuova convenzione: "Lezione X - argomento". La data viene dal metadato.
+        title = m[4] || '';
+      }
     } else {
       title = folderName;
     }
@@ -2500,9 +2527,27 @@ const LibraryScanner = {
 
   /** Imposta un file esistente della root come documento principale della lezione */
   async setMainFile(lesson, file){
+    const originalName = file.name;
+    // Per il documento principale PDF applichiamo sempre la convenzione
+    // "Lezione X - argomento.pdf". Non modifichiamo altri file.
+    if(file.kind === 'pdf'){
+      const desiredName = canonicalLessonPdfName(lesson, 'pdf');
+      if(file.name !== desiredName){
+        const oldName = file.name;
+        // Evita di sovrascrivere accidentalmente un PDF già esistente con il nome canonico.
+        try{
+          await lesson.handle.getFileHandle(desiredName);
+          throw new Error(`Esiste già il PDF "${desiredName}" nella cartella della lezione.`);
+        }catch(checkErr){
+          if(checkErr && checkErr.message && checkErr.message.startsWith('Esiste già il PDF')) throw checkErr;
+          await FileSystemManager.renameFile(lesson.handle, oldName, desiredName);
+          file = { ...file, name: desiredName, handle: await lesson.handle.getFileHandle(desiredName) };
+        }
+      }
+    }
     lesson.mainFile = file;
     lesson.mainFilePages = null;
-    lesson.otherRootFiles = lesson.otherRootFiles.filter(f => f.name !== file.name);
+    lesson.otherRootFiles = (lesson.otherRootFiles||[]).filter(f => f.name !== originalName && f.name !== file.name);
     const metaHandle = await FileSystemManager.getOrCreateFile(lesson.handle, '.lesson.json');
     let existing = {};
     try{ existing = JSON.parse(await FileSystemManager.readTextFile(metaHandle)); }catch(e){}
@@ -3839,7 +3884,7 @@ const DashboardPage = {
               <div class="lesson-row" data-open-lesson="${esc(l.subjectName)}::${esc(l.id)}" style="padding-left:0;padding-right:0;">
                 <div class="lesson-num">${l.number!=null?String(l.number).padStart(2,'0'):'—'}</div>
                 <div class="lesson-info">
-                  <div class="lesson-title">${esc(l.title || l.folderName)} <span class="muted" style="font-weight:500;">— ${esc(l.subjectName)}</span></div>
+                  <div class="lesson-title">${esc(lessonDisplayName(l))} <span class="muted" style="font-weight:500;">— ${esc(l.subjectName)}</span></div>
                   <div class="lesson-date">${l.date ? fmtDateShort(l.date) : 'Data non impostata'} · ${current ? 'Semestre corrente' : 'Archivio'}${printed ? ' · Già stampata' : ''}</div>
                 </div>
                 <button class="paper-status-btn" data-advice-highlight="${esc(l.subjectName)}::${esc(l.id)}" title="Segna come già evidenziata">${icon('highlighter',13)}<span>Segna evidenziata</span></button>
@@ -3892,7 +3937,7 @@ const LessonRow = {
         <button class="icon-btn" data-toggle-pin="${l.subjectName}::${l.id}" title="${l.pinned?'Rimuovi dai preferiti':'Aggiungi ai preferiti'}" style="color:${l.pinned?'var(--warning)':'var(--text-tertiary)'}; flex-shrink:0;">${icon('star',15)}</button>
         <div class="lesson-num">${l.number!=null?String(l.number).padStart(2,'0'):'—'}</div>
         <div class="lesson-info">
-          <div class="lesson-title">${esc(l.title || l.folderName)} <span class="muted" style="font-weight:500;">— ${esc(l.subjectName)}</span></div>
+          <div class="lesson-title">${esc(lessonDisplayName(l))} <span class="muted" style="font-weight:500;">— ${esc(l.subjectName)}</span></div>
           <div class="lesson-date">${l.date ? fmtDateShort(l.date)+' · '+fmtRelative(l.date) : 'Data non impostata'} · ${fileCount} file</div>
         </div>
         <div class="lesson-paper-actions">
@@ -4365,7 +4410,7 @@ const SubjectPage = {
       el.innerHTML = allFiles.length ? `<div class="card" style="padding:6px 14px;">${allFiles.map(({f,lesson}) => `
         <div class="lesson-row" data-open-file="${lesson.subjectName}::${lesson.id}::${esc(f.name)}">
           <div class="lesson-files">${FileTypeIcon.chip(f.kind)}</div>
-          <div class="lesson-info"><div class="lesson-title">${esc(f.name)}</div><div class="lesson-date">${esc(lesson.title || lesson.folderName)}</div></div>
+          <div class="lesson-info"><div class="lesson-title">${esc(f.name)}</div><div class="lesson-date">${esc(lessonDisplayName(lesson))}</div></div>
         </div>`).join('')}</div>` : `<div class="empty-state card">${icon('file',34)}<div class="empty-state-title">Nessun file</div><div class="empty-state-sub">I file delle lezioni appariranno qui.</div></div>`;
       el.querySelectorAll('[data-open-file]').forEach(row => row.addEventListener('click', () => {
         const [subjectName, lessonId, fileName] = row.dataset.openFile.split('::');
@@ -4452,7 +4497,7 @@ const LessonFormModal = {
           <div class="field"><label>Numero <span class="muted" style="font-weight:500;">(automatico, modificabile)</span></label><input id="f-number" type="number" min="1" value="${suggestNumber(initialSubject)}"></div>
           <div class="field"><label>Data</label><input id="f-date" type="date" value="${new Date().toISOString().slice(0,10)}"></div>
         </div>
-        <div class="field"><label>Titolo</label><input id="f-title" placeholder="Es. Derivate e applicazioni"></div>
+        <div class="field"><label>Argomento <span style="color:var(--danger,#c4361f);">*</span></label><input id="f-title" required placeholder="Es. Derivate e applicazioni"><div class="muted" style="font-size:11px;margin-top:5px;">Il nome verrà creato automaticamente come <b>Lezione X - argomento</b>.</div></div>
         <div class="field-row">
           <div class="field"><label>Docente</label><input id="f-docente" placeholder="Facoltativo"></div>
           <div class="field"><label>Tag</label><input id="f-tags" placeholder="#esame, #teoria"></div>
@@ -4484,14 +4529,16 @@ const LessonFormModal = {
     const number = parseInt(m.querySelector('#f-number').value, 10) || null;
     const dateVal = m.querySelector('#f-date').value;
     const date = dateVal ? new Date(dateVal+'T00:00:00') : new Date();
-    const title = m.querySelector('#f-title').value.trim();
+    const title = requiredLessonTitle(m.querySelector('#f-title').value);
     const docente = m.querySelector('#f-docente').value.trim();
     const tags = m.querySelector('#f-tags').value.split(',').map(t=>t.trim()).filter(Boolean);
     const notes = m.querySelector('#f-notes').value.trim();
     const s = findSubject(subjectName);
     if(!s){ Toast.error('Materia non trovata.'); return; }
+    if(!Number.isFinite(number) || number < 1){ Toast.error('Il numero della lezione è obbligatorio.'); return; }
+    if(!title){ Toast.error('L’argomento è obbligatorio. Esempio: "Derivate e applicazioni".'); m.querySelector('#f-title').focus(); return; }
 
-    const folderName = `Lezione ${String(number ?? (s.lessons.length+1)).padStart(2,'0')} - ${fmtDateShort(date)}${title ? ' - '+title : ''}`;
+    const folderName = lessonDisplayName({ number, title });
     try{
       const handle = await FileSystemManager.createSubDir(s.handle, folderName);
       const metaHandle = await FileSystemManager.getOrCreateFile(handle, '.lesson.json');
@@ -4543,7 +4590,7 @@ const LessonPage = {
         <button class="btn btn-ghost btn-sm" id="btn-back-subject" style="margin-bottom:14px; padding-left:4px;">${icon('arrowLeft',14)} ${esc(lesson.subjectName)}</button>
         <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:16px; flex-wrap:wrap;">
           <div>
-            <div class="section-title">Lezione ${lesson.number ?? '—'}${lesson.title ? ' — '+esc(lesson.title) : ''}</div>
+            <div class="section-title">${esc(lessonDisplayName(lesson))}</div>
             <div class="section-sub">${lesson.date ? fmtDate(lesson.date) : 'Data non impostata'} · ${lesson.semester ? `${semesterLabel(lesson.semester)}${lesson.academicYear ? ' · '+esc(lesson.academicYear) : ''}` : 'Semestre non assegnato'} · <span class="status-pill ${meta.cls}" style="margin-left:4px;">${icon(meta.icon,10)} ${meta.label}</span></div>
             ${latexNotice ? `<div style="margin-top:8px;padding:9px 11px;border:1px solid color-mix(in srgb, var(--danger,#c4361f) 22%, var(--border));background:color-mix(in srgb, var(--danger,#c4361f) 6%, var(--surface));border-radius:10px;font-size:11.5px;color:var(--danger,#c4361f);font-weight:600;">${icon('alert',13)} ${latexNotice.replace(/<[^>]+>/g,'')}</div>` : ''}
             <div class="lesson-paper-actions detail">
@@ -4604,7 +4651,7 @@ const LessonPage = {
       }catch(err){ console.error(err); Toast.error('Impossibile aggiornare lo stato "già stampata".'); }
     });
     document.getElementById('btn-copy-ref').addEventListener('click', () => {
-      const ref = `${lesson.subjectName} — Lezione ${lesson.number??''}${lesson.title?' — '+lesson.title:''}`;
+      const ref = `${lesson.subjectName} — ${lessonDisplayName(lesson)}`;
       Clipboard.copy(ref);
     });
     content.querySelectorAll('[data-goto-tag]').forEach(el => el.addEventListener('click', () => Router.go('tags', { tag: el.dataset.gotoTag })));
@@ -4904,7 +4951,7 @@ const LessonEditModal = {
           <div class="field"><label>Numero</label><input id="f-number" type="number" value="${lesson.number ?? ''}"></div>
           <div class="field"><label>Data</label><input id="f-date" type="date" value="${lesson.date ? lesson.date.toISOString().slice(0,10) : ''}"></div>
         </div>
-        <div class="field"><label>Titolo</label><input id="f-title" value="${esc(lesson.title||'')}"></div>
+        <div class="field"><label>Argomento <span style="color:var(--danger,#c4361f);">*</span></label><input id="f-title" required value="${esc(lesson.title||'')}"><div class="muted" style="font-size:11px;margin-top:5px;">Il nome della lezione resta <b>Lezione X - argomento</b>.</div></div>
         <div class="field-row">
           <div class="field"><label>Docente</label><input id="f-docente" value="${esc(lesson.docente||'')}"></div>
           <div class="field"><label>Tag</label><input id="f-tags" value="${esc((lesson.tags||[]).join(', '))}"></div>
@@ -4926,7 +4973,8 @@ const LessonEditModal = {
     lesson.number = parseInt(m.querySelector('#f-number').value,10) || lesson.number;
     const dateVal = m.querySelector('#f-date').value;
     if(dateVal) lesson.date = new Date(dateVal+'T00:00:00');
-    lesson.title = m.querySelector('#f-title').value.trim();
+    lesson.title = requiredLessonTitle(m.querySelector('#f-title').value);
+    if(!lesson.title){ Toast.error('L’argomento è obbligatorio.'); m.querySelector('#f-title').focus(); return; }
     lesson.docente = m.querySelector('#f-docente').value.trim();
     lesson.tags = m.querySelector('#f-tags').value.split(',').map(t=>t.trim()).filter(Boolean);
     lesson.notes = m.querySelector('#f-notes').value.trim();
@@ -5543,7 +5591,7 @@ const SetMainFileModal = {
       <div class="modal-body">
         <div class="muted" style="font-size:12.5px; margin-bottom:14px;">È il documento che rappresenta la lezione rielaborata (di solito il PDF finale dall'AI). Comparirà in grande in cima alla pagina della lezione.</div>
         <div class="field">
-          <label>Carica un nuovo file</label>
+          <label>Carica un nuovo file</label><div class="muted" style="font-size:11px;margin-top:4px;">Se è un PDF principale, verrà rinominato automaticamente in <b>${esc(canonicalLessonPdfName(lesson,'pdf'))}</b>.</div>
           <input type="file" id="f-main-upload" accept=".pdf,.docx,.tex">
         </div>
         ${lesson.otherRootFiles && lesson.otherRootFiles.length ? `
@@ -8048,15 +8096,19 @@ const UniNotesAPI = {
       const s = findSubject(subjectName);
       if(!s) throw new Error('Materia non trovata: '+subjectName);
       const d = date ? new Date(date) : new Date();
-      const n = number != null ? number : (s.lessons.reduce((mx,l)=>Math.max(mx,l.number||0),0) + 1);
-      const folderName = `Lezione ${String(n).padStart(2,'0')} - ${fmtDateShort(d)}${title ? ' - '+title : ''}`;
+      const n = number != null ? Number(number) : (s.lessons.reduce((mx,l)=>Math.max(mx,l.number||0),0) + 1);
+      const topic = requiredLessonTitle(title);
+      if(!Number.isFinite(n) || n < 1) throw new Error('Il numero della lezione è obbligatorio e deve essere maggiore di 0.');
+      if(!topic) throw new Error('L’argomento è obbligatorio. Usa il formato: Lezione X - argomento.');
+      const folderName = lessonDisplayName({ number:n, title:topic });
       const handle = await FileSystemManager.createSubDir(s.handle, folderName);
       const metaHandle = await FileSystemManager.getOrCreateFile(handle, '.lesson.json');
-      const meta = { number:n, date: d.toISOString(), title, docente, tags, notes };
+      const createdAt = new Date().toISOString();
+      const meta = { number:n, date: d.toISOString(), createdAt, title:topic, docente, tags, notes };
       await FileSystemManager.writeTextFile(metaHandle, JSON.stringify(meta, null, 2));
       const lesson = {
         id: 'lesson_'+subjectName+'_'+folderName, folderName, handle, subjectName,
-        number:n, date:d, title, docente, tags, notes, pinned:false, order:null,
+        number:n, date:d, createdAt, title:topic, docente, tags, notes, pinned:false, order:null,
         files:{}, subfolders:[], mainFile:null, otherRootFiles:[], rawFolderHandle:null
       };
       s.lessons.push(lesson);
@@ -8069,6 +8121,14 @@ const UniNotesAPI = {
       if(!lesson) throw new Error('Lezione non trovata.');
       const c = Object.assign({}, changes);
       if(c.date) c.date = new Date(c.date);
+      if(Object.prototype.hasOwnProperty.call(c,'title')){
+        c.title = requiredLessonTitle(c.title);
+        if(!c.title) throw new Error('L’argomento è obbligatorio.');
+      }
+      if(Object.prototype.hasOwnProperty.call(c,'number')){
+        c.number = Number(c.number);
+        if(!Number.isFinite(c.number) || c.number < 1) throw new Error('Il numero della lezione è obbligatorio e deve essere maggiore di 0.');
+      }
       Object.assign(lesson, c);
       const metaHandle = await FileSystemManager.getOrCreateFile(lesson.handle, '.lesson.json');
       let existing = {}; try{ existing = JSON.parse(await FileSystemManager.readTextFile(metaHandle)); }catch(e){}
@@ -8299,7 +8359,7 @@ const AITools = {
   },
   create_lesson: {
     description: 'Crea una nuova lezione dentro una materia esistente.',
-    parameters: { type:'object', properties:{ subjectName:{type:'string'}, number:{type:'number'}, date:{type:'string'}, title:{type:'string'}, docente:{type:'string'}, tags:{type:'array', items:{type:'string'}}, notes:{type:'string'} }, required:['subjectName'] },
+    parameters: { type:'object', properties:{ subjectName:{type:'string'}, number:{type:'number'}, date:{type:'string'}, title:{type:'string'}, docente:{type:'string'}, tags:{type:'array', items:{type:'string'}}, notes:{type:'string'} }, required:['subjectName','title'] },
     async execute(args){ const lesson = await UniNotesAPI.lessons.create(args); Router.render(); return makeOk({ lessonId:lesson.id, folderName:lesson.folderName }, 'Lezione creata: '+lesson.folderName+'.'); }
   },
   update_lesson: {
@@ -9545,7 +9605,7 @@ Non inserire HTML.`;
     summaryOut=await aiLocalizeSummaryIfNeeded(lesson,summaryOut,signal,summaryLanguage);
     aiThrowIfAborted(signal);
     const summary=aiCleanMarkdown(summaryOut&&summaryOut.summary);
-    const newTitle=aiSafeText(summaryOut&&summaryOut.title);
+    const newTitle=requiredLessonTitle(aiSafeText(summaryOut&&summaryOut.title));
     if(!summary) throw new Error('L’AI non ha restituito un riassunto valido.');
 
     await aiCreateSummaryFile(lesson,summary,signal);
