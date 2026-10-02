@@ -8665,11 +8665,6 @@ const AI_SUMMARY_FOLDER_NAME = 'Riepiloghi AI';
         </div>`;
       const stopBtn=this.modal.querySelector('#ai-bg-stop');
       const resumeBtn=this.modal.querySelector('#ai-bg-resume');
-      const retryBtn=this.modal.querySelector('#ai-bg-retry');
-      if(retryBtn){
-        const canRetry=!!(window.UniNotesAIBackground&&window.UniNotesAIBackground.lastFailedLesson&&s.phase==='error');
-        retryBtn.style.display=canRetry?'inline-flex':'none';
-      }
       if(stopBtn){
         stopBtn.disabled=!canStop;
         stopBtn.style.display=canStop?'inline-flex':'none';
@@ -8689,7 +8684,6 @@ const AI_SUMMARY_FOLDER_NAME = 'Riepiloghi AI';
           <div style="display:flex;align-items:center;gap:6px;">
             <button class="btn btn-sm btn-danger" id="ai-bg-stop" style="display:none;">${icon('stopcircle',13)} Stop</button>
             <button class="btn btn-sm" id="ai-bg-resume" style="display:none;">${icon('play',13)} Riprendi</button>
-            <button class="btn btn-sm" id="ai-bg-retry" style="display:none;">${icon('refresh',13)} Riprova lezione</button>
             <button class="icon-btn" id="ai-bg-inspector-close">${icon('x',15)}</button>
           </div>
         </div>
@@ -8698,7 +8692,6 @@ const AI_SUMMARY_FOLDER_NAME = 'Riepiloghi AI';
       const close=this.modal.querySelector('#ai-bg-inspector-close'); if(close) close.onclick=()=>this.close();
       const stop=this.modal.querySelector('#ai-bg-stop'); if(stop) stop.onclick=()=>window.UniNotesAIBackground&&window.UniNotesAIBackground.stop();
       const resume=this.modal.querySelector('#ai-bg-resume'); if(resume) resume.onclick=()=>window.UniNotesAIBackground&&window.UniNotesAIBackground.start(true);
-      const retry=this.modal.querySelector('#ai-bg-retry'); if(retry) retry.onclick=()=>window.UniNotesAIBackground&&window.UniNotesAIBackground.retryLast();
       this.render();
       clearInterval(this.refreshTimer); this.refreshTimer=setInterval(()=>this.render(),400);
     },
@@ -8772,82 +8765,54 @@ const AI_SUMMARY_FOLDER_NAME = 'Riepiloghi AI';
     return null;
   }
 
-  const AI_MAX_LESSON_RETRIES = 3;
-  const AI_RETRY_BACKOFF_MS = [30_000, 120_000, 600_000];
-  function aiRetryState(meta){
-    const a=(meta&&meta.aiAutomation)||{};
-    return { attempts: Number(a.retryCount)||0, nextRetryAt:Number(a.nextRetryAt)||0, status:a.status||'' };
-  }
-  function aiRetryAllowed(meta, force=false){
-    if(force) return true;
-    const st=aiRetryState(meta);
-    if(st.status==='blocked' && st.attempts>=AI_MAX_LESSON_RETRIES) return false;
-    if(st.status==='retry-wait' && st.nextRetryAt && Date.now()<st.nextRetryAt) return false;
-    return st.attempts < AI_MAX_LESSON_RETRIES;
-  }
-  async function aiRecordLessonFailure(lesson,err){
-    const meta=await aiReadMeta(lesson);
-    const prev=aiRetryState(meta);
-    const attempts=prev.attempts+1;
-    const blocked=attempts>=AI_MAX_LESSON_RETRIES;
-    const nextRetryAt=blocked?0:Date.now()+AI_RETRY_BACKOFF_MS[Math.min(attempts-1,AI_RETRY_BACKOFF_MS.length-1)];
-    const state=Object.assign({},meta.aiAutomation||{}, {
-      version:AI_AUTOMATION_VERSION, processing:false, done:false,
-      status:blocked?'blocked':'retry-wait', retryCount:attempts, nextRetryAt,
-      lastError:err&&err.message?err.message:String(err), failedAt:Date.now(),
-      analysisScope:'main-pdf-only', audioMode:'untouched',
-      resourceProfile:localStorage.getItem('uninotes.aiBackgroundLowPower')!=='0'?'eco':'normal'
-    });
-    await aiPersist(lesson,{aiAutomation:state});
-    return state;
+  function aiParseModelPayload(data){
+    const parts=[];
+    if(data&&data.message){
+      if(typeof data.message.content==='string') parts.push(data.message.content);
+      if(typeof data.message.output==='string') parts.push(data.message.output);
+    }
+    if(typeof data?.response==='string') parts.push(data.response);
+    if(typeof data?.output==='string') parts.push(data.output);
+    return parts.find(x=>String(x||'').trim()) || '';
   }
 
   async function aiOllamaJson(messages, signal, schema){
     aiThrowIfAborted(signal);
     const model=aiModel(); if(!model) throw new Error('Nessun modello Ollama selezionato.');
     const profile=aiResourceProfile();
-    const requestBody={
-      model, messages, stream:false, format: schema || 'json', think:false, keep_alive:profile.keepAlive,
-      options:{temperature:0.1,num_ctx:profile.numCtx,num_predict:profile.numPredict}
-    };
+    const baseOptions={temperature:0.1,num_ctx:profile.numCtx,num_predict:profile.numPredict};
     const doRequest=async(body)=>{
       const res=await fetch(OllamaManager.baseUrl+'/api/chat',{
-        method:'POST',
-        headers:{'Content-Type':'application/json'},
-        body:JSON.stringify(body),
-        signal
+        method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),signal
       });
       aiThrowIfAborted(signal);
       if(!res.ok){ const t=await res.text().catch(()=> ''); throw new Error('Ollama HTTP '+res.status+(t?': '+t.slice(0,160):'')); }
       const data=await res.json();
       aiThrowIfAborted(signal);
-      return data&&data.message?String(data.message.content||''):'';
+      return aiParseModelPayload(data);
     };
 
-    let content=await doRequest(requestBody);
+    // Prima prova con JSON strutturato quando il modello lo supporta.
+    let content=await doRequest({model,messages,stream:false,format:schema||'json',think:false,keep_alive:profile.keepAlive,options:baseOptions});
     let parsed=aiExtractJsonObject(content);
-    if(parsed){
-      if(typeof parsed.summary!=='string' && typeof parsed.content==='string') parsed.summary=parsed.content;
-      if(typeof parsed.summary!=='string' && typeof parsed.response==='string') parsed.summary=parsed.response;
-      return parsed;
-    }
+    if(parsed) return parsed;
 
-    // Alcuni modelli dichiarano supporto JSON ma occasionalmente restituiscono testo non conforme.
-    // Un singolo retry più vincolante evita di bloccare l'intera coda senza moltiplicare il carico.
-    await aiYield(350);
+    // Fallback: stesso contesto, ma senza JSON schema. Questo evita che modelli/versioni
+    // Ollama che supportano solo format:'json' restituiscano un risultato vuoto.
+    await aiYield(250);
     aiThrowIfAborted(signal);
-    const retryMessages=[...messages];
-    const last=retryMessages.length-1;
-    retryMessages.push({
-      role:'user',
-      content:'ATTENZIONE: la risposta precedente non era JSON valido. Rispondi ADESSO esclusivamente con un oggetto JSON valido, senza markdown fence, testo introduttivo o spiegazioni esterne al JSON.'
-    });
-    content=await doRequest(Object.assign({},requestBody,{messages:retryMessages,options:Object.assign({},requestBody.options,{temperature:0,num_predict:Math.min(requestBody.options.num_predict,1400)})}));
+    const retryMessages=[...messages,{role:'user',content:'Rispondi esclusivamente con JSON valido, senza ``` e senza testo fuori dal JSON. Mantieni esattamente le chiavi richieste.'}];
+    content=await doRequest({model,messages:retryMessages,stream:false,format:'json',think:false,keep_alive:profile.keepAlive,options:{...baseOptions,temperature:0,num_predict:Math.min(baseOptions.num_predict,1400)}});
     parsed=aiExtractJsonObject(content);
-    if(parsed){
-      if(typeof parsed.summary!=='string' && typeof parsed.content==='string') parsed.summary=parsed.content;
-      if(typeof parsed.summary!=='string' && typeof parsed.response==='string') parsed.summary=parsed.response;
-      return parsed;
+    if(parsed) return parsed;
+
+    // Ultimo fallback solo per risposte che contengono già un documento Markdown utile:
+    // non ripetiamo la richiesta se il modello ha restituito testo vuoto.
+    const cleaned=aiCleanMarkdown(content);
+    const wantsSummary=!!schema?.properties?.summary;
+    const wantsTitle=!!schema?.properties?.title;
+    if(cleaned && wantsSummary && cleaned.length>=80){
+      return wantsTitle ? {title:'',summary:cleaned} : {summary:cleaned};
     }
     throw new Error('Risposta AI non valida dopo 2 tentativi.');
   }
@@ -8925,62 +8890,81 @@ const AI_SUMMARY_FOLDER_NAME = 'Riepiloghi AI';
     return fixed;
   }
 
+  function aiSummaryInputBudget(profile){
+    // Manteniamo abbastanza spazio nel contesto per l'output del modello.
+    return Math.max(7000, Math.min(18000, Math.floor((profile.numCtx||4096)*2.5)));
+  }
+
+  async function aiReducePartialSummaries(partials, lesson, signal, lang, profile){
+    const budget=aiSummaryInputBudget(profile);
+    let current=partials.filter(Boolean).map(aiCleanMarkdown).filter(Boolean);
+    while(current.length>1){
+      aiThrowIfAborted(signal);
+      const next=[];
+      let batch=[]; let chars=0;
+      const flush=async()=>{
+        if(!batch.length) return;
+        const body=batch.join('\n\n---\n\n');
+        const out=await aiOllamaJson([
+          {role:'system',content:`Unisci e compatta questi appunti di una lezione universitaria esclusivamente in ${lang.instruction}. Conserva tutte le informazioni importanti, formule e relazioni. Usa Markdown con **grassetto**, *corsivo*, tabelle quando utili e formule $...$ o $$...$$. Restituisci SOLO JSON {"summary":"..."}.`},
+          {role:'user',content:body}
+        ],signal,{type:'object',properties:{summary:{type:'string'}},required:['summary']});
+        if(out&&out.summary) next.push(aiCleanMarkdown(out.summary).slice(0,5000));
+        batch=[]; chars=0;
+        await aiYield(profile.betweenRequests);
+      };
+      for(const part of current){
+        const add=(part||'');
+        if(batch.length && chars+add.length>budget) await flush();
+        batch.push(add); chars+=add.length;
+      }
+      await flush();
+      if(!next.length) throw new Error('Impossibile compattare i segmenti del riepilogo.');
+      current=next;
+    }
+    return current[0]||'';
+  }
+
   async function aiSummarize(lesson,pdfData,signal,languageKey){
     aiThrowIfAborted(signal);
-    const profile = aiResourceProfile();
-    const langKey = languageKey || langKey;
-    const lang = AI_SUMMARY_LANGUAGES[langKey] || AI_SUMMARY_LANGUAGES.it;
+    const profile=aiResourceProfile();
+    const chosenLanguage=languageKey || aiSummaryLanguage();
+    const lang=AI_SUMMARY_LANGUAGES[chosenLanguage] || AI_SUMMARY_LANGUAGES.it;
     const baseInstruction=`Sei un tutor universitario professionale. Devi creare un riassunto fedele e strutturato di una lezione universitaria.
 
 LINGUA OBBLIGATORIA E VINCOLANTE: ${lang.instruction}.
-NON cambiare lingua. NON alternare lingue. NON usare inglese per intestazioni, formule spiegate a parole, callout o conclusioni. Tutto il contenuto testuale generato deve essere ESCLUSIVAMENTE in ${lang.instruction}, inclusi titolo, intestazioni, testo, elenchi, callout ed etichette. Sono ammessi solo nomi propri e terminologia tecnica indispensabile già presente nel PDF.
+Tutto il testo generato deve essere esclusivamente in ${lang.instruction}. Sono ammessi solo nomi propri e terminologia tecnica indispensabile già presente nel PDF.
 
-Usa ESCLUSIVAMENTE il contenuto del PDF fornito. Non inventare esempi, definizioni, formule o concetti assenti.
+Usa ESCLUSIVAMENTE il contenuto del PDF fornito. Non inventare esempi, definizioni o concetti assenti.
 
 Restituisci SOLO JSON valido:
-{
-  "title": "titolo breve e preciso della lezione nella lingua richiesta",
-  "summary": "documento Markdown completo nella lingua richiesta"
-}
+{"title":"titolo breve e preciso nella lingua richiesta","summary":"documento Markdown completo nella lingua richiesta"}
 
-Formato Markdown richiesto:
-- un titolo H1;
-- una sezione iniziale "Sintesi" o equivalente;
-- sezioni H2 per gli argomenti principali;
-- usa **grassetto** per definizioni e concetti da ricordare;
-- usa *corsivo* per precisazioni;
-- usa \`codice inline\` per termini tecnici;
-- usa \`==testo evidenziato==\` per 1-3 elementi essenziali;
-- usa elenchi e tabelle quando utili;
-- usa callout \`> [!KEY] testo\`, \`> [!NOTE] testo\`, \`> [!WARNING] testo\`, \`> [!TIP] testo\`, \`> [!EXAMPLE] testo\`;
-- termina con una sezione "Concetti chiave" o equivalente.
-Non inserire HTML.`;
-    if(pdfData.text.length<=60000){
-      return await aiOllamaJson(
-        [{role:'system',content:baseInstruction},{role:'user',content:`Materia: ${lesson.subjectName}\nTitolo attuale: ${lesson.title||'(vuoto)'}\n\nTESTO DEL PDF:\n${pdfData.text}`}],
-        signal,
-        {type:'object',properties:{title:{type:'string'},summary:{type:'string'}},required:['title','summary']}
-      );
+Formato Markdown richiesto: titolo H1, sezioni H2, **grassetto** per concetti fondamentali, *corsivo* per precisazioni, \`codice\` per termini tecnici, ==evidenziato== per 1-3 elementi essenziali, elenchi e tabelle quando utili, callout > [!KEY]/[!NOTE]/[!WARNING]/[!TIP]/[!EXAMPLE], formule inline $...$ e a blocco $$...$$ quando presenti nel PDF.`;
+    const budget=aiSummaryInputBudget(profile);
+    if(pdfData.text.length<=budget){
+      return await aiOllamaJson([
+        {role:'system',content:baseInstruction},
+        {role:'user',content:`Materia: ${lesson.subjectName}\nTitolo attuale: ${lesson.title||'(vuoto)'}\n\nTESTO DEL PDF:\n${pdfData.text}`}
+      ],signal,{type:'object',properties:{title:{type:'string'},summary:{type:'string'}},required:['title','summary']});
     }
+
     const partials=[];
-    for(let start=0,idx=1;start<pdfData.text.length;start+=profile.chunkChars,idx++){
+    for(let start=0,idx=1;start<pdfData.text.length;start+=budget,idx++){
       aiThrowIfAborted(signal);
-      const chunk=pdfData.text.slice(start,start+profile.chunkChars);
-      const out=await aiOllamaJson(
-        [{role:'system',content:`Riassumi fedelmente questo segmento di una lezione universitaria esclusivamente in ${lang.instruction}. Rispondi SOLO JSON {"summary":"..."}. Usa Markdown leggibile con **grassetto**, *corsivo*, \`==evidenziato==\` e callout quando utili. Non inventare nulla.`},
-         {role:'user',content:`Segmento ${idx}\nMateria: ${lesson.subjectName}\n${chunk}`}],
-        signal,
-        {type:'object',properties:{summary:{type:'string'}},required:['summary']}
-      );
-      if(out&&out.summary) partials.push(aiCleanMarkdown(out.summary).slice(0,7000));
+      const chunk=pdfData.text.slice(start,start+budget);
+      const out=await aiOllamaJson([
+        {role:'system',content:`Riassumi fedelmente questo segmento di una lezione universitaria esclusivamente in ${lang.instruction}. Conserva definizioni, formule, esempi e relazioni presenti. Usa **grassetto**, *corsivo*, tabelle e formule Markdown quando utili. Restituisci SOLO JSON {"summary":"..."}.`},
+        {role:'user',content:`Segmento ${idx}\nMateria: ${lesson.subjectName}\n${chunk}`}
+      ],signal,{type:'object',properties:{summary:{type:'string'}},required:['summary']});
+      if(out&&out.summary) partials.push(aiCleanMarkdown(out.summary).slice(0,5000));
       await aiYield(profile.betweenRequests);
     }
-    aiThrowIfAborted(signal);
-    return await aiOllamaJson(
-      [{role:'system',content:baseInstruction},{role:'user',content:`Materia: ${lesson.subjectName}\nTitolo attuale: ${lesson.title||'(vuoto)'}\n\nRIASSUNTI DEI SEGMENTI:\n${partials.join('\n\n---\n\n')}`}],
-      signal,
-      {type:'object',properties:{title:{type:'string'},summary:{type:'string'}},required:['title','summary']}
-    );
+    const compacted=await aiReducePartialSummaries(partials,lesson,signal,lang,profile);
+    return await aiOllamaJson([
+      {role:'system',content:baseInstruction},
+      {role:'user',content:`Materia: ${lesson.subjectName}\nTitolo attuale: ${lesson.title||'(vuoto)'}\n\nSINTESI COMPATTATA DEI SEGMENTI:\n${compacted}`}
+    ],signal,{type:'object',properties:{title:{type:'string'},summary:{type:'string'}},required:['title','summary']});
   }
 
   async function aiCreateSummaryFile(lesson,summaryMarkdown,signal){
@@ -9056,10 +9040,8 @@ Non inserire HTML.`;
     let summaryOut=await aiSummarize(lesson,pdfData,signal,summaryLanguage);
     summaryOut=await aiLocalizeSummaryIfNeeded(lesson,summaryOut,signal,summaryLanguage);
     aiThrowIfAborted(signal);
-    let summary=aiCleanMarkdown(summaryOut&&summaryOut.summary);
+    const summary=aiCleanMarkdown(summaryOut&&summaryOut.summary);
     const newTitle=aiSafeText(summaryOut&&summaryOut.title);
-    if(!summary && summaryOut && typeof summaryOut.content==='string') summary=aiCleanMarkdown(summaryOut.content);
-    if(!summary && summaryOut && typeof summaryOut.response==='string') summary=aiCleanMarkdown(summaryOut.response);
     if(!summary) throw new Error('L’AI non ha restituito un riassunto valido.');
 
     await aiCreateSummaryFile(lesson,summary,signal);
@@ -9072,7 +9054,7 @@ Non inserire HTML.`;
 
     aiThrowIfAborted(signal);
     lesson.aiAutomation=Object.assign({},lesson.aiAutomation,{
-      version:AI_AUTOMATION_VERSION,processing:false,done:true,status:'done',
+      version:AI_AUTOMATION_VERSION,processing:false,done:true,status:'done',attempts:0,nextRetryAt:null,lastError:null,
       completedAt:Date.now(),model:aiModel(),summaryFileName:AI_SUMMARY_FILE_NAME,summaryFolder:AI_SUMMARY_FOLDER_NAME,language:summaryLanguage,
       analysisScope:'main-pdf-only',audioMode:'untouched',resourceProfile:localStorage.getItem('uninotes.aiBackgroundLowPower') !== '0' ? 'eco' : 'normal'
     });
@@ -9086,8 +9068,20 @@ Non inserire HTML.`;
   }
 
 
+  async function aiRecordFailure(lesson, err){
+    let meta={}; try{ meta=await aiReadMeta(lesson); }catch(e){}
+    const prev=meta.aiAutomation||lesson.aiAutomation||{};
+    const attempts=Number(prev.attempts||0)+1;
+    const message=err&&err.message?err.message:String(err||'Errore AI');
+    const status=attempts>=3?'needs-attention':'error';
+    const nextRetryAt=attempts===1?Date.now()+30000:attempts===2?Date.now()+120000:null;
+    const state=Object.assign({},prev,{version:AI_AUTOMATION_VERSION,processing:false,done:false,status,attempts,lastError:message,updatedAt:Date.now(),nextRetryAt});
+    await aiPersist(lesson,{aiAutomation:state});
+    return state;
+  }
+
   const AIBackgroundWorker={
-    running:false,timer:null,controller:null,stopped:false,resumeRequested:false,currentLesson:null,lastFailedLesson:null,forceRetry:false,
+    running:false,timer:null,controller:null,stopped:false,resumeRequested:false,currentLesson:null,
     connectionCache:null,
     schedule(ms=7000){
       clearTimeout(this.timer);
@@ -9144,22 +9138,18 @@ Non inserire HTML.`;
           const meta=await aiReadMeta(lesson);
           const summaryHandle=await aiGetSummaryFile(lesson,{create:false,migrateLegacy:true});
           const summaryValid=await aiSummaryIsValid(lesson,summaryHandle);
-          if(meta.aiAutomation&&meta.aiAutomation.done===true&&summaryValid){
-            completed++;
-          }else if(aiRetryAllowed(meta,this.forceRetry)){
+          if(meta.aiAutomation&&meta.aiAutomation.done===true&&summaryValid) completed++;
+          else {
+            const st=meta.aiAutomation||{};
+            const waitUntil=Number(st.nextRetryAt||0);
+            if(st.status==='needs-attention' && waitUntil===0) continue;
+            if(waitUntil>0 && Date.now()<waitUntil) continue;
             pending.push(lesson);
           }
         }
 
         if(!pending.length){
-          if(this.lastFailedLesson){
-            const failedMeta=await aiReadMeta(this.lastFailedLesson);
-            const fs=aiRetryState(failedMeta);
-            if(fs.status==='blocked') aiStatus({phase:'error',currentLesson:`${this.lastFailedLesson.subjectName} · Lezione ${this.lastFailedLesson.number??''}`,error:failedMeta.aiAutomation&&failedMeta.aiAutomation.lastError||'Tentativi esauriti',completed,total:lessons.length,blocked:true});
-            else aiStatus({phase:'idle',completed,total:lessons.length});
-          }else{
-            aiStatus({phase:'idle',completed,total:lessons.length});
-          }
+          aiStatus({phase:'idle',completed,total:lessons.length});
           this.schedule(120000);
           return;
         }
@@ -9172,7 +9162,6 @@ Non inserire HTML.`;
             await aiIdleYield();
             const result=await aiProcessLesson(lesson,completed,lessons.length,this.controller.signal);
             if(result&&result.done) completed++;
-            this.forceRetry=false;
           }catch(err){
             if(err&&err.name==='AbortError'){
               this.stopped=true;
@@ -9187,16 +9176,13 @@ Non inserire HTML.`;
               }
             }else{
               console.warn('[Uni Notes AI] elaborazione lezione fallita:',lesson.subjectName,lesson.number,err);
-              this.lastFailedLesson=lesson;
-              const failureState=await aiRecordLessonFailure(lesson,err).catch(()=>null);
-              const blocked=!!(failureState&&failureState.status==='blocked');
+              const failure=await aiRecordFailure(lesson,err);
+              const wait=failure.status==='needs-attention'?'La lezione è stata messa in “Richiede intervento” dopo 3 tentativi. Premi Riprova per forzare una nuova elaborazione.':`Tentativo ${failure.attempts}/3 fallito. ${failure.nextRetryAt?'Verrà ritentata automaticamente più tardi.':'Riprova manualmente.'}`;
               AIBackgroundInspector.push('error',
                 `Elaborazione fallita: ${lesson.subjectName} · Lezione ${lesson.number??''}`,
-                blocked
-                  ? `Tentativi esauriti (${AI_MAX_LESSON_RETRIES}/${AI_MAX_LESSON_RETRIES}). ${err.message||String(err)}\nLa lezione non verrà più riprovata automaticamente.`
-                  : `Tentativo ${failureState&&failureState.retryCount||'?'} di ${AI_MAX_LESSON_RETRIES}. ${err.message||String(err)}\nVerrà ritentata dopo un breve intervallo.`
+                (err.message||String(err))+'\n'+wait
               );
-              aiStatus({phase:'error',error:err.message||String(err),currentLesson:`${lesson.subjectName} · Lezione ${lesson.number??''}`,completed,total:lessons.length,blocked});
+              aiStatus({phase:'error',error:err.message||String(err),completed,total:lessons.length});
             }
           }
           this.currentLesson=null;
@@ -9245,16 +9231,6 @@ Non inserire HTML.`;
       }
       AIBackgroundInspector.push('wait','Richiesta di stop ricevuta','Interrompo l’operazione in corso senza segnare la lezione come completata. Puoi riprendere in seguito.');
       AIBackgroundInspector.render();
-    },
-    async retryLast(){
-      const lesson=this.lastFailedLesson;
-      if(!lesson) return;
-      const meta=await aiReadMeta(lesson);
-      const state=Object.assign({},meta.aiAutomation||{},{retryCount:0,nextRetryAt:0,status:'queued',done:false,processing:false,lastError:null});
-      await aiPersist(lesson,{aiAutomation:state});
-      this.stopped=false; this.forceRetry=true; this.resumeRequested=true;
-      AIBackgroundInspector.push('wait',`Riprovo: ${lesson.subjectName} · Lezione ${lesson.number??''}`,'Il contatore dei tentativi è stato azzerato su richiesta.');
-      this.start(true);
     },
     enabled:aiEnabled
   };
