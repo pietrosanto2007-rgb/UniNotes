@@ -3498,7 +3498,7 @@ const SidebarView = {
     ]},
     { section: 'Strumenti', items: [
       { page:'prompts', label:'Prompt', icon:'prompt' },
-      { page:'practice', label:'Esercitati', icon:'layers', count: () => PracticeEngine.getDueCount() },
+      { page:'practice', label:'Esercitati', icon:'layers', count: () => { try { return PracticeEngine.getDueCount(); } catch(err) { console.warn('[Practice] conteggio non disponibile:', err); return 0; } } },
       { page:'search', label:'Ricerca', icon:'search' },
       { page:'tags', label:'Tag', icon:'tag' },
       { page:'calendar', label:'Calendario', icon:'calendar' },
@@ -6960,16 +6960,31 @@ function practiceMd(host,text){ if(host) knowledgeMarkdownInto(host,text||''); }
 const PracticePage = {
   session: null,
   render(){
-    TopbarView.render(`<b>Esercitati</b>`, `<button class="btn btn-primary btn-sm" id="practice-start-top">${icon('play',14)} Inizia sessione</button>`);
     const content=document.getElementById('content');
-    const subjects=currentSemesterSubjects();
-    const ctx=getCurrentSemesterContext();
+    if(!content) return;
+    try{
+      TopbarView.render(`<b>Esercitati</b>`, `<button class="btn btn-primary btn-sm" id="practice-start-top">${icon('play',14)} Inizia sessione</button>`);
+    }catch(err){ console.error('[Practice] topbar render failed:', err); }
+
+    let subjects=[];
+    let ctx=getCurrentSemesterContext();
+    try{
+      subjects=currentSemesterSubjects();
+    }catch(err){
+      console.error('[Practice] impossibile leggere le materie correnti:', err);
+      content.innerHTML=`<div class="page practice-page"><section class="card practice-result" style="margin:30px auto;"><div class="practice-result-kicker">ESERCITATI</div><h1>Non riesco a leggere le materie</h1><p class="practice-result-copy">La libreria è stata caricata, ma alcuni dati del periodo corrente non sono disponibili. Torna alla Dashboard e sincronizza la cartella.</p><div class="practice-result-actions"><button class="btn btn-primary" id="practice-retry-load">${icon('refresh',14)} Riprova</button></div></section></div>`;
+      document.getElementById('practice-retry-load')?.addEventListener('click',()=>Router.render());
+      return;
+    }
     if(!subjects.length){
       content.innerHTML=`<div class="page"><div class="empty-state card">${icon('layers',34)}<div class="empty-state-title">Nessuna materia nel periodo attuale</div><div class="empty-state-sub">Esercitati utilizza solo le materie del periodo attuale.</div></div></div>`;
       return;
     }
     if(this.session?.active){ this.renderSession(content); return; }
-    const due=this.buildDueSummary(subjects);
+
+    let due={due:0,weak:0,known:0,rows:[]};
+    try{ due=this.buildDueSummary(subjects); }catch(err){ console.error('[Practice] riepilogo adattivo non disponibile:',err); }
+
     content.innerHTML=`
       <div class="page practice-page">
         <div class="practice-hero card">
