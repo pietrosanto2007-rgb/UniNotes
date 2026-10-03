@@ -4076,6 +4076,9 @@ function subjectIsCurrent(subject){
   const ctx = getCurrentSemesterContext();
   return subject.academicYear === ctx.academicYear && subject.semester === ctx.semester;
 }
+function currentSemesterSubjects(subjects = AppState.library.subjects){
+  return (subjects || []).filter(subjectIsCurrent);
+}
 function visibleSubjectGroups(subjects){
   const ctx = getCurrentSemesterContext();
   const current = [], previous = [], upcoming = [];
@@ -4475,12 +4478,13 @@ const FileTypeIcon = {
    ============================================================ */
 const LessonFormModal = {
   open(preselectSubject){
-    const subjects = AppState.library.subjects;
+    const subjects = currentSemesterSubjects();
     if(subjects.length === 0){
-      Toast.error('Crea prima una materia.');
+      const ctx = getCurrentSemesterContext();
+      Toast.error(`Non ci sono materie nel periodo attuale (${semesterLabel(ctx.semester)} · ${ctx.academicYear}).`);
       return;
     }
-    const initialSubject = findSubject(preselectSubject) || subjects[0];
+    const initialSubject = subjects.find(s => s.name===preselectSubject) || subjects[0];
     // Numero lezione proposto automaticamente (max numero esistente + 1 nella materia), ma resta modificabile a mano.
     const suggestNumber = (s) => {
       if(!s || !s.lessons.length) return 1;
@@ -4490,7 +4494,7 @@ const LessonFormModal = {
     const m = ModalManager.open(`
       <div class="modal-header"><div class="modal-title">Nuova lezione</div><button class="icon-btn" id="m-close">${icon('x',16)}</button></div>
       <div class="modal-body">
-        <div class="field"><label>Materia</label>
+        <div class="field"><label>Materia <span class="muted" style="font-weight:500;">(${esc(semesterLabel(getCurrentSemesterContext().semester))})</span></label>
           <select id="f-subject">${subjects.map(s=>`<option value="${esc(s.name)}" ${s.name===preselectSubject?'selected':''}>${esc(s.name)}</option>`).join('')}</select>
         </div>
         <div class="field-row">
@@ -6204,12 +6208,13 @@ const PromptsPage = {
   render(){
     TopbarView.render(`<b>Prompt</b>`);
     const content = document.getElementById('content');
-    const subjects = AppState.library.subjects;
+    const subjects = currentSemesterSubjects();
+    const ctx = getCurrentSemesterContext();
     if(!subjects.length){
-      content.innerHTML = `<div class="page"><div class="empty-state card">${icon('prompt',34)}<div class="empty-state-title">Nessuna materia</div><div class="empty-state-sub">Crea una materia per gestire i suoi prompt.</div></div></div>`;
+      content.innerHTML = `<div class="page"><div class="empty-state card">${icon('prompt',34)}<div class="empty-state-title">Nessuna materia nel periodo attuale</div><div class="empty-state-sub">I menu dei prompt mostrano solo le materie di ${esc(semesterLabel(ctx.semester))} · ${esc(ctx.academicYear)}.</div></div></div>`;
       return;
     }
-    this.activeSubject = this.activeSubject && findSubject(this.activeSubject) ? this.activeSubject : subjects[0].name;
+    this.activeSubject = this.activeSubject && subjects.some(s => s.name===this.activeSubject) ? this.activeSubject : subjects[0].name;
     content.innerHTML = `
       <div class="page">
         <div class="section-head">
@@ -6485,7 +6490,7 @@ const SearchPage = {
     const el = document.getElementById('search-results');
     if(!query.trim()){
       const hist = this.loadHistory();
-      const subjects = AppState.library.subjects.slice(0,8);
+      const subjects = currentSemesterSubjects().slice(0,8);
       el.innerHTML = `
         ${hist.length ? `
         <div class="cmdk-section-label" style="padding-left:0;">Ricerche recenti</div>
