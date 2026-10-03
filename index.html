@@ -1721,6 +1721,20 @@ input:not([type]),select,textarea{color:var(--text);}
 .post-lesson-reminder{padding:4px 2px 2px}.post-lesson-kicker{display:flex;align-items:center;gap:7px;font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--accent);font-weight:800}.post-lesson-card{margin-top:12px;padding:15px;border:1px solid color-mix(in srgb,var(--accent) 24%,var(--border));background:color-mix(in srgb,var(--accent-soft) 45%,var(--surface));border-radius:16px}.post-lesson-title{font-size:19px;font-weight:760;letter-spacing:-.025em;line-height:1.2}.post-lesson-meta{display:flex;flex-wrap:wrap;gap:7px;margin-top:9px}.post-lesson-chip{display:inline-flex;align-items:center;gap:5px;padding:5px 8px;border-radius:999px;background:var(--surface);border:1px solid var(--border);font-size:10.5px;color:var(--text-secondary);font-weight:700}.post-lesson-copy{margin-top:10px;font-size:12px;line-height:1.55;color:var(--text-secondary)}.post-lesson-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:14px}.post-lesson-progress{height:3px;border-radius:999px;background:var(--surface-2);overflow:hidden;margin-top:12px}.post-lesson-progress>span{display:block;height:100%;width:100%;transform-origin:left center;background:var(--accent)}
 
 </style>
+
+<style>
+.practice-page{max-width:1200px;margin:0 auto}
+.practice-hero{padding:24px 26px;display:flex;justify-content:space-between;gap:24px;align-items:stretch;margin-bottom:16px;overflow:hidden;position:relative}
+.practice-hero:after{content:"";position:absolute;right:-70px;top:-100px;width:280px;height:280px;border-radius:50%;background:radial-gradient(circle,rgba(99,102,241,.17),transparent 68%);pointer-events:none}
+.practice-hero-copy{max-width:680px;position:relative;z-index:1}.practice-eyebrow{font-size:10px;font-weight:850;letter-spacing:.08em;color:var(--accent);margin-bottom:7px}.practice-hero h1{font-size:28px;letter-spacing:-.035em;margin:0 0 7px}.practice-hero p{margin:0;max-width:620px;color:var(--text-secondary);font-size:13px;line-height:1.6}
+.practice-stats{display:grid;grid-template-columns:repeat(3,minmax(90px,1fr));gap:8px;position:relative;z-index:1;align-self:center}.practice-stats>div{padding:13px 12px;border:1px solid var(--border);border-radius:14px;background:var(--surface-2);min-width:92px}.practice-stats strong{display:block;font-size:22px;letter-spacing:-.03em}.practice-stats span{display:block;font-size:10px;color:var(--text-tertiary);margin-top:2px}
+.practice-layout{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(290px,.75fr);gap:16px}.practice-builder,.practice-insights{padding:20px}.practice-section-head,.practice-label-row,.practice-insight-top{display:flex;justify-content:space-between;align-items:center;gap:10px}.practice-title{font-size:14px;font-weight:820;letter-spacing:-.01em}.practice-sub{margin-top:3px;font-size:11.5px;color:var(--text-tertiary);line-height:1.45}.practice-field{margin-top:18px}.practice-field label,.practice-options-grid label{display:block;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:var(--text-tertiary);margin-bottom:8px}.practice-check-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:7px}.practice-check{display:flex!important;align-items:center;gap:8px;text-transform:none!important;letter-spacing:0!important;font-size:12px!important;font-weight:650!important;color:var(--text)!important;border:1px solid var(--border);border-radius:10px;padding:9px 10px;background:var(--surface-2);cursor:pointer;margin:0!important}.practice-check input,.practice-lesson-row input{accent-color:var(--accent)}.practice-check span{flex:1}.practice-check em,.practice-lesson-row em{font-size:9.5px;color:var(--text-tertiary);font-style:normal}.practice-lessons-panel{border:1px solid var(--border);border-radius:12px;max-height:250px;overflow:auto;background:var(--surface-2)}.practice-subject-block+.practice-subject-block{border-top:1px solid var(--border)}.practice-subject-line{display:flex;justify-content:space-between;align-items:center;padding:9px 11px;font-size:11.5px}.practice-lesson-row{display:flex!important;align-items:center;gap:8px;padding:8px 11px;border-top:1px solid color-mix(in srgb,var(--border) 65%,transparent);font-size:11px!important;font-weight:520!important;text-transform:none!important;letter-spacing:0!important;margin:0!important;cursor:pointer}.practice-lesson-row span{flex:1}.practice-options-grid{display:grid;grid-template-columns:1.1fr 1.5fr .7fr 1.1fr;gap:9px;margin-top:18px}.practice-options-grid select{width:100%;min-height:38px;padding:0 10px;border:1px solid var(--border);border-radius:10px;background:var(--surface-2);color:var(--text);font:inherit;font-size:11.5px}.practice-start-row{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:18px;padding-top:15px;border-top:1px solid var(--border)}.practice-hint{font-size:11px;color:var(--text-tertiary)}.practice-insight-row{padding:12px 0;border-bottom:1px solid var(--border)}.practice-insight-top{font-size:11.5px}.practice-insight-top b{font-size:11px}.practice-bar{height:5px;background:var(--surface-2);border-radius:999px;overflow:hidden;margin:7px 0 4px}.practice-bar i{display:block;height:100%;background:var(--accent);border-radius:inherit}.practice-insight-row small{font-size:9.5px;color:var(--text-tertiary)}.practice-tip{margin-top:14px;padding:11px 12px;border:1px solid var(--border);border-radius:11px;background:var(--surface-2);font-size:10.5px;line-height:1.5;color:var(--text-secondary)}.practice-tip b{display:block;color:var(--text);margin-bottom:3px}.practice-empty-mini{padding:12px;color:var(--text-tertiary);font-size:10.5px}
+.practice-session-head{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:14px;margin-bottom:13px}.practice-session-progress{max-width:500px;margin:auto;width:100%;text-align:center;font-size:10.5px;color:var(--text-tertiary)}.practice-session-progress>div{height:5px;margin-top:6px;background:var(--surface-2);border-radius:999px;overflow:hidden}.practice-session-progress i{display:block;height:100%;background:var(--accent);border-radius:inherit}.practice-session-mastery{font-size:10.5px;color:var(--text-secondary)}.practice-card{padding:24px;min-height:520px;display:flex;flex-direction:column}.practice-card-meta{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:22px}.practice-card-meta span{padding:5px 8px;border-radius:999px;background:var(--surface-2);border:1px solid var(--border);font-size:9.5px;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:.045em}.practice-card-body{max-width:800px;width:100%;margin:0 auto;flex:1;display:flex;flex-direction:column}.practice-type{font-size:10px;font-weight:850;letter-spacing:.07em;text-transform:uppercase;color:var(--accent);margin-bottom:10px}.practice-big-prompt{font-size:18px;line-height:1.65;letter-spacing:-.01em}.practice-rich .md-callout{margin-top:10px}.practice-rich .md-table-wrap{margin-top:10px}.practice-options{display:grid;gap:8px;margin-top:22px}.practice-option{display:grid;grid-template-columns:30px 1fr;align-items:start;gap:10px;text-align:left;padding:12px 13px;border:1px solid var(--border);background:var(--surface-2);border-radius:12px;color:var(--text);cursor:pointer;font:inherit}.practice-option:hover{border-color:var(--accent);transform:translateY(-1px)}.practice-option>span{width:26px;height:26px;border-radius:8px;background:var(--surface);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800}.practice-option.correct{border-color:var(--success);background:var(--success-soft)}.practice-option.wrong{border-color:var(--danger);background:var(--danger-soft)}.practice-binary{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:24px}.practice-flip-zone{margin-top:26px;padding:12px;border:1px dashed var(--border);border-radius:12px;text-align:center;color:var(--accent);font-size:12px;font-weight:700;cursor:pointer}.practice-flip-zone.shown{display:none}.practice-answer{margin-top:12px;padding:16px;border-radius:12px;background:var(--surface-2);border:1px solid var(--border)}.practice-answer-input{margin-top:18px;width:100%;box-sizing:border-box;resize:vertical;border:1px solid var(--border);border-radius:12px;background:var(--surface-2);color:var(--text);padding:12px;font:inherit;font-size:12.5px;line-height:1.55;outline:none}.practice-answer-input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}.practice-check-answer{margin-top:10px}.practice-feedback{margin-top:13px;padding:11px 12px;border-radius:10px;font-size:11.5px;line-height:1.5}.practice-feedback.good{background:var(--success-soft);color:var(--success)}.practice-feedback.bad{background:var(--danger-soft);color:var(--danger)}.practice-answer-label{font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--text-tertiary);font-weight:800;margin:16px 0 6px}.practice-actions-hint{font-size:10.5px;color:var(--text-tertiary)}.practice-session-footer{display:flex;justify-content:space-between;align-items:center;gap:14px;margin-top:28px;padding-top:14px;border-top:1px solid var(--border)}.practice-live-score{font-size:10.5px;color:var(--text-tertiary)}.practice-live-score b{color:var(--text)}
+.practice-result{padding:30px;max-width:760px;margin:50px auto;text-align:center}.practice-result-kicker{font-size:10px;font-weight:850;letter-spacing:.08em;color:var(--accent)}.practice-result h1{font-size:30px;letter-spacing:-.03em;margin:7px 0}.practice-result-score strong{display:block;font-size:54px;letter-spacing:-.05em}.practice-result-score span{font-size:11.5px;color:var(--text-tertiary)}.practice-result-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin:24px 0}.practice-result-grid>div{padding:13px;border:1px solid var(--border);border-radius:12px;background:var(--surface-2)}.practice-result-grid b{display:block;font-size:20px}.practice-result-grid span{font-size:9.5px;color:var(--text-tertiary)}.practice-result-copy{max-width:560px;margin:0 auto;color:var(--text-secondary);font-size:12px;line-height:1.6}.practice-result-actions{display:flex;justify-content:center;gap:8px;margin-top:22px;flex-wrap:wrap}
+.btn-xs{padding:5px 7px;font-size:9.5px;min-height:28px}.btn-lg{min-height:46px;font-size:13px}
+@media(max-width:900px){.practice-layout{grid-template-columns:1fr}.practice-options-grid{grid-template-columns:1fr 1fr}.practice-hero{flex-direction:column}.practice-stats{width:100%}}
+@media(max-width:620px){.practice-layout{gap:10px}.practice-hero,.practice-builder,.practice-insights,.practice-card,.practice-result{padding:16px}.practice-hero h1{font-size:23px}.practice-stats{grid-template-columns:repeat(3,1fr)}.practice-stats>div{min-width:0;padding:10px}.practice-stats strong{font-size:18px}.practice-options-grid{grid-template-columns:1fr}.practice-start-row{align-items:stretch;flex-direction:column}.practice-session-head{grid-template-columns:auto 1fr}.practice-session-mastery{display:none}.practice-card{min-height:460px}.practice-big-prompt{font-size:16px}.practice-result{margin:20px auto}.practice-result-score strong{font-size:44px}.practice-result-grid{grid-template-columns:1fr}.practice-session-footer{align-items:stretch;flex-direction:column}}
+</style>
 </head>
 <body>
 
@@ -1952,6 +1966,7 @@ const AppState = {
   theme: 'system', // light | dark | system
   sidebarCollapsed: false,
   route: { page: 'dashboard', params: {} },
+  savedNavigation: { route: { page: 'dashboard', params: {} }, scroll: 0, sidebarScroll: 0 },
   activity: [], // {time, subjectName, text}
   sidebarSectionsOpen: {},
   audioObjectUrls: new Map(),
@@ -1964,6 +1979,20 @@ const AppState = {
     this.sidebarCollapsed = localStorage.getItem('uninotes.sidebarCollapsed') === '1';
     this.activity = JSON.parse(localStorage.getItem('uninotes.activity') || '[]');
     this.rootAbsolutePath = localStorage.getItem('uninotes.rootAbsolutePath') || '';
+    try {
+      const saved = JSON.parse(localStorage.getItem('uninotes.navigation') || 'null');
+      if(saved && saved.route && typeof saved.route.page === 'string'){
+        this.savedNavigation = {
+          route: { page: saved.route.page, params: (saved.route.params && typeof saved.route.params === 'object') ? saved.route.params : {} },
+          scroll: Number.isFinite(Number(saved.scroll)) ? Math.max(0, Number(saved.scroll)) : 0,
+          sidebarScroll: Number.isFinite(Number(saved.sidebarScroll)) ? Math.max(0, Number(saved.sidebarScroll)) : 0
+        };
+        this.route = { ...this.savedNavigation.route };
+      }
+    } catch(e) {
+      this.savedNavigation = { route: { page:'dashboard', params:{} }, scroll:0, sidebarScroll:0 };
+      this.route = { page:'dashboard', params:{} };
+    }
     this.printSettings = this.loadPrintSettings();
     this.applyTheme();
   },
@@ -2053,6 +2082,17 @@ const AppState = {
     this.theme = t;
     localStorage.setItem('uninotes.theme', t);
     this.applyTheme();
+  },
+  persistNavigation(nextRoute = this.route){
+    const content = document.getElementById('content');
+    const sidebar = document.getElementById('sidebar-scroll');
+    const nav = {
+      route: { page: nextRoute.page, params: nextRoute.params && typeof nextRoute.params === 'object' ? nextRoute.params : {} },
+      scroll: content ? Math.max(0, Number(content.scrollTop) || 0) : Number(this.savedNavigation?.scroll) || 0,
+      sidebarScroll: sidebar ? Math.max(0, Number(sidebar.scrollTop) || 0) : Number(this.savedNavigation?.sidebarScroll) || 0
+    };
+    this.savedNavigation = nav;
+    try{ localStorage.setItem('uninotes.navigation', JSON.stringify(nav)); }catch(e){}
   },
   logActivity(subjectName, text){
     this.activity.unshift({ time: Date.now(), subjectName, text });
@@ -3458,6 +3498,7 @@ const SidebarView = {
     ]},
     { section: 'Strumenti', items: [
       { page:'prompts', label:'Prompt', icon:'prompt' },
+      { page:'practice', label:'Esercitati', icon:'layers', count: () => PracticeEngine.getDueCount() },
       { page:'search', label:'Ricerca', icon:'search' },
       { page:'tags', label:'Tag', icon:'tag' },
       { page:'calendar', label:'Calendario', icon:'calendar' },
@@ -3618,10 +3659,35 @@ const MobileBottomNav = {
    ROUTER
    ============================================================ */
 const Router = {
+  _routeKey(route){
+    try{ return JSON.stringify({ page: route?.page || 'dashboard', params: route?.params || {} }); }catch(e){ return String(route?.page || 'dashboard'); }
+  },
+  _captureCurrentPosition(){
+    if(!AppState?.route) return;
+    AppState.persistNavigation(AppState.route);
+  },
+  _restorePosition(targetRoute){
+    const saved = AppState.savedNavigation;
+    if(!saved || this._routeKey(saved.route) !== this._routeKey(targetRoute)) return;
+    const apply = () => {
+      const content = document.getElementById('content');
+      const sidebar = document.getElementById('sidebar-scroll');
+      if(content) content.scrollTop = Math.min(saved.scroll || 0, Math.max(0, content.scrollHeight - content.clientHeight));
+      if(sidebar) sidebar.scrollTop = Math.min(saved.sidebarScroll || 0, Math.max(0, sidebar.scrollHeight - sidebar.clientHeight));
+    };
+    requestAnimationFrame(() => requestAnimationFrame(apply));
+    // Alcune viste completano il rendering in modo asincrono: riallinea anche dopo il caricamento.
+    window.setTimeout(apply, 180);
+    window.setTimeout(apply, 600);
+  },
   go(page, params={}){
+    this._captureCurrentPosition();
     AppState.route = { page, params };
+    AppState.savedNavigation = { route: { page, params }, scroll: 0, sidebarScroll: AppState.savedNavigation?.sidebarScroll || 0 };
+    try{ localStorage.setItem('uninotes.navigation', JSON.stringify(AppState.savedNavigation)); }catch(e){}
     MobileNav.close();
     this.render();
+    this._restorePosition(AppState.route);
   },
   async resync(){
     if(AppState.isMobileFolder){
@@ -3657,6 +3723,7 @@ const Router = {
       'files-latex': FilesKindPage,
       'files-pdf': FilesKindPage,
       'prompts': PromptsPage,
+      'practice': PracticePage,
       'search': SearchPage,
       'tags': TagsPage,
       'calendar': CalendarPage,
@@ -3669,6 +3736,7 @@ const Router = {
     const view = pages[page] || DashboardPage;
     view.render(AppState.route.params);
     MobileBottomNav.sync();
+    this._restorePosition(AppState.route);
   }
 };
 
@@ -4733,6 +4801,7 @@ const LessonPage = {
     });
     content.querySelectorAll('[data-goto-tag]').forEach(el => el.addEventListener('click', () => Router.go('tags', { tag: el.dataset.gotoTag })));
     LessonKnowledgeView.bind(content, lesson);
+    document.getElementById('btn-practice-lesson')?.addEventListener('click', () => { Router.go('practice'); requestAnimationFrame(() => PracticePage.startQuick(lesson.subjectName, lesson.id)); });
     document.getElementById('btn-open-linked-calendar')?.addEventListener('click', () => Router.go('calendar'));
     document.getElementById('btn-open-calendar-link')?.addEventListener('click', () => Router.go('calendar'));
     document.getElementById('btn-prepare-latex').addEventListener('click', () => PrepareLatexModal.open(lesson));
@@ -6187,9 +6256,28 @@ const MarkdownPreview = {
     t=t.replace(/(?<!\*)\*([^*\n]+?)\*(?!\*)/g,'<em>$1</em>');
     t=t.replace(/(?<!_)_([^_\n]+?)_(?!_)/g,'<em>$1</em>');
     t=t.replace(/==([^=\n]+)==/g,'<mark class="md-mark">$1</mark>');
+    t=t.replace(/\[color:(red|orange|yellow|green|blue|purple|gray)\]([\s\S]*?)\[\/color\]/gi,(_,c,body)=>`<span class="md-color md-color-${String(c).toLowerCase()}">${body}</span>`);
     t=t.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g,'<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
     t=t.replace(/\u0000CODE(\d+)\u0000/g,(m,i)=>code[Number(i)]||'');
     return t;
+  },
+  renderInline(src){
+    const raw=String(src||''); const math=[];
+    let withMath=raw.replace(/\$\$([\s\S]*?)\$\$/g,(_,m)=>{const id=math.length;math.push({display:true,tex:m.trim()});return `\u0000MATH${id}\u0000`;});
+    withMath=withMath.replace(/\$([^$\n]+)\$/g,(_,m)=>{const id=math.length;math.push({display:false,tex:m.trim()});return `\u0000MATH${id}\u0000`;});
+    return {html:this._inline(withMath).replace(/\u0000MATH(\d+)\u0000/g,(m,id)=>`<span class="md-math" data-math-index="${id}"></span>`),math};
+  },
+  renderInlineAsync(src,container){
+    if(!container) return;
+    const rendered=this.renderInline(src); container.innerHTML=rendered.html;
+    if(!rendered.math.length) return;
+    this._loadKatex().then(katex=>{
+      container.querySelectorAll('.md-math').forEach(node=>{
+        const item=rendered.math[Number(node.dataset.mathIndex)]; if(!item) return;
+        if(katex){ try{ node.innerHTML=katex.renderToString(item.tex,{displayMode:item.display,throwOnError:false,strict:false}); return; }catch(e){} }
+        node.classList.add('md-math-fallback'); node.textContent=item.display?'$$ '+item.tex+' $$':'$ '+item.tex+' $';
+      });
+    });
   },
   render(src){
     const lines=String(src||'').replace(/\r\n?/g,'\n').split('\n');
@@ -6498,7 +6586,7 @@ const LessonKnowledgeView = {
       <section class="card lk-shell" id="lesson-knowledge-card">
         <div class="lk-head">
           <div class="lk-brand"><div class="lk-icon">${icon('layers',16)}</div><div><div class="lk-title">Lesson Knowledge</div><div class="lk-sub">Knowledge JSON · schema ${knowledgeEscText(k.schema_version||'')}</div></div></div>
-          <div class="lk-head-actions"><button class="btn btn-sm" id="btn-copy-lesson-knowledge">${icon('copy',14)} Copia JSON</button><button class="btn btn-sm" id="btn-view-lesson-knowledge">Visualizza JSON</button><button class="btn btn-sm" id="btn-edit-lesson-knowledge">${icon('edit',14)} Modifica JSON</button></div>
+          <div class="lk-head-actions"><button class="btn btn-sm btn-primary" id="btn-practice-lesson">${icon('play',13)} Esercitati</button><button class="btn btn-sm" id="btn-copy-lesson-knowledge">${icon('copy',14)} Copia JSON</button><button class="btn btn-sm" id="btn-view-lesson-knowledge">Visualizza JSON</button><button class="btn btn-sm" id="btn-edit-lesson-knowledge">${icon('edit',14)} Modifica JSON</button></div>
         </div>
         <div class="lk-stat-row">${counts.map(([label,n])=>`<div class="lk-stat"><span class="lk-stat-n">${n}</span><span class="lk-stat-l">${label}</span></div>`).join('')}</div>
         <div class="lk-summary-compact"><div><div class="lk-mini-title">In breve</div><div class="lk-compact-text">${knowledgeEscText(k.summary?.short||'')}</div></div><div><div class="lk-mini-title">Sintesi</div><div class="lk-compact-text">${knowledgeEscText(k.summary?.medium||'')}</div></div></div>
@@ -6560,6 +6648,49 @@ const LessonKnowledgeView = {
     if(!k){ card.querySelector('#btn-import-lesson-knowledge')?.addEventListener('click',()=>LessonKnowledgeModal.open(lesson)); return; }
     const summary=card.querySelector('[id^="lk-summary-"]');
     knowledgeMarkdownInto(summary,k.markdown_summary||k.summary?.detailed||k.summary?.medium||k.summary?.short||'');
+
+    // Tutti i contenuti provenienti dal Knowledge JSON vengono interpretati come Markdown.
+    // Il renderer applica grassetto, corsivo, evidenziazioni, callout, tabelle, formule e colori semantici.
+    const renderMdBlock=(el,source)=>{ if(!el) return; try{ MarkdownPreview.renderAsync(String(source??''),el); el.classList.add('lk-md'); }catch(e){ el.textContent=String(source??''); } };
+    const renderMdInline=(el,source)=>{ if(!el) return; try{ MarkdownPreview.renderInlineAsync(String(source??''),el); el.classList.add('lk-md-inline'); }catch(e){ el.textContent=String(source??''); } };
+    const blockSelectors=['.lk-summary-compact .lk-compact-text','.lk-chip','.lk-item-text','.lk-topic .lk-item-text','.lk-concept-chip','.lk-study-point','.lk-study-step > div','.lk-proof > div','.lk-answer-reveal > div','.lk-quiz-question','.lk-sublist','.lk-md-edge-description'];
+    card.querySelectorAll(blockSelectors.join(',')).forEach(el=>{
+      if(el.closest('.lk-summary, .lk-summary-compact') && el.classList.contains('lk-md')) return;
+      const source=el.textContent.trim(); if(source) renderMdBlock(el,source);
+    });
+    card.querySelectorAll('.lk-item-title,.lk-topic-head .lk-item-title,.lk-toc-item > div,.lk-edge-rel').forEach(el=>{
+      const source=el.textContent.trim(); if(source) renderMdInline(el,source);
+    });
+    card.querySelectorAll('.lk-toc-item > div').forEach(el=>{
+      el.classList.add('lk-md-toc-title');
+      if(!el.querySelector('p')) el.style.margin='0';
+    });
+    card.querySelectorAll('.lk-option').forEach(btn=>{
+      const source=btn.textContent.trim();
+      if(source) renderMdBlock(btn,source);
+    });
+    card.querySelectorAll('.lk-formula span').forEach(el=>{
+      const source=el.textContent.trim();
+      if(source) renderMdBlock(el,`$$\n${source.replace(/^\$\$\s*|\s*\$\$$/g,'')}\n$$`);
+    });
+    card.querySelectorAll('.lk-flashcard-face').forEach(face=>{
+      const content=Array.from(face.children).find(x=>x.classList?.contains('lk-flashcard-label'))?.nextElementSibling;
+      if(content && !content.classList.contains('lk-badge')) renderMdBlock(content,content.textContent.trim());
+    });
+    card.querySelectorAll('.lk-vars').forEach(vars=>{
+      const lines=Array.from(vars.children).map(x=>x.textContent.trim()).filter(Boolean);
+      if(lines.length){
+        vars.innerHTML='';
+        renderMdBlock(vars,`**Variabili**\n\n${lines.map(v=>`- ${v}`).join('\n')}`);
+      }
+    });
+    card.querySelectorAll('.lk-sublist').forEach(el=>{
+      if(!el.dataset.mdHydrated){
+        const children=Array.from(el.querySelectorAll(':scope > div')).map(x=>x.textContent.trim()).filter(Boolean);
+        if(children.length){ renderMdBlock(el,`**${el.firstChild?.textContent?.trim()||'Dettagli'}**\n\n${children.map(v=>`- ${v.replace(/^•\s*/,'')}`).join('\n')}`); }
+        el.dataset.mdHydrated='1';
+      }
+    });
     card.querySelector('#btn-copy-lesson-knowledge')?.addEventListener('click',()=>LessonKnowledge.copy(k));
     card.querySelector('#btn-view-lesson-knowledge')?.addEventListener('click',()=>LessonKnowledgeModal.open(lesson,{viewOnly:true}));
     card.querySelector('#btn-edit-lesson-knowledge')?.addEventListener('click',()=>LessonKnowledgeModal.open(lesson));
@@ -6679,6 +6810,312 @@ const LatexPreview = {
   }
 };
 
+
+/* ============================================================
+   PRACTICE ENGINE — adattivo, locale, alimentato dal Lesson Knowledge JSON
+   ============================================================ */
+const PracticeEngine = {
+  storageKey: 'uninotes.practice.v1',
+  state: null,
+  init(){
+    try{
+      const raw = JSON.parse(localStorage.getItem(this.storageKey) || '{}');
+      this.state = raw && typeof raw==='object' ? raw : {};
+    }catch(e){ this.state = {}; }
+  },
+  ensure(){ if(!this.state) this.init(); return this.state; },
+  save(){ try{ localStorage.setItem(this.storageKey, JSON.stringify(this.state||{})); }catch(e){ console.warn('Practice stats save failed',e); } },
+  key(kind, subjectName, lesson, itemId, extra=''){
+    return [kind, subjectName, lesson?.id||'', itemId||'', extra].map(x=>String(x).replace(/[|\\]/g,'_')).join('|');
+  },
+  getStats(key){
+    const s=this.ensure();
+    if(!s[key]) s[key]={attempts:0,correct:0,wrong:0,streak:0,bestStreak:0,ease:2.5,dueAt:0,lastAt:0,lastResult:null,lastMs:0};
+    return s[key];
+  },
+  record(key, result, ms=0, quality=null){
+    const st=this.getStats(key);
+    const now=Date.now();
+    st.attempts++;
+    st.lastAt=now; st.lastMs=Number.isFinite(ms)?Math.max(0,Math.round(ms)):0; st.lastResult=result;
+    if(result==='correct'){
+      st.correct++; st.streak++; st.bestStreak=Math.max(st.bestStreak||0,st.streak);
+    }else{
+      st.wrong++; st.streak=0;
+    }
+    let q=quality;
+    if(q==null) q=result==='correct'?4:1;
+    q=Math.max(0,Math.min(5,Number(q)||0));
+    let ease=Number(st.ease)||2.5;
+    ease += 0.08 - (5-q)*(0.08 + (5-q)*0.02);
+    st.ease=Math.max(1.3,Math.min(3.1,ease));
+    const days = result==='correct'
+      ? (q>=4 ? Math.min(30, Math.max(1, Math.round((st.streak<=1?1:st.streak<=3?3:7) * st.ease/2.5))) : 1)
+      : (q===2 ? 0.0416667 : 0.0034722); // ~1h / ~5min
+    st.dueAt=now + days*86400000;
+    this.save();
+    return st;
+  },
+  mastery(st){
+    if(!st || !st.attempts) return 0;
+    const accuracy=st.correct/st.attempts;
+    const recency=st.lastAt ? Math.max(0,1-Math.min(1,(Date.now()-st.lastAt)/(21*86400000))) : 0;
+    const due = st.dueAt && st.dueAt>Date.now() ? Math.min(1,(st.dueAt-Date.now())/(30*86400000)) : 0;
+    const base=Math.max(0,Math.min(1,accuracy*0.72 + Math.min(1,st.streak/5)*0.18 + recency*0.10));
+    return Math.round(Math.max(0,Math.min(1,base - due*0.08))*100);
+  },
+  weight(st, mode='smart'){
+    const mastery=this.mastery(st);
+    let w=1 + (100-mastery)/28;
+    if(st?.lastResult==='wrong') w+=2.5;
+    if(st?.dueAt && st.dueAt<=Date.now()) w+=1.8;
+    if(mode==='weak') w+= (100-mastery)/18;
+    if(mode==='new') w = st?.attempts ? Math.max(.15,1-(st.attempts/4)) : 4;
+    if(mode==='weak' && st?.attempts===0) w*=0.18;
+    return Math.max(.1,w);
+  },
+  getDueCount(){
+    if(!this.state) this.init();
+    const subj=currentSemesterSubjects();
+    let n=0;
+    for(const s of subj) for(const l of (s.lessons||[])){
+      const k=l.lessonKnowledge; if(!k) continue;
+      for(const item of this.collectLessonItems(s,l)){
+        const st=this.state[this.key(item.kind,s.name,l,item.id,item.extra||'')];
+        if(st?.attempts && st.dueAt && st.dueAt<=Date.now()) n++;
+      }
+    }
+    return n;
+  },
+  collectLessonItems(subject, lesson){
+    const k=lesson?.lessonKnowledge; if(!k) return [];
+    const out=[]; const push=(kind,id,data,extra='')=>{ if(id && data) out.push({kind,id,data,subject:subject.name,lessonId:lesson.id,extra}); };
+    const q=k.quiz||{};
+    (q.multiple_choice||[]).forEach(x=>push('mc',x.id,x));
+    (q.true_false||[]).forEach(x=>push('tf',x.id,x));
+    (q.open_questions||[]).forEach(x=>push('open',x.id,x));
+    (q.formula_application||[]).forEach(x=>push('formula',x.id,x));
+    (q.conceptual||[]).forEach(x=>push('concept',x.id,x));
+    (k.flashcards||[]).forEach(x=>push('fc',x.id,x));
+    // Fallback utile: se l'AI esterna non ha creato flashcard/quiz, usiamo definizioni e concetti già presenti.
+    (k.definitions||[]).forEach(x=>push('def',x.id,x));
+    (k.key_concepts||[]).forEach(x=>push('concept-card',x.id,x));
+    return out;
+  },
+  availableItems(filters){
+    const subjects=filters?.subjects?.length ? currentSemesterSubjects().filter(s=>filters.subjects.includes(s.name)) : currentSemesterSubjects();
+    const lessonIds=filters?.lessons||[];
+    const out=[];
+    for(const s of subjects){
+      for(const l of s.lessons||[]){
+        if(lessonIds.length && !lessonIds.includes(`${s.name}::${l.id}`)) continue;
+        if(!l.lessonKnowledge) continue;
+        out.push(...this.collectLessonItems(s,l));
+      }
+    }
+    return out;
+  },
+  selectSession(filters){
+    const all=this.availableItems(filters);
+    if(!all.length) return [];
+    const mode=filters?.mode||'smart';
+    const type=filters?.content||'mixed';
+    let pool=all.filter(item=> type==='mixed' || type===this.contentType(item));
+    if(!pool.length) pool=all;
+    const scored=pool.map(item=>{
+      const st=this.getStats(this.key(item.kind,item.subject,findLesson(item.subject,item.lessonId),item.id,item.extra||''));
+      let score=this.weight(st,mode);
+      if(mode==='review' && st.lastAt && st.lastResult==='correct' && st.dueAt>Date.now()) score*=0.4;
+      if(mode==='weak') score*=1+(100-this.mastery(st))/70;
+      return {...item,score,rand:Math.random()};
+    });
+    const size=Math.max(1,Math.min(50,Number(filters?.size)||10));
+    const selected=[];
+    const remaining=[...scored];
+    const mixed=filters?.mix===true;
+    while(remaining.length && selected.length<size){
+      let total=remaining.reduce((n,x)=>n+x.score,0); let r=Math.random()*total; let idx=remaining.length-1;
+      for(let i=0;i<remaining.length;i++){ r-=remaining[i].score; if(r<=0){idx=i;break;} }
+      const picked=remaining.splice(idx,1)[0]; selected.push(picked);
+    }
+    if(!mixed){
+      selected.sort((a,b)=> a.subject.localeCompare(b.subject,'it') || (findLesson(a.subject,a.lessonId)?.number||0)-(findLesson(b.subject,b.lessonId)?.number||0));
+    }
+    return selected;
+  },
+  contentType(item){
+    if(['fc'].includes(item.kind)) return 'flashcards';
+    if(['mc','tf','open','formula','concept'].includes(item.kind)) return 'quiz';
+    return 'cards';
+  },
+  statsFor(item){
+    return this.getStats(this.key(item.kind,item.subject,findLesson(item.subject,item.lessonId),item.id,item.extra||''));
+  },
+  reset(){ this.state={}; this.save(); }
+};
+PracticeEngine.init();
+
+function practiceMd(host,text){ if(host) knowledgeMarkdownInto(host,text||''); }
+
+const PracticePage = {
+  session: null,
+  render(){
+    TopbarView.render(`<b>Esercitati</b>`, `<button class="btn btn-primary btn-sm" id="practice-start-top">${icon('play',14)} Inizia sessione</button>`);
+    const content=document.getElementById('content');
+    const subjects=currentSemesterSubjects();
+    const ctx=getCurrentSemesterContext();
+    if(!subjects.length){
+      content.innerHTML=`<div class="page"><div class="empty-state card">${icon('layers',34)}<div class="empty-state-title">Nessuna materia nel periodo attuale</div><div class="empty-state-sub">Esercitati utilizza solo le materie del periodo attuale.</div></div></div>`;
+      return;
+    }
+    if(this.session?.active){ this.renderSession(content); return; }
+    const due=this.buildDueSummary(subjects);
+    content.innerHTML=`
+      <div class="page practice-page">
+        <div class="practice-hero card">
+          <div class="practice-hero-copy"><div class="practice-eyebrow">SMART PRACTICE · ${esc(semesterLabel(ctx.semester))}</div><h1>Impara facendo.</h1><p>Uni Notes usa le tue risposte, gli errori e la frequenza dei ripassi per riportarti soprattutto su ciò che sai meno.</p></div>
+          <div class="practice-stats"><div><strong>${due.due}</strong><span>da ripassare</span></div><div><strong>${due.weak}</strong><span>aree deboli</span></div><div><strong>${due.known}</strong><span>conoscenze solide</span></div></div>
+        </div>
+        <div class="practice-layout">
+          <section class="card practice-builder">
+            <div class="practice-section-head"><div><div class="practice-title">Costruisci il ripasso</div><div class="practice-sub">Decidi esattamente cosa vuoi allenare.</div></div><button class="btn btn-sm" id="practice-all-current">${icon('check',13)} Tutto il periodo</button></div>
+            <div class="practice-field"><label>Materie</label><div class="practice-check-grid" id="practice-subjects">${subjects.map((s,i)=>`<label class="practice-check"><input type="checkbox" data-p-subject value="${esc(s.name)}" ${i===0?'checked':''}><span>${esc(s.name)}</span><em>${(s.lessons||[]).length}</em></label>`).join('')}</div></div>
+            <div class="practice-field"><div class="practice-label-row"><label>Lezioni</label><button class="btn btn-xs" id="practice-lessons-current">Seleziona lezioni</button></div><div id="practice-lessons" class="practice-lessons-panel"></div></div>
+            <div class="practice-options-grid">
+              <div><label>Contenuto</label><select id="practice-content"><option value="mixed">Tutto</option><option value="quiz">Quiz</option><option value="flashcards">Flashcard</option><option value="cards">Concetti e definizioni</option></select></div>
+              <div><label>Strategia</label><select id="practice-mode"><option value="smart">🧠 Smart: soprattutto ciò che sai meno</option><option value="weak">🎯 Solo punti deboli</option><option value="review">🔁 Ripasso programmato</option><option value="new">✨ Soprattutto contenuti nuovi</option></select></div>
+              <div><label>Numero domande</label><select id="practice-size"><option>10</option><option>15</option><option>20</option><option>30</option><option>50</option></select></div>
+              <div><label>Modalità</label><select id="practice-mix"><option value="together">Mescola tutto insieme</option><option value="grouped">Una materia alla volta</option></select></div>
+            </div>
+            <div class="practice-start-row"><div class="practice-hint" id="practice-builder-hint">Seleziona almeno una materia.</div><button class="btn btn-primary" id="practice-start">${icon('play',15)} Inizia ripasso intelligente</button></div>
+          </section>
+          <aside class="card practice-insights">
+            <div class="practice-title">Il tuo andamento</div><div class="practice-sub">La selezione si adatta alle tue prestazioni.</div>
+            ${due.rows.map(r=>`<div class="practice-insight-row"><div class="practice-insight-top"><span>${esc(r.name)}</span><b>${r.mastery}%</b></div><div class="practice-bar"><i style="width:${r.mastery}%"></i></div><small>${r.label}</small></div>`).join('') || '<div class="practice-empty-mini">Inizia una sessione per costruire il tuo profilo.</div>'}
+            <div class="practice-tip"><b>Come funziona</b><div>Le risposte sbagliate tornano più spesso. Le risposte corrette vengono riprogrammate più avanti. La memoria resta sul tuo dispositivo.</div></div>
+          </aside>
+        </div>
+      </div>`;
+    this.bindBuilder();
+    document.getElementById('practice-start-top')?.addEventListener('click',()=>this.startFromBuilder());
+  },
+  buildDueSummary(subjects){
+    let due=0,weak=0,known=0; const rows=[];
+    for(const s of subjects){
+      const items=this.availableItems({subjects:[s.name]});
+      if(!items.length) continue;
+      let totalM=0, count=0, localDue=0;
+      for(const item of items){ const st=PracticeEngine.statsFor(item); const m=PracticeEngine.mastery(st); totalM+=m; count++; if(st.attempts&&st.dueAt<=Date.now()) localDue++; }
+      const mastery=Math.round(totalM/count); if(localDue) due+=localDue; if(mastery<60) weak+=1; else if(mastery>=80) known+=1;
+      rows.push({name:s.name,mastery,label:localDue?`${localDue} elementi da ripassare`:mastery<60?'Serve più allenamento':'Andamento solido'});
+    }
+    rows.sort((a,b)=>a.mastery-b.mastery); return {due,weak,known,rows:rows.slice(0,8)};
+  },
+  selectedSubjects(){ return [...document.querySelectorAll('[data-p-subject]:checked')].map(x=>x.value); },
+  refreshLessons(){
+    const host=document.getElementById('practice-lessons'); if(!host) return;
+    const names=this.selectedSubjects(); const subs=currentSemesterSubjects().filter(s=>names.includes(s.name));
+    if(!subs.length){ host.innerHTML='<div class="practice-empty-mini">Seleziona una materia per vedere le lezioni.</div>'; return; }
+    const html=subs.map(s=>`<div class="practice-subject-block"><div class="practice-subject-line"><b>${esc(s.name)}</b><button class="btn btn-xs" data-p-select-subject="${esc(s.name)}">${icon('check',11)} Tutte</button></div>${(s.lessons||[]).filter(l=>l.lessonKnowledge).map(l=>`<label class="practice-lesson-row"><input type="checkbox" data-p-lesson value="${esc(s.name+'::'+l.id)}"><span><b>Lezione ${esc(l.number??'')}</b> · ${esc(l.title||'')}</span><em>${(l.lessonKnowledge.flashcards||[]).length+(l.lessonKnowledge.quiz?.multiple_choice||[]).length+(l.lessonKnowledge.quiz?.true_false||[]).length} items</em></label>`).join('') || '<div class="practice-empty-mini">Nessun Lesson Knowledge disponibile.</div>'}</div>`).join('');
+    host.innerHTML=html;
+    host.querySelectorAll('[data-p-select-subject]').forEach(btn=>btn.addEventListener('click',()=>{ const sub=btn.dataset.pSelectSubject; host.querySelectorAll(`[data-p-lesson][value^="${CSS.escape(sub)}::"]`).forEach(x=>x.checked=true); this.updateBuilderHint(); }));
+    host.querySelectorAll('[data-p-lesson]').forEach(x=>x.addEventListener('change',()=>this.updateBuilderHint()));
+  },
+  bindBuilder(){
+    document.querySelectorAll('[data-p-subject]').forEach(x=>x.addEventListener('change',()=>{this.refreshLessons();this.updateBuilderHint();}));
+    this.refreshLessons(); this.updateBuilderHint();
+    document.getElementById('practice-all-current')?.addEventListener('click',()=>{document.querySelectorAll('[data-p-subject]').forEach(x=>x.checked=true);this.refreshLessons();document.querySelectorAll('[data-p-lesson]').forEach(x=>x.checked=true);this.updateBuilderHint();});
+    document.getElementById('practice-lessons-current')?.addEventListener('click',()=>{this.refreshLessons();document.querySelectorAll('[data-p-lesson]').forEach(x=>x.checked=true);this.updateBuilderHint();});
+    document.getElementById('practice-start')?.addEventListener('click',()=>this.startFromBuilder());
+  },
+  updateBuilderHint(){
+    const names=this.selectedSubjects(); const lessonIds=[...document.querySelectorAll('[data-p-lesson]:checked')].map(x=>x.value); const items=PracticeEngine.availableItems({subjects:names,lessons:lessonIds});
+    const hint=document.getElementById('practice-builder-hint'); if(hint) hint.textContent=items.length?`${items.length} contenuti disponibili · la sessione darà priorità a ciò che sai meno.`:'Nessun contenuto disponibile nelle selezioni.';
+  },
+  startQuick(subjectName,lessonId){
+    const subjects=currentSemesterSubjects();
+    if(!subjects.some(s=>s.name===subjectName)){ Toast.error('La materia non appartiene al periodo attuale.'); return; }
+    const lessons=[`${subjectName}::${lessonId}`];
+    const queue=PracticeEngine.selectSession({subjects:[subjectName],lessons,size:10,content:'mixed',mode:'smart',mix:true});
+    if(!queue.length){ Toast.error('Questa lezione non contiene ancora un Lesson Knowledge utilizzabile per il ripasso.'); return; }
+    this.session={active:true,queue,index:0,startedAt:Date.now(),correct:0,wrong:0,results:[],filters:{subjects:[subjectName],lessons,size:10,content:'mixed',mode:'smart',mix:true}};
+    this.render();
+  },
+  startFromBuilder(){
+    const subjects=this.selectedSubjects();
+    const lessons=[...document.querySelectorAll('[data-p-lesson]:checked')].map(x=>x.value);
+    const size=parseInt(document.getElementById('practice-size')?.value||'10',10);
+    const content=document.getElementById('practice-content')?.value||'mixed';
+    const mode=document.getElementById('practice-mode')?.value||'smart';
+    const mix=document.getElementById('practice-mix')?.value==='together';
+    if(!subjects.length){Toast.error('Seleziona almeno una materia.');return;}
+    if(lessons.length===0){
+      // Se l'utente non seleziona singole lezioni, includiamo tutte le lezioni con Knowledge nelle materie scelte.
+    }
+    const queue=PracticeEngine.selectSession({subjects,lessons,size,content,mode,mix});
+    if(!queue.length){Toast.error('Non ci sono contenuti Lesson Knowledge disponibili per questa selezione.');return;}
+    this.session={active:true,queue,index:0,startedAt:Date.now(),correct:0,wrong:0,results:[],filters:{subjects,lessons,size,content,mode,mix}};
+    this.render();
+  },
+  renderSession(content){
+    const s=this.session, item=s.queue[s.index];
+    if(!item){ this.renderSummary(content); return; }
+    const lesson=findLesson(item.subject,item.lessonId); const st=PracticeEngine.statsFor(item); const mastery=PracticeEngine.mastery(st);
+    content.innerHTML=`<div class="page practice-page"><div class="practice-session-head"><button class="btn btn-sm" id="practice-exit">${icon('arrowLeft',14)} Esci</button><div class="practice-session-progress"><span>${s.index+1} / ${s.queue.length}</span><div><i style="width:${Math.round((s.index/s.queue.length)*100)}%"></i></div></div><div class="practice-session-mastery">${mastery}% padronanza</div></div><section class="card practice-card"><div class="practice-card-meta"><span>${esc(item.subject)}</span><span>Lezione ${esc(lesson?.number??'')} · ${esc(lesson?.title||'')}</span><span>${esc(item.kind)}</span></div><div id="practice-card-body"></div><div class="practice-session-footer"><div class="practice-live-score"><b>${s.correct}</b> corrette · <b>${s.wrong}</b> da rivedere</div><div id="practice-actions"></div></div></section></div>`;
+    document.getElementById('practice-exit')?.addEventListener('click',()=>{this.session=null;this.render();});
+    this.renderItem(item);
+  },
+  renderItem(item){
+    const host=document.getElementById('practice-card-body'), actions=document.getElementById('practice-actions');
+    if(!host||!actions)return;
+    const x=item.data, started=Date.now(); this.session.itemStartedAt=started; this.session.itemAnswered=false;
+    const md=(text,cls='')=>`<div class="practice-rich ${cls}" data-md></div>`;
+    if(item.kind==='fc'){
+      host.innerHTML=`<div class="practice-type">Flashcard</div><div class="practice-big-prompt">${md(x.front)}</div><div class="practice-flip-zone" id="practice-flip">Mostra risposta ${icon('chevronDown',15)}</div><div id="practice-back" hidden>${md(x.back,'practice-answer')}</div>`;
+      practiceMd(host.querySelector('[data-md]'),x.front);
+      const back=host.querySelector('#practice-back'); if(back){ practiceMd(back.querySelector('[data-md]'),x.back); }
+      host.querySelector('#practice-flip').addEventListener('click',()=>{const b=host.querySelector('#practice-back');b.hidden=false;host.querySelector('#practice-flip').textContent='Valuta la risposta';host.querySelector('#practice-flip').classList.add('shown');actions.innerHTML=`<button class="btn" data-p-rate="again">Ancora</button><button class="btn" data-p-rate="hard">Difficile</button><button class="btn btn-primary" data-p-rate="good">La sapevo</button>`;this.bindRate(item);});
+      actions.innerHTML='<span class="practice-actions-hint">Pensa alla risposta, poi mostra il retro.</span>';
+      return;
+    }
+    if(item.kind==='mc'){
+      host.innerHTML=`<div class="practice-type">Scelta multipla</div><div class="practice-big-prompt" data-md></div><div class="practice-options">${(x.options||[]).map(o=>`<button class="practice-option" data-p-option="${esc(o.id)}"><span>${esc(o.id)}</span><div data-md></div></button>`).join('')}</div><div id="practice-feedback"></div>`;
+      practiceMd(host.querySelector('.practice-big-prompt'),x.question); host.querySelectorAll('.practice-option').forEach((b,i)=>practiceMd(b.querySelector('[data-md]'),x.options?.[i]?.text||''));
+      host.querySelectorAll('[data-p-option]').forEach(btn=>btn.addEventListener('click',()=>{if(this.session.itemAnswered)return; const ok=String(btn.dataset.pOption)===String(x.correct_answer);this.answer(item,ok);host.querySelectorAll('[data-p-option]').forEach(b=>{b.disabled=true;if(String(b.dataset.pOption)===String(x.correct_answer))b.classList.add('correct');});if(!ok)btn.classList.add('wrong');const fb=host.querySelector('#practice-feedback');fb.innerHTML=`<div class="practice-feedback ${ok?'good':'bad'}" data-md></div>`;practiceMd(fb.querySelector('[data-md]'),x.explanation||'');this.nextButton();}));
+      return;
+    }
+    if(item.kind==='tf'){
+      host.innerHTML=`<div class="practice-type">Vero o falso</div><div class="practice-big-prompt" data-md></div><div class="practice-binary"><button class="btn btn-lg" data-p-tf="true">Vero</button><button class="btn btn-lg" data-p-tf="false">Falso</button></div><div id="practice-feedback"></div>`;
+      practiceMd(host.querySelector('.practice-big-prompt'),x.question);host.querySelectorAll('[data-p-tf]').forEach(b=>b.addEventListener('click',()=>{if(this.session.itemAnswered)return;const ok=String(x.correct_answer)===b.dataset.pTf;this.answer(item,ok);host.querySelectorAll('[data-p-tf]').forEach(x=>x.disabled=true);const fb=host.querySelector('#practice-feedback');fb.innerHTML=`<div class="practice-feedback ${ok?'good':'bad'}" data-md></div>`;practiceMd(fb.querySelector('[data-md]'),x.explanation||'');this.nextButton();}));return;
+    }
+    // Open, formula, conceptual e fallback cards
+    const question = x.question || (item.kind==='def'?x.term:x.name);
+    const answer = x.answer ?? x.expected_answer ?? x.definition ?? x.description ?? x.back ?? '';
+    host.innerHTML=`<div class="practice-type">${item.kind==='def'?'Definizione':item.kind==='concept-card'?'Concetto':'Domanda aperta'}</div><div class="practice-big-prompt" data-md></div><textarea id="practice-free-answer" class="practice-answer-input" rows="5" placeholder="Scrivi la tua risposta…"></textarea><div class="practice-check-answer"><button class="btn btn-primary" id="practice-reveal">Mostra risposta</button></div><div id="practice-revealed" hidden><div class="practice-answer-label">Risposta di riferimento</div><div class="practice-rich" data-md></div></div>`;
+    practiceMd(host.querySelector('.practice-big-prompt'),question);
+    const reveal=host.querySelector('#practice-reveal'); reveal.addEventListener('click',()=>{if(this.session.itemAnswered)return; const ref=host.querySelector('#practice-revealed');ref.hidden=false;practiceMd(ref.querySelector('[data-md]'),answer);reveal.disabled=true;actions.innerHTML=`<button class="btn" data-p-rate="again">Non la sapevo</button><button class="btn" data-p-rate="hard">Quasi</button><button class="btn btn-primary" data-p-rate="good">La sapevo</button>`;this.bindRate(item);});
+    actions.innerHTML='<span class="practice-actions-hint">Scrivi senza guardare, poi confronta.</span>';
+  },
+  bindRate(item){
+    document.querySelectorAll('[data-p-rate]').forEach(b=>b.addEventListener('click',()=>{if(this.session.itemAnswered)return;const q=b.dataset.pRate;this.answer(item,q==='good',q==='good'?4:q==='hard'?2:0);this.nextButton();}));
+  },
+  answer(item,ok,quality=null){
+    this.session.itemAnswered=true; if(ok)this.session.correct++;else this.session.wrong++;
+    const ms=Date.now()-this.session.itemStartedAt; PracticeEngine.record(PracticeEngine.key(item.kind,item.subject,findLesson(item.subject,item.lessonId),item.id,item.extra||''),ok?'correct':'wrong',ms,quality);
+  },
+  nextButton(){
+    const a=document.getElementById('practice-actions'); if(!a)return;
+    a.innerHTML=`<button class="btn btn-primary" id="practice-next">${this.session.index===this.session.queue.length-1?'Termina sessione':'Continua'} ${icon('chevronRight',14)}</button>`;
+    document.getElementById('practice-next')?.addEventListener('click',()=>{this.session.index++;this.render();});
+  },
+  renderSummary(content){
+    const s=this.session; const total=s.correct+s.wrong; const pct=total?Math.round(s.correct/total*100):0;
+    content.innerHTML=`<div class="page practice-page"><section class="card practice-result"><div class="practice-result-kicker">SESSIONE COMPLETATA</div><h1>${pct>=80?'Ottimo ripasso.':pct>=60?'Buon lavoro.':'Abbiamo trovato cosa allenare.'}</h1><div class="practice-result-score"><strong>${pct}%</strong><span>${s.correct} corrette · ${s.wrong} da rivedere</span></div><div class="practice-result-grid"><div><b>${s.queue.length}</b><span>contenuti allenati</span></div><div><b>${Math.round((Date.now()-s.startedAt)/60000)}</b><span>minuti</span></div><div><b>${PracticeEngine.getDueCount()}</b><span>ripassi in coda</span></div></div><div class="practice-result-copy"><p>Il profilo di ripasso è stato aggiornato: le risposte sbagliate avranno più peso nelle prossime sessioni, mentre quelle corrette verranno riproposte più avanti.</p></div><div class="practice-result-actions"><button class="btn btn-primary" id="practice-repeat-weak">${icon('refresh',14)} Ripassa gli errori</button><button class="btn" id="practice-result-home">Torna a Esercitati</button></div></section></div>`;
+    document.getElementById('practice-repeat-weak')?.addEventListener('click',()=>{const f={...s.filters,mode:'weak'};const queue=PracticeEngine.selectSession({...f,size:Math.max(6,Math.min(20,s.queue.length))});if(!queue.length){Toast.info('Non ci sono ancora contenuti deboli sufficienti.');return;}this.session={active:true,queue,index:0,startedAt:Date.now(),correct:0,wrong:0,results:[],filters:f};this.render();});
+    document.getElementById('practice-result-home')?.addEventListener('click',()=>{this.session=null;this.render();});
+  }
+};
+
 /* ============================================================
    PROMPT MANAGER
    ============================================================ */
@@ -6690,7 +7127,8 @@ Genera una rappresentazione strutturata, ricca e fedele della lezione a partire 
 IMPORTANTE
 - Questo output verrà importato direttamente in Uni Notes.
 - Devi produrre ESCLUSIVAMENTE un singolo oggetto JSON valido.
-- NON usare Markdown e NON racchiudere il JSON in un blocco di codice.
+- Il JSON deve rimanere JSON puro e non deve essere racchiuso in un blocco di codice.
+- ATTENZIONE: Markdown è obbligatorio ALL'INTERNO delle stringhe testuali del JSON; il divieto riguarda solo testo fuori dal JSON.
 - NON aggiungere testo prima o dopo il JSON.
 - NON inserire commenti JSON.
 - NON inventare informazioni che non siano supportate dai materiali.
@@ -6712,8 +7150,11 @@ Tutti i contenuti testuali del JSON devono essere nella lingua indicata da lesso
 
 REGOLE DI QUALITÀ
 1. short, medium e detailed devono essere coerenti ma avere profondità diverse.
-2. markdown_summary deve essere pronto per il frontend e supportare titoli, sottotitoli, liste, grassetto, corsivo, formule inline $...$ e formule block $$...$$, oltre ai callout > [!NOTE], > [!WARNING], > [!KEY], > [!TIP], > [!EXAMPLE] quando utili.
-3. table_of_contents deve essere gerarchico e usare ID stabili, level numerico e parent_id quando c'è un genitore.
+2. TUTTE le stringhe destinate alla lettura umana devono essere scritte in Markdown compatibile con Uni Notes: summary.short/medium/detailed, markdown_summary, obiettivi, titoli e descrizioni di topics, concetti, definizioni, descrizioni delle formule, teoremi, proprietà, esempi, esercizi, errori comuni, prerequisiti, connections, domande/risposte/spiegazioni dei quiz, front/back delle flashcard, study_plan, key_takeaways ed exam_relevance.
+3. markdown_summary deve supportare titoli, sottotitoli, liste, **grassetto**, *corsivo*, tabelle Markdown, formule inline $...$ e formule block $$...$$, oltre ai callout > [!NOTE], > [!WARNING], > [!KEY], > [!TIP], > [!EXAMPLE].
+4. Per i colori usa esclusivamente questa estensione Markdown sicura: [color:red]testo[/color], [color:orange]testo[/color], [color:yellow]testo[/color], [color:green]testo[/color], [color:blue]testo[/color], [color:purple]testo[/color], [color:gray]testo[/color]. Usala con moderazione.
+5. Usa tabelle Markdown quando rendono più leggibili confronti, proprietà, variabili, classificazioni o riepiloghi.
+6. table_of_contents deve essere gerarchico e usare ID stabili, level numerico e parent_id quando c'è un genitore.
 4. topics deve contenere argomenti e sottoargomenti reali, con ID stabili e parent_id quando utile.
 5. key_concepts, definitions, formulas, theorems, properties, examples, exercises, common_mistakes e flashcards devono avere ID stabili e topic_id quando possibile.
 6. formulas: latex contiene la formula, mentre variables contiene symbol, name e meaning; unit è opzionale.
@@ -6731,6 +7172,12 @@ REGOLE DI QUALITÀ
 18. study_plan deve proporre un ordine di studio coerente con la lezione; estimated_minutes è un numero oppure null.
 19. exam_relevance può contenere stringhe oppure oggetti con item/topic_id e importance = low, medium, high o critical.
 20. search_keywords e tags devono essere specifici della lezione.
+21. Flashcard: front e back devono essere Markdown ricco. Possono contenere **grassetto**, ==evidenziazione==, [color:blue]colore semantico[/color], formule e piccole tabelle quando utili. Non devono essere copie meccaniche delle definizioni.
+22. Quiz: question, option.text, answer/expected_answer ed explanation devono essere Markdown e possono usare formule, tabelle, callout e colori semantici.
+23. Tutte le sezioni devono usare Markdown nei valori testuali invece di testo piatto. Gli ID, gli enum, i riferimenti e schema_version restano valori strutturali semplici.
+24. Non inserire HTML arbitrario, CSS, script o dati inventati.
+25. Per formulas.latex usa SOLO LaTeX puro senza delimitatori $$; description e le spiegazioni sono Markdown.
+
 
 RIFERIMENTI INTERNI
 - topic_id deve puntare a un topic esistente.
@@ -6814,12 +7261,20 @@ FORMATO CONSIGLIATO DEGLI ELEMENTI
 - knowledge_graph.edges: {"from":"node_01","to":"node_02","relationship":"depends_on","description":"..."}
 - exam_relevance: una stringa breve oppure {"id":"exam_01","topic_id":"topic_01","importance":"high","item":"..."}
 
+QUALITÀ PER L'ESERCITAZIONE
+- Le domande e le flashcard devono essere utili per un sistema di ripasso adattivo. Evita doppioni quasi identici.
+- Alterna contenuti concettuali, definizioni, applicazioni e formule quando il materiale lo permette.
+- Ogni quiz deve avere una risposta univoca o una risposta di riferimento chiaramente derivata dalla lezione.
+- Le flashcard devono avere fronte e retro leggibili in Markdown e devono essere abbastanza specifiche da distinguere concetti simili.
+- Inserisci topic_id coerenti: Uni Notes li userà per raggruppare le debolezze per argomento.
+
 NUMEROSITÀ
 La quantità deve dipendere dalla lezione. Quando il materiale lo permette, punta indicativamente a 4–10 obiettivi, 4–15 topics/concetti rilevanti, tutte le formule importanti, tutti i teoremi/proprietà pertinenti, 3–10 esempi/esercizi significativi, 5–15 flashcard e un set equilibrato di quiz. NON riempire artificialmente le sezioni.
 
 CONTROLLO FINALE OBBLIGATORIO
 Prima di rispondere verifica che:
 - schema_version sia "1.0";
+- le stringhe testuali siano Markdown compatibile;
 - tutti i campi principali esistano;
 - il JSON sia sintatticamente valido;
 - non ci sia testo fuori dal JSON;
@@ -8633,10 +9088,30 @@ const CommandPalette = {
 function finishBoot(){
   document.getElementById('setup-screen').classList.add('hidden');
   document.getElementById('app').classList.remove('hidden');
-  Router.go('dashboard');
+  const restored = AppState.savedNavigation?.route;
+  if(restored && restored.page){
+    AppState.route = { page: restored.page, params: restored.params || {} };
+    Router.render();
+    Router._restorePosition(AppState.route);
+  }else{
+    Router.go('dashboard');
+  }
   ContentIndex.build();
   globalThis.UniNotesPostLessonManager?.init?.();
 }
+
+// Persistenza della posizione: viene aggiornata anche mentre l'utente scorre e prima di un refresh/uscita.
+(function initNavigationPersistence(){
+  let timer = 0;
+  document.addEventListener('scroll', (e) => {
+    const target = e.target;
+    if(target?.id !== 'content' && target?.id !== 'sidebar-scroll') return;
+    clearTimeout(timer);
+    timer = window.setTimeout(() => AppState.persistNavigation(AppState.route), 160);
+  }, true);
+  window.addEventListener('beforeunload', () => AppState.persistNavigation(AppState.route));
+  document.addEventListener('visibilitychange', () => { if(document.visibilityState === 'hidden') AppState.persistNavigation(AppState.route); });
+})();
 
 /* ============================================================
    PWA — manifest e service worker generati come Blob (single-file)
@@ -10907,6 +11382,7 @@ Non inserire HTML.`;
 
     .lk-shell{padding:0;overflow:hidden;margin-top:18px;border-color:color-mix(in srgb,var(--accent) 16%,var(--border));}
     .lk-head{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:16px 18px;border-bottom:1px solid var(--border);background:linear-gradient(180deg,var(--surface),var(--surface-2));}
+    .lk-md{font-size:12.5px;line-height:1.62;color:var(--text-secondary);min-width:0}.lk-md>p:first-child{margin-top:0}.lk-md>p:last-child{margin-bottom:0}.lk-md h1,.lk-md h2,.lk-md h3,.lk-md h4{color:var(--text);margin:12px 0 7px;line-height:1.25;letter-spacing:-.02em}.lk-md h1{font-size:18px}.lk-md h2{font-size:16px}.lk-md h3{font-size:14px}.lk-md h4{font-size:13px}.lk-md strong{color:var(--text);font-weight:800}.lk-md em{color:var(--text)}.lk-md ul,.lk-md ol{padding-left:20px}.lk-md li+li{margin-top:4px}.lk-md .md-mark{display:inline;padding:0 .2em;border-radius:.28em;background:linear-gradient(180deg,transparent 28%,rgba(255,221,87,.58) 28%,rgba(255,221,87,.58) 88%,transparent 88%)}.lk-md .md-table-wrap{overflow-x:auto;margin:10px 0;border:1px solid var(--border);border-radius:11px}.lk-md .md-table{width:100%;border-collapse:collapse;min-width:420px;font-size:11.5px}.lk-md .md-table th,.lk-md .md-table td{padding:8px 9px;border-bottom:1px solid var(--border);text-align:left;vertical-align:top}.lk-md .md-table th{background:var(--surface-2);font-weight:800;color:var(--text)}.lk-md .md-table tr:last-child td{border-bottom:none}.lk-md .md-callout{margin:10px 0;padding:10px 12px;border:1px solid var(--border);border-left:4px solid var(--accent);border-radius:11px;background:var(--surface-2)}.lk-md .md-callout-label{font-size:9.5px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;color:var(--accent)}.lk-md .md-callout-text{font-size:12px;line-height:1.55}.lk-md .md-callout-key{border-left-color:var(--accent);background:var(--accent-soft)}.lk-md .md-callout-note{border-left-color:var(--success);background:var(--success-soft)}.lk-md .md-callout-warning{border-left-color:var(--warning);background:var(--warning-soft)}.lk-md .md-callout-tip{border-left-color:var(--accent-strong);background:var(--accent-soft)}.lk-md .md-callout-example{border-left-color:#8b5cf6;background:rgba(139,92,246,.08)}.lk-md .md-color{font-weight:700}.lk-md .md-color-red{color:var(--danger)}.lk-md .md-color-orange{color:var(--warning)}.lk-md .md-color-yellow{color:color-mix(in srgb,var(--warning) 82%,var(--text))}.lk-md .md-color-green{color:var(--success)}.lk-md .md-color-blue{color:var(--accent)}.lk-md .md-color-purple{color:#7c3aed}.lk-md .md-color-gray{color:var(--text-tertiary)}.lk-md .md-math-block{display:flex;width:100%;margin:12px 0;padding:11px 10px;border:1px solid var(--border);border-radius:11px;background:var(--surface-2);overflow-x:auto}.lk-md .md-math-fallback{font-family:var(--mono);font-size:12px;color:var(--text-secondary)}.lk-md-inline{display:inline}.lk-md-inline .md-color{font-weight:700}.lk-md-inline .md-math{vertical-align:middle}.lk-md-compact{font-size:11.5px;line-height:1.5}.lk-md-rich{font-size:13.5px;line-height:1.68}.lk-md-rich h1:first-child,.lk-md-rich h2:first-child{margin-top:0}.lk-md-toc-title>p{margin:0}.lk-md-chip>p{margin:0}.lk-md-cardface{font-size:13px;line-height:1.6}.lk-md-cardface>p:first-child{margin-top:0}.lk-md-option>p:first-child{margin-top:0}.lk-md-option>p:last-child{margin-bottom:0}.lk-md-question{color:var(--text)}
     .lk-brand{display:flex;align-items:center;gap:10px;min-width:0}.lk-icon{width:34px;height:34px;border-radius:10px;display:flex;align-items:center;justify-content:center;background:var(--accent-soft);color:var(--accent);flex-shrink:0}.lk-title{font-size:14px;font-weight:800;letter-spacing:-.01em}.lk-sub{font-size:11px;color:var(--text-tertiary);margin-top:2px}.lk-head-actions{display:flex;gap:7px;flex-wrap:wrap;justify-content:flex-end}.lk-stat-row{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));border-bottom:1px solid var(--border)}.lk-stat{padding:11px 12px;border-right:1px solid var(--border);text-align:center}.lk-stat:last-child{border-right:none}.lk-stat-n{display:block;font-size:18px;font-weight:800;letter-spacing:-.03em}.lk-stat-l{display:block;margin-top:2px;font-size:10px;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:.05em;font-weight:700}.lk-summary-compact{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:16px 20px 0}.lk-summary-compact>div{padding:11px 12px;border:1px solid var(--border);border-radius:11px;background:var(--surface-2)}.lk-compact-text{font-size:12px;line-height:1.5;color:var(--text-secondary)}.lk-summary{padding:20px 24px 8px;max-width:920px;margin:0 auto}.lk-summary .md-math-block{margin-left:0;margin-right:0}.lk-summary>p:first-child{margin-top:0}.lk-takeaways{padding:8px 20px 18px}.lk-mini-title{font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--text-tertiary);margin-bottom:9px}.lk-chip{display:inline-flex;align-items:center;padding:6px 9px;border:1px solid var(--border);background:var(--surface-2);border-radius:999px;font-size:11.5px;line-height:1.25;margin:0 6px 6px 0}.lk-details{border-top:1px solid var(--border)}.lk-details summary{list-style:none;cursor:pointer;padding:14px 18px;font-size:12.5px;font-weight:750;display:flex;align-items:center;justify-content:space-between}.lk-details summary::-webkit-details-marker{display:none}.lk-details summary>span{transition:transform .16s ease;color:var(--text-tertiary)}.lk-details[open] summary>span{transform:rotate(180deg)}.lk-details-body{padding:0 18px 18px}.lk-list{display:grid;gap:9px}.lk-empty{padding:10px 12px;border:1px dashed var(--border);border-radius:10px;color:var(--text-tertiary);font-size:12px;background:var(--surface-2)}.lk-toc-item{display:flex;gap:8px;align-items:baseline;padding:8px 9px;margin-left:calc(var(--lk-level) * 18px);border-radius:8px;background:var(--surface-2);font-size:12.5px}.lk-toc-id{font-family:var(--mono);font-size:10px;color:var(--accent);min-width:max-content}.lk-item,.lk-topic,.lk-quiz,.lk-flashcard{border:1px solid var(--border);border-radius:12px;padding:12px 13px;background:var(--surface)}.lk-item-title{font-weight:760;font-size:13px;line-height:1.4}.lk-item-text{font-size:12.5px;line-height:1.55;color:var(--text-secondary);margin-top:5px;white-space:pre-wrap}.lk-item-meta{font-size:10.5px;color:var(--text-tertiary);margin-top:7px}.lk-topic-head{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}.lk-topic-head code{font-family:var(--mono);font-size:9.5px;color:var(--text-tertiary)}.lk-concept-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:8px;margin-top:10px}.lk-concept-chip{padding:9px;border-radius:10px;background:var(--surface-2);border:1px solid var(--border);display:flex;flex-direction:column;gap:3px}.lk-concept-chip b{font-size:11.5px}.lk-concept-chip span{font-size:10.5px;color:var(--text-secondary);line-height:1.4}.lk-muted-inline{font-size:11px;color:var(--text-tertiary)}.lk-formula{margin-top:9px;padding:11px 12px;border-radius:10px;background:var(--surface-2);border:1px solid var(--border);font-family:var(--mono);overflow:auto;font-size:12.5px}.lk-vars{display:flex;flex-wrap:wrap;gap:6px;margin-top:9px}.lk-vars span{padding:5px 7px;border-radius:7px;background:var(--surface-2);border:1px solid var(--border);font-size:10.5px}.lk-badge{display:inline-flex;padding:3px 6px;border-radius:999px;background:var(--accent-soft);color:var(--accent);font-size:9.5px;text-transform:uppercase;letter-spacing:.04em;font-weight:800;margin-bottom:7px}.lk-proof{margin-top:9px;border-top:1px solid var(--border);padding-top:8px}.lk-proof summary,.lk-answer-reveal summary{cursor:pointer;font-size:11.5px;font-weight:700;color:var(--accent)}.lk-proof div,.lk-answer-reveal div{font-size:12.5px;line-height:1.55;color:var(--text-secondary);margin-top:7px;white-space:pre-wrap}.lk-sublist{margin-top:9px;font-size:11.5px;line-height:1.55;color:var(--text-secondary)}.lk-mistake{border-color:color-mix(in srgb,var(--danger) 16%,var(--border));background:color-mix(in srgb,var(--danger) 4%,var(--surface))}.lk-quiz-group+.lk-quiz-group{margin-top:16px}.lk-quiz-top{display:flex;align-items:center;justify-content:space-between;gap:8px}.lk-difficulty{font-size:9.5px;padding:3px 6px;border-radius:999px;background:var(--surface-2);color:var(--text-tertiary);text-transform:uppercase;font-weight:750}.lk-quiz-question{font-size:13px;font-weight:650;line-height:1.5;margin:6px 0 10px}.lk-options{display:grid;gap:6px}.lk-option{appearance:none;border:1px solid var(--border);background:var(--surface-2);border-radius:9px;padding:9px 10px;text-align:left;cursor:pointer;color:var(--text);font:inherit;font-size:12px}.lk-option:hover{border-color:var(--accent);background:var(--accent-soft)}.lk-option.is-selected{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}.lk-quiz-feedback{margin-top:9px;padding:9px 10px;border-radius:9px;font-size:11.5px;line-height:1.45}.lk-quiz-feedback.is-correct{background:var(--success-soft);color:var(--success)}.lk-quiz-feedback.is-wrong{background:var(--danger-soft);color:var(--danger)}.lk-answer-reveal{margin-top:7px}.lk-flashcard{position:relative;min-height:150px;perspective:900px;overflow:hidden;display:flex;align-items:stretch;justify-content:center}.lk-flashcard-face{width:100%;display:flex;flex-direction:column;gap:7px;padding:15px;padding-bottom:45px;backface-visibility:hidden;transition:transform .22s ease,opacity .22s ease}.lk-flashcard-back{position:absolute;inset:0;transform:rotateY(180deg);background:var(--surface-2)}.lk-flashcard.is-flipped .lk-flashcard-front{transform:rotateY(180deg)}.lk-flashcard.is-flipped .lk-flashcard-back{transform:rotateY(0)}.lk-flashcard-label{font-size:9.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--text-tertiary);font-weight:800}.lk-flip{position:absolute;left:14px;bottom:12px}.lk-study-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}.lk-study-step{display:flex;gap:9px;align-items:flex-start;padding:8px 0;border-bottom:1px solid var(--border);font-size:12px}.lk-study-step>span{width:22px;height:22px;border-radius:7px;background:var(--accent-soft);color:var(--accent);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:10px;flex-shrink:0}.lk-study-point{padding:8px 9px;border:1px solid var(--border);border-radius:9px;background:var(--surface-2);font-size:11.5px;margin-bottom:6px;line-height:1.45}.lk-study-time{margin-top:12px;font-size:11.5px;color:var(--text-secondary)}.lk-graph-summary{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}.lk-graph-summary span{padding:6px 8px;border:1px solid var(--border);border-radius:999px;background:var(--surface-2);font-size:10.5px}.lk-graph-edges{display:grid;gap:6px}.lk-edge{display:grid;grid-template-columns:minmax(0,1fr) auto auto auto minmax(0,1fr);gap:7px;align-items:center;padding:8px;border:1px solid var(--border);border-radius:9px;background:var(--surface-2);font-size:10.5px}.lk-node{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.lk-edge-rel{color:var(--accent);font-weight:750;text-align:center}.lk-arrow{color:var(--text-tertiary)}.lk-empty-shell .lk-empty-state{padding:18px;display:flex;align-items:center;gap:12px}.lk-empty-state-icon{width:42px;height:42px;border-radius:12px;background:var(--surface-2);display:flex;align-items:center;justify-content:center;color:var(--text-tertiary);flex-shrink:0}.lk-empty-state-title{font-size:13px;font-weight:750}.lk-empty-state-sub{font-size:11.5px;color:var(--text-tertiary);margin-top:3px;line-height:1.45}.lk-empty-state .btn{margin-left:auto;flex-shrink:0}.lk-modal-body{display:flex;flex-direction:column;gap:10px}.lk-modal-intro{font-size:12px;color:var(--text-secondary);line-height:1.5}.lk-modal-body textarea{min-height:420px;width:100%;resize:vertical;font-family:var(--mono);font-size:12px;line-height:1.55;padding:14px;border:1px solid var(--border);border-radius:12px;background:var(--surface-2);color:var(--text);outline:none}.lk-modal-body textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}.lk-editor-toolbar{display:flex;gap:7px;flex-wrap:wrap}.lk-validation-result{padding:10px 12px;border-radius:10px;font-size:11.5px;line-height:1.5}.lk-validation-result.is-ok{background:var(--success-soft);color:var(--success)}.lk-validation-result.is-error{background:var(--danger-soft);color:var(--danger)}.lk-warnings{margin-top:7px;padding-top:7px;border-top:1px solid color-mix(in srgb,var(--warning) 25%,transparent);color:var(--warning)}.lk-json-viewer-wrap{border:1px solid var(--border);border-radius:12px;overflow:hidden}.lk-json-viewer-head{padding:9px 11px;background:var(--surface-2);font-size:10.5px;font-weight:750;border-bottom:1px solid var(--border)}.lk-json-viewer{margin:0;max-height:340px;overflow:auto;padding:14px;font-family:var(--mono);font-size:11px;line-height:1.55;background:var(--surface);color:var(--text)}.lk-json-key{color:var(--accent)}.lk-json-string{color:var(--text-secondary)}.lk-json-number{color:var(--warning)}.lk-json-bool{color:var(--success)}.lk-json-null{color:var(--text-tertiary)}.lk-json-punct{color:var(--text-tertiary)}.lk-edit-quick{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:11px 12px;border:1px solid var(--border);border-radius:11px;background:var(--surface-2);font-size:12px}.lk-edit-quick .muted{margin-top:2px;font-size:10.5px}
     @media(max-width:720px){.lk-summary-compact{grid-template-columns:1fr}.lk-head{align-items:flex-start;flex-direction:column}.lk-head-actions{width:100%;justify-content:flex-start}.lk-stat-row{grid-template-columns:repeat(3,1fr)}.lk-stat:nth-child(3){border-right:none}.lk-stat:nth-child(n+4){border-top:1px solid var(--border)}.lk-summary{padding:16px}.lk-details-body{padding:0 13px 15px}.lk-study-grid{grid-template-columns:1fr}.lk-edge{grid-template-columns:1fr auto 1fr}.lk-edge-rel{grid-column:1/-1;order:2;text-align:left}.lk-edge .lk-arrow:nth-of-type(1){display:none}.lk-empty-state{align-items:flex-start!important;flex-wrap:wrap}.lk-empty-state .btn{margin-left:0}.lk-modal-body textarea{min-height:340px}}
     .ai-summary-shell{padding:0;overflow:hidden;}
