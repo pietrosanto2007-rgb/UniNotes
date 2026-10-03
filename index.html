@@ -1708,6 +1708,15 @@ input:not([type]),select,textarea{color:var(--text);}
 .export-empty{padding:18px 10px;text-align:center;color:var(--text-tertiary);font-size:12px;}
 @media(max-width:900px){.export-grid{grid-template-columns:1fr;}.export-summary{position:static;}.export-hero{align-items:flex-start;flex-direction:column;}.export-toolbar{justify-content:flex-start;}}
 @media(max-width:560px){.export-type-grid{grid-template-columns:1fr;}.export-stat-row{grid-template-columns:repeat(2,minmax(0,1fr));}.export-title{font-size:23px;}.export-card-head{padding:13px 13px 11px;}.export-card-body{padding:12px 13px;}}
+
+/* ============================================================
+   CALENDAR 2.0 — Apple-inspired visual system
+   ============================================================ */
+.calendar-page{max-width:1500px;margin:0 auto;padding-bottom:30px}
+.calendar-hero{background:linear-gradient(180deg,color-mix(in srgb,var(--surface) 96%,transparent),var(--surface));border:1px solid var(--border);border-radius:24px;padding:20px 22px 16px;box-shadow:0 16px 42px rgba(0,0,0,.05);backdrop-filter:blur(18px);position:sticky;top:8px;z-index:4}
+.calendar-title-row{display:flex;align-items:center;justify-content:space-between;gap:20px}.calendar-eyebrow,.calendar-side-kicker{font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--text-tertiary);font-weight:750}.calendar-title{font-size:30px;letter-spacing:-.035em;font-weight:760;text-transform:capitalize;margin-top:3px}.calendar-nav-group{display:flex;align-items:center;gap:5px}.calendar-today{border:1px solid var(--border);background:var(--surface);border-radius:999px;padding:8px 13px;font-weight:700;font-size:12px;cursor:pointer}.calendar-toolbar{display:flex;align-items:center;gap:10px;margin-top:17px;flex-wrap:wrap}.calendar-segmented{display:flex;padding:3px;border:1px solid var(--border);border-radius:10px;background:var(--surface-2)}.cal-seg{border:0;background:transparent;border-radius:8px;padding:7px 12px;font-size:11.5px;font-weight:700;color:var(--text-secondary);cursor:pointer}.cal-seg.active{background:var(--surface);color:var(--text);box-shadow:0 2px 8px rgba(0,0,0,.08)}.calendar-search-wrap{height:35px;display:flex;align-items:center;gap:7px;min-width:240px;flex:1;max-width:370px;padding:0 11px;border:1px solid var(--border);background:var(--surface-2);border-radius:10px;color:var(--text-tertiary)}.calendar-search-wrap input{border:0;outline:0;background:transparent;min-width:0;flex:1;font-size:12px;color:var(--text)}.calendar-filter{height:35px;border:1px solid var(--border);border-radius:10px;background:var(--surface);padding:0 10px;font-size:11.5px;color:var(--text)}.calendar-check{display:flex;align-items:center;gap:7px;font-size:11.5px;color:var(--text-secondary);font-weight:650}.calendar-layout{display:grid;grid-template-columns:260px minmax(0,1fr);gap:16px;margin-top:16px}.calendar-side{display:flex;flex-direction:column;gap:12px}.calendar-side-card{background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:15px;box-shadow:0 8px 25px rgba(0,0,0,.035)}.calendar-source-list{display:flex;flex-direction:column;gap:2px;margin-top:9px}.calendar-source-item{display:flex;align-items:center;gap:8px;padding:8px 7px;border-radius:9px;color:var(--text-secondary);font-size:11.5px}.calendar-source-item.active{background:var(--surface-2);color:var(--text);font-weight:700}.calendar-source-item span:nth-child(2){flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.calendar-source-item strong{font-size:10px;color:var(--text-tertiary)}.cal-dot{width:8px;height:8px;border-radius:50%;background:var(--text-tertiary)}.cal-dot.accent{background:var(--accent);box-shadow:0 0 0 4px color-mix(in srgb,var(--accent) 10%,transparent)}.calendar-side-title{font-size:14px;font-weight:740;letter-spacing:-.015em;margin-top:4px}.calendar-side-text{font-size:11px;line-height:1.55;color:var(--text-secondary);margin-top:7px}.calendar-side-icon{width:36px;height:36px;display:grid;place-items:center;border-radius:11px;background:var(--accent-soft);color:var(--accent);margin-bottom:11px}.calendar-side-actions{display:flex;gap:7px;margin-top:11px;flex-wrap:wrap}.calendar-main{min-width:0}.calendar-main #cal-body{min-height:620px}.calendar-main #cal-body.dragover{outline:2px dashed var(--accent);outline-offset:5px;border-radius:20px}.cal-month-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:5px;background:var(--border);border:1px solid var(--border);border-radius:20px;overflow:hidden}.cal-weekday{background:var(--surface-2);padding:9px 10px;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--text-tertiary);font-weight:750}.cal-month-cell{background:var(--surface);min-height:118px;padding:8px;position:relative;cursor:pointer}.cal-month-cell.is-muted{background:color-mix(in srgb,var(--surface) 80%,var(--surface-2));cursor:default}.cal-month-cell.today{box-shadow:inset 0 0 0 2px color-mix(in srgb,var(--accent) 78%,transparent)}.cal-day-number{font-size:11.5px;font-weight:730;width:24px;height:24px;display:grid;place-items:center;border-radius:50%;color:var(--text-secondary)}.cal-month-cell.today .cal-day-number{background:var(--accent);color:#fff}.cal-event-stack{display:flex;flex-direction:column;gap:4px;margin-top:5px}.cal-item{display:flex;width:100%;align-items:flex-start;gap:5px;text-align:left;border:0;border-radius:7px;padding:5px 6px;cursor:pointer;min-width:0}.cal-item.event-item{background:var(--warning-soft)}.cal-item.lesson-item{background:var(--accent-soft)}.cal-item.linked{box-shadow:inset 2px 0 0 var(--accent)}.cal-item-dot{width:5px;height:5px;flex:0 0 5px;margin-top:4px;border-radius:50%;background:currentColor;opacity:.7}.cal-item-main{min-width:0;flex:1}.cal-item-main strong{display:block;font-size:10.5px;line-height:1.25;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.cal-item-main small{display:block;font-size:9px;color:var(--text-tertiary);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.cal-more{font-size:9.5px;color:var(--text-tertiary);margin:4px 5px}.cal-week-grid{display:grid;grid-template-columns:56px repeat(7,minmax(0,1fr));border:1px solid var(--border);border-radius:20px;overflow:hidden;background:var(--surface)}.cal-week-corner{background:var(--surface-2);border-bottom:1px solid var(--border)}.cal-week-head{background:var(--surface-2);padding:9px 6px;border-left:1px solid var(--border);border-bottom:1px solid var(--border);text-align:center;color:var(--text-secondary)}.cal-week-head span{display:block;font-size:9.5px;text-transform:uppercase;letter-spacing:.05em}.cal-week-head strong{display:inline-grid;place-items:center;width:27px;height:27px;margin-top:3px;border-radius:50%;font-size:12px}.cal-week-head.today strong{background:var(--accent);color:#fff}.cal-hour-label{font-family:var(--mono);font-size:9.5px;color:var(--text-tertiary);padding:7px 7px;text-align:right;border-right:1px solid var(--border);background:var(--surface-2)}.cal-week-slot{min-height:72px;border-left:1px solid var(--border);border-top:1px solid var(--border);padding:4px;cursor:pointer}.cal-week-slot:hover{background:color-mix(in srgb,var(--accent) 3%,var(--surface))}.cal-week-slot .cal-item{margin-bottom:3px;padding:5px}.cal-week-slot .cal-item-main strong{font-size:10px}.cal-day-timeline{border:1px solid var(--border);border-radius:20px;overflow:hidden;background:var(--surface)}.cal-day-row{display:grid;grid-template-columns:70px minmax(0,1fr);min-height:56px;border-bottom:1px solid var(--border)}.cal-day-row:last-child{border-bottom:0}.cal-day-row>.cal-hour-label{border-right:1px solid var(--border);padding-top:10px}.cal-day-slot{padding:6px 10px}.cal-day-slot .cal-item{max-width:720px;padding:9px 11px}.cal-day-slot .cal-item-main strong{font-size:12px}.cal-day-slot .cal-item-main small{font-size:10px}.cal-top-actions{display:flex;gap:7px}.calendar-event-modal{display:flex;flex-direction:column;gap:12px}.calendar-detail-hero{padding:15px;border-radius:16px;background:var(--surface-2);border:1px solid var(--border)}.calendar-detail-date{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--text-tertiary);font-weight:750}.calendar-detail-title{font-size:22px;font-weight:760;letter-spacing:-.025em;margin-top:4px}.calendar-detail-meta{font-size:11.5px;color:var(--text-secondary);margin-top:6px}.calendar-detail-row{display:flex;gap:10px;padding:9px 2px;border-bottom:1px solid var(--border)}.calendar-detail-row>span{width:24px;height:24px;display:grid;place-items:center;border-radius:7px;background:var(--surface-2);color:var(--accent)}.calendar-detail-row div{display:flex;flex-direction:column;gap:2px}.calendar-detail-row small{font-size:9px;text-transform:uppercase;letter-spacing:.05em;color:var(--text-tertiary);font-weight:750}.calendar-detail-row strong{font-size:12px}.calendar-link-panel{padding:13px;border:1px solid var(--border);border-radius:14px;background:var(--surface-2)}.calendar-linked-lesson{display:flex;align-items:center;gap:8px;margin-top:7px;color:var(--accent)}.calendar-linked-lesson>div{display:flex;flex-direction:column;gap:2px}.calendar-linked-lesson strong{font-size:12px;color:var(--text)}.calendar-linked-lesson small{font-size:10px;color:var(--text-secondary)}.calendar-modal-actions{display:flex;gap:7px;margin-top:9px}.calendar-detail-source{font-size:9px;color:var(--text-tertiary);word-break:break-all}.calendar-lesson-card{display:flex;align-items:center;gap:12px;margin-top:14px;padding:13px 15px;border:1px solid color-mix(in srgb,var(--accent) 24%,var(--border));border-radius:15px;background:color-mix(in srgb,var(--accent-soft) 36%,var(--surface));box-shadow:0 8px 22px rgba(0,0,0,.035)}.calendar-lesson-card.is-empty{border-color:var(--border);background:var(--surface)}.calendar-lesson-card-icon{width:36px;height:36px;border-radius:10px;background:var(--surface);color:var(--accent);display:grid;place-items:center}.calendar-lesson-card-main{min-width:0;flex:1}.calendar-lesson-card-title{font-size:13px;font-weight:720;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.calendar-lesson-card-meta{font-size:10.5px;color:var(--text-secondary);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+@media (max-width:900px){.calendar-layout{grid-template-columns:1fr}.calendar-side{display:none}.calendar-hero{position:relative;top:auto}.calendar-title{font-size:25px}.calendar-main #cal-body{min-height:520px}.cal-month-cell{min-height:94px;padding:6px}.calendar-search-wrap{min-width:180px}.cal-week-grid{overflow:auto;grid-template-columns:48px repeat(7,minmax(115px,1fr))}.calendar-main{overflow:auto}.cal-month-grid{min-width:640px}.calendar-main #cal-body{overflow-x:auto}.calendar-lesson-card{align-items:flex-start}.calendar-lesson-card .btn{align-self:center}}
+@media (max-width:560px){.calendar-title-row{align-items:flex-start}.calendar-title{font-size:21px}.calendar-nav-group .icon-btn{width:31px;height:31px}.calendar-today{padding:7px 10px}.calendar-toolbar{gap:7px}.calendar-segmented{width:100%}.cal-seg{flex:1}.calendar-search-wrap,.calendar-filter{max-width:none;width:100%}.calendar-check{padding:2px}.calendar-hero{padding:15px;border-radius:19px}.calendar-layout{margin-top:10px}.calendar-main #cal-body{min-height:450px}}
 </style>
 </head>
 <body>
@@ -1803,6 +1812,7 @@ const ICONS = {
   menu: '<path d="M4 6h16M4 12h16M4 18h16"/>',
   download: '<path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M4 21h16"/>',
   archive: '<path d="M4 7h16v13H4z"/><path d="M4 7l2-4h12l2 4"/><path d="M9 12h6"/>',
+  link: '<path d="M10 13a5 5 0 007.54.54l2-2a5 5 0 00-7.07-7.07l-1.14 1.14"/><path d="M14 11a5 5 0 00-7.54-.54l-2 2a5 5 0 007.07 7.07l1.14-1.14"/>',
   filter: '<path d="M4 5h16L14 12v6l-4 2v-8z"/>'
 };
 function icon(name, size){
@@ -2480,6 +2490,7 @@ const LibraryScanner = {
       semester: resolvedSemester,
       academicYear: resolvedAcademicYear,
       createdAt: metaOverride.createdAt || null,
+      calendarEventIds: Array.isArray(metaOverride.calendarEventIds) ? metaOverride.calendarEventIds.filter(Boolean) : [],
       pinned: !!metaOverride.pinned,
       highlightedOnPaper: !!metaOverride.highlightedOnPaper,
       printed: !!metaOverride.printed,
@@ -4549,11 +4560,12 @@ const LessonFormModal = {
       const semester = normalizeSemester(s.semester) || getCurrentSemesterContext().semester;
       const academicYear = s.academicYear || getCurrentSemesterContext().academicYear;
       const createdAt = new Date().toISOString();
-      const meta = { number, date: date.toISOString(), createdAt, title, docente, tags, notes, semester, academicYear };
+      const meta = { number, date: date.toISOString(), createdAt, title, docente, tags, notes, semester, academicYear, calendarEventIds: [] };
       await FileSystemManager.writeTextFile(metaHandle, JSON.stringify(meta, null, 2));
-      const lesson = { id: 'lesson_'+subjectName+'_'+folderName, folderName, handle, subjectName, number, date, createdAt, title, docente, tags, notes, semester, academicYear, files: {}, subfolders: [], mainFile: null, otherRootFiles: [], rawFolderHandle: null };
+      const lesson = { id: 'lesson_'+subjectName+'_'+folderName, folderName, handle, subjectName, number, date, createdAt, title, docente, tags, notes, semester, academicYear, calendarEventIds: [], files: {}, subfolders: [], mainFile: null, otherRootFiles: [], rawFolderHandle: null };
       s.lessons.push(lesson);
       s.lessons.sort((a,b)=>(a.number||0)-(b.number||0));
+      try{ await CalendarStore.autoLinkLesson(lesson); }catch(e){ console.warn('Auto-collegamento calendario nuova lezione fallito',e); }
       AppState.logActivity(subjectName, `Lezione "${title||folderName}" creata`);
       ModalManager.close();
       Toast.success('Lezione creata');
@@ -4618,6 +4630,8 @@ const LessonPage = {
 
         <div style="margin-top:20px;">${StatisticsView.printingCard(statisticsForLesson(lesson), true)}</div>
 
+        ${CalendarStore.getForLesson(lesson).length ? `<div class="calendar-lesson-card"><div class="calendar-lesson-card-icon">${icon('calendar',18)}</div><div class="calendar-lesson-card-main"><div class="calendar-side-kicker">Calendario</div><div class="calendar-lesson-card-title">${CalendarStore.getForLesson(lesson).length===1?esc(CalendarStore.getForLesson(lesson)[0].summary||'Evento collegato'):`${CalendarStore.getForLesson(lesson).length} eventi collegati`}</div><div class="calendar-lesson-card-meta">${CalendarStore.getForLesson(lesson)[0].start ? fmtDate(CalendarStore.getForLesson(lesson)[0].start) : ''}${CalendarStore.getForLesson(lesson)[0].location ? ` · ${esc(CalendarStore.getForLesson(lesson)[0].location)}` : ''}</div></div><button class="btn btn-sm" id="btn-open-linked-calendar">Apri calendario</button></div>` : `<div class="calendar-lesson-card is-empty"><div class="calendar-lesson-card-icon">${icon('calendar',18)}</div><div class="calendar-lesson-card-main"><div class="calendar-side-kicker">Calendario</div><div class="calendar-lesson-card-title">Nessun evento collegato</div><div class="calendar-lesson-card-meta">Importa il calendario delle lezioni e associa l'evento a questa lezione.</div></div><button class="btn btn-sm" id="btn-open-calendar-link">Collega</button></div>`}
+
         <div id="lesson-main-doc" style="margin-top:4px;"></div>
 
         <div style="margin-top:18px; display:flex; gap:10px; flex-wrap:wrap;">
@@ -4659,6 +4673,8 @@ const LessonPage = {
       Clipboard.copy(ref);
     });
     content.querySelectorAll('[data-goto-tag]').forEach(el => el.addEventListener('click', () => Router.go('tags', { tag: el.dataset.gotoTag })));
+    document.getElementById('btn-open-linked-calendar')?.addEventListener('click', () => Router.go('calendar'));
+    document.getElementById('btn-open-calendar-link')?.addEventListener('click', () => Router.go('calendar'));
     document.getElementById('btn-prepare-latex').addEventListener('click', () => PrepareLatexModal.open(lesson));
     document.getElementById('hidden-file-input').addEventListener('change', (e) => this.handleFiles(lesson, e.target.files));
     const setMainBtn = document.getElementById('btn-set-main');
@@ -4986,8 +5002,9 @@ const LessonEditModal = {
       const metaHandle = await FileSystemManager.getOrCreateFile(lesson.handle, '.lesson.json');
       await FileSystemManager.writeTextFile(metaHandle, JSON.stringify({
         number: lesson.number, date: lesson.date ? lesson.date.toISOString() : null, createdAt: lesson.createdAt || null, title: lesson.title, docente: lesson.docente, tags: lesson.tags, notes: lesson.notes,
-        semester: normalizeSemester(lesson.semester), academicYear: lesson.academicYear || ''
+        semester: normalizeSemester(lesson.semester), academicYear: lesson.academicYear || '', calendarEventIds: Array.isArray(lesson.calendarEventIds) ? lesson.calendarEventIds : []
       }, null, 2));
+      if(!(lesson.calendarEventIds||[]).length){ try{ await CalendarStore.autoLinkLesson(lesson); }catch(e){} }
       ModalManager.close();
       Toast.success('Lezione aggiornata');
       Router.render();
@@ -6673,225 +6690,443 @@ const LessonsAllPage = {
 };
 
 /* ============================================================
-   CALENDAR
+   CALENDAR 2.0 — Apple-inspired, ICS robust, lesson linking
    ============================================================ */
-/* ============================================================
-   CALENDAR — mese / settimana / giorno + import .ics
-   ============================================================ */
+function calendarUid(){
+  try{ return crypto.randomUUID(); }catch(e){ return 'uninotes-'+Date.now()+'-'+Math.random().toString(36).slice(2,10); }
+}
+function calendarDateKey(d){
+  const x = d instanceof Date ? d : new Date(d);
+  if(!(x instanceof Date) || isNaN(x)) return '';
+  return `${x.getFullYear()}-${String(x.getMonth()+1).padStart(2,'0')}-${String(x.getDate()).padStart(2,'0')}`;
+}
+function calendarMinutes(d){ const x=d instanceof Date?d:new Date(d); return isNaN(x)?null:x.getHours()*60+x.getMinutes(); }
+function calendarEscapeICS(v){ return String(v??'').replace(/\\/g,'\\\\').replace(/\r?\n/g,'\\n').replace(/;/g,'\\;').replace(/,/g,'\\,'); }
+function calendarUnescapeICS(v){ return String(v??'').replace(/\\n/gi,'\n').replace(/\\,/g,',').replace(/\\;/g,';').replace(/\\\\/g,'\\'); }
+function calendarFormatICSDate(date, allDay=false){
+  const d=date instanceof Date?date:new Date(date);
+  if(isNaN(d)) return '';
+  if(allDay) return `${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}`;
+  return `${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}T${String(d.getHours()).padStart(2,'0')}${String(d.getMinutes()).padStart(2,'0')}${String(d.getSeconds()).padStart(2,'0')}`;
+}
+function calendarDateOnly(y,mo,d){ return new Date(Number(y),Number(mo)-1,Number(d),0,0,0,0); }
+function calendarZonedDate(y,mo,d,h,mi,s,tzid){
+  // Interpreta componenti locali nel fuso IANA indicato, senza librerie esterne.
+  const guess = new Date(Date.UTC(y,mo-1,d,h||0,mi||0,s||0));
+  if(!tzid || tzid.toUpperCase()==='UTC' || tzid.toUpperCase()==='GMT') return guess;
+  try{
+    const fmt = new Intl.DateTimeFormat('en-US',{timeZone:tzid,year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false});
+    const parts = Object.fromEntries(fmt.formatToParts(guess).filter(x=>x.type!=='literal').map(x=>[x.type,x.value]));
+    const asUtc = Date.UTC(+parts.year,+parts.month-1,+parts.day,+parts.hour===24?0:+parts.hour,+parts.minute,+parts.second);
+    const desiredUtc = Date.UTC(y,mo-1,d,h||0,mi||0,s||0);
+    return new Date(guess.getTime() + (desiredUtc-asUtc));
+  }catch(e){ return new Date(y,mo-1,d,h||0,mi||0,s||0); }
+}
+function calendarHash(str){ let h=2166136261; for(let i=0;i<String(str).length;i++){h^=String(str).charCodeAt(i);h=Math.imul(h,16777619);} return (h>>>0).toString(36); }
+
 const CalendarStore = {
-  KEY: 'uninotes.icsEvents',
-  load(){
-    try{ return JSON.parse(localStorage.getItem(this.KEY) || '[]').map(e => ({...e, start:new Date(e.start), end: e.end?new Date(e.end):null})); }
-    catch(e){ return []; }
-  },
-  save(events){
-    localStorage.setItem(this.KEY, JSON.stringify(events.map(e => ({...e, start:e.start.toISOString(), end: e.end?e.end.toISOString():null}))));
-  },
+  KEY: 'uninotes.calendar.v2',
+  SOURCES_KEY: 'uninotes.calendar.sources.v2',
   events: [],
-  init(){ this.events = this.load(); },
-  add(events){ this.events = this.events.concat(events); this.save(this.events); }
+  sources: [],
+  init(){
+    let hadV2=false;
+    try{
+      const rawV2=localStorage.getItem(this.KEY); hadV2=rawV2!=null;
+      const raw=JSON.parse(rawV2||'[]');
+      this.events=(Array.isArray(raw)?raw:[]).map(e=>this.hydrate(e)).filter(e=>e.start instanceof Date && !isNaN(e.start));
+    }catch(e){ this.events=[]; }
+    try{ this.sources=JSON.parse(localStorage.getItem(this.SOURCES_KEY)||'[]'); }catch(e){ this.sources=[]; }
+    // Migrazione trasparente dal vecchio archivio calendario.
+    if(!hadV2){
+      try{
+        const legacy=JSON.parse(localStorage.getItem('uninotes.icsEvents')||'[]');
+        if(Array.isArray(legacy)&&legacy.length){
+          this.events=legacy.map(e=>this.hydrate({...e,uid:e.uid||'legacy-'+calendarHash(`${e.summary||''}|${e.start}`),_key:'legacy-'+calendarHash(`${e.summary||''}|${e.start}|${e.location||''}`),sourceId:'legacy',sourceName:e.sourceName||'Calendario importato'})).filter(e=>e.start instanceof Date&&!isNaN(e.start));
+          if(this.events.length&&!this.sources.some(x=>x.id==='legacy')) this.sources.push({id:'legacy',name:'Calendario importato',type:'legacy'});
+          this.save();
+        }
+      }catch(e){}
+    }
+  },
+  hydrate(e){
+    return {...e,start:new Date(e.start),end:e.end?new Date(e.end):null,lessonLink:e.lessonLink||null};
+  },
+  save(){
+    localStorage.setItem(this.KEY,JSON.stringify(this.events.map(e=>({...e,start:e.start?.toISOString?.()||null,end:e.end?.toISOString?.()||null}))));
+    localStorage.setItem(this.SOURCES_KEY,JSON.stringify(this.sources));
+  },
+  sourceFor(id){ return this.sources.find(s=>s.id===id)||null; },
+  upsert(events, source={id:'local',name:'Uni Notes',type:'local'}){
+    const srcId=source.id||('src_'+calendarHash((source.name||'Calendario')+'|'+Date.now()));
+    if(!this.sources.some(s=>s.id===srcId)) this.sources.push({...source,id:srcId,updatedAt:Date.now()});
+    const map=new Map(this.events.map(e=>[e._key||`${e.uid||''}|${e.recurrenceId||calendarDateKey(e.start)}`,e]));
+    events.forEach(raw=>{
+      const e=this.hydrate({...raw,sourceId:srcId,sourceName:source.name||'Calendario',_key:raw._key||`${raw.uid||''}|${raw.recurrenceId||calendarDateKey(raw.start)}`});
+      const old=map.get(e._key);
+      if(old){ e.lessonLink=old.lessonLink||e.lessonLink||null; }
+      map.set(e._key,e);
+    });
+    this.events=[...map.values()].sort((a,b)=>a.start-b.start);
+    this.save();
+    return events.length;
+  },
+  removeSource(sourceId){ this.events=this.events.filter(e=>e.sourceId!==sourceId); this.sources=this.sources.filter(s=>s.id!==sourceId); this.save(); },
+  getForDay(date){ const key=calendarDateKey(date); return this.events.filter(e=>calendarDateKey(e.start)===key); },
+  getForLesson(lesson){ if(!lesson) return []; const ids=new Set(lesson.calendarEventIds||[]); return this.events.filter(e=>ids.has(e.uid)||ids.has(e._key)||e.lessonLink?.lessonId===lesson.id); },
+  getByKey(key){ return this.events.find(e=>e._key===key||e.uid===key)||null; },
+  async linkEvent(event,lesson){
+    if(!event||!lesson) return;
+    event.lessonLink={subjectName:lesson.subjectName,lessonId:lesson.id};
+    if(!Array.isArray(lesson.calendarEventIds)) lesson.calendarEventIds=[];
+    if(!lesson.calendarEventIds.includes(event.uid)) lesson.calendarEventIds.push(event.uid);
+    try{
+      const h=await FileSystemManager.getOrCreateFile(lesson.handle,'.lesson.json');
+      let meta={}; try{meta=JSON.parse(await FileSystemManager.readTextFile(h));}catch(e){}
+      meta.calendarEventIds=[...new Set([...(Array.isArray(meta.calendarEventIds)?meta.calendarEventIds:[]),event.uid])];
+      await FileSystemManager.writeTextFile(h,JSON.stringify(meta,null,2));
+    }catch(e){ console.warn('Salvataggio collegamento calendario fallito',e); }
+    this.save();
+  },
+  async autoLinkLesson(lesson){
+    if(!lesson || (lesson.calendarEventIds||[]).length) return null;
+    const candidates=this.events.map(e=>({event:e,score:calendarLessonMatchScore(lesson,e)})).filter(x=>x.score>=55).sort((a,b)=>b.score-a.score);
+    if(!candidates.length) return null;
+    if(candidates.length>1 && candidates[0].score===candidates[1].score) return null;
+    await this.linkEvent(candidates[0].event,lesson);
+    return candidates[0].event;
+  },
+  async unlinkEvent(event){
+    if(!event?.lessonLink){ event.lessonLink=null; this.save(); return; }
+    const l=findLesson(event.lessonLink.subjectName,event.lessonLink.lessonId);
+    if(l){
+      l.calendarEventIds=(l.calendarEventIds||[]).filter(id=>id!==event.uid);
+      try{
+        const h=await FileSystemManager.getOrCreateFile(l.handle,'.lesson.json');
+        let meta={}; try{meta=JSON.parse(await FileSystemManager.readTextFile(h));}catch(e){}
+        meta.calendarEventIds=l.calendarEventIds;
+        await FileSystemManager.writeTextFile(h,JSON.stringify(meta,null,2));
+      }catch(e){ console.warn('Rimozione collegamento calendario fallita',e); }
+    }
+    event.lessonLink=null; this.save();
+  },
+  async linkEventToLessonById(event,subjectName,lessonId){ const l=findLesson(subjectName,lessonId); if(l){ await this.linkEvent(event,l); return l; } return null; }
 };
 
-const ICSParser = {
-  /** Parser .ics minimale: estrae VEVENT con SUMMARY, DTSTART, DTEND */
-  parse(text){
-    const events = [];
-    const lines = text.replace(/\r\n/g,'\n').split('\n');
-    // unfold lines (righe che iniziano con spazio continuano la precedente)
-    const unfolded = [];
-    lines.forEach(line => {
-      if(line.startsWith(' ') && unfolded.length){ unfolded[unfolded.length-1] += line.slice(1); }
-      else unfolded.push(line);
-    });
-    let current = null;
-    unfolded.forEach(line => {
-      if(line.startsWith('BEGIN:VEVENT')){ current = {}; return; }
-      if(line.startsWith('END:VEVENT')){ if(current && current.summary && current.start) events.push(current); current = null; return; }
-      if(!current) return;
-      const idx = line.indexOf(':');
-      if(idx === -1) return;
-      const rawKey = line.slice(0, idx);
-      const value = line.slice(idx+1);
-      const key = rawKey.split(';')[0].toUpperCase();
-      if(key === 'SUMMARY') current.summary = value;
-      else if(key === 'DTSTART') current.start = this.parseDate(value);
-      else if(key === 'DTEND') current.end = this.parseDate(value);
-      else if(key === 'LOCATION') current.location = value;
-      else if(key === 'DESCRIPTION') current.description = value;
-    });
-    return events;
-  },
-  parseDate(v){
-    // formati: 20260914T090000Z oppure 20260914
-    const m = /^(\d{4})(\d{2})(\d{2})(?:T(\d{2})(\d{2})(\d{2}))?/.exec(v);
-    if(!m) return null;
-    const [,y,mo,d,h,mi,s] = m;
-    return new Date(Number(y), Number(mo)-1, Number(d), Number(h||0), Number(mi||0), Number(s||0));
+const AppleCalendarBridge = {
+  get available(){ return !!(window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.appleCalendar); },
+  exportEvents(events){
+    if(!this.available) return false;
+    try{ window.webkit.messageHandlers.appleCalendar.postMessage({ action:'saveEvents', events:(events||[]).map(e=>({ uid:e.uid, summary:e.summary, start:e.start?.toISOString?.(), end:e.end?.toISOString?.()||null, allDay:!!e.allDay, location:e.location||'', description:e.description||'' })) }); return true; }catch(e){ console.warn('Apple Calendar bridge non disponibile',e); return false; }
   }
 };
 
-const CalendarPage = {
-  view: 'month', // month | week | day
-  month: new Date().getMonth(), year: new Date().getFullYear(),
-  cursor: new Date(),
+const ICSParser = {
+  unfold(text){
+    const lines=String(text||'').replace(/\r\n/g,'\n').replace(/\r/g,'\n').split('\n');
+    const out=[]; for(const line of lines){ if(/^[ \t]/.test(line)&&out.length) out[out.length-1]+=line.slice(1); else out.push(line); } return out;
+  },
+  prop(line){ const idx=line.indexOf(':'); if(idx<0) return null; const left=line.slice(0,idx), value=line.slice(idx+1); const bits=left.split(';'); const key=bits.shift().toUpperCase(); const params={}; bits.forEach(b=>{const i=b.indexOf('='); if(i>=0) params[b.slice(0,i).toUpperCase()]=b.slice(i+1);}); return {key,params,value}; },
+  parseDate(prop){
+    if(!prop) return null; const v=prop.value.trim();
+    let m=/^(\d{4})(\d{2})(\d{2})$/.exec(v); if(m) return calendarDateOnly(+m[1],+m[2],+m[3]);
+    m=/^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})(Z)?$/.exec(v); if(!m) return null;
+    const y=+m[1],mo=+m[2],d=+m[3],h=+m[4],mi=+m[5],s=+m[6];
+    if(m[7]==='Z') return new Date(Date.UTC(y,mo-1,d,h,mi,s));
+    return calendarZonedDate(y,mo,d,h,mi,s,prop.params.TZID||'');
+  },
+  parseRRule(v){ const out={}; String(v||'').split(';').forEach(p=>{const [k,val]=p.split('='); if(!k)return; out[k.toUpperCase()]=val||'';}); return out; },
+  byDayMap(v){ return String(v||'').split(',').map(x=>{const m=/^([+-]?\d+)?([A-Z]{2})$/.exec(x.trim().toUpperCase()); return m?{ord:m[1]?+m[1]:null,day:m[2]}:null;}).filter(Boolean); },
+  nthWeekdayOfMonth(y,mo,weekday,ord){
+    const map={SU:0,MO:1,TU:2,WE:3,TH:4,FR:5,SA:6}; const w=map[weekday]; if(w==null||!ord) return null;
+    if(ord>0){ const first=new Date(y,mo-1,1); const delta=(w-first.getDay()+7)%7; const day=1+delta+(ord-1)*7; const d=new Date(y,mo-1,day); return d.getMonth()===mo-1?d:null; }
+    const last=new Date(y,mo,0); const delta=(last.getDay()-w+7)%7; const day=last.getDate()-delta+(ord+1)*7; const d=new Date(y,mo-1,day); return d.getMonth()===mo-1?d:null;
+  },
+  matchesByDay(date,by){ const map={SU:0,MO:1,TU:2,WE:3,TH:4,FR:5,SA:6}; return by.some(x=>map[x.day]===date.getDay()); },
+  expandRecurring(base){
+    const rule=base.rrule;
+    if(!rule){
+      const plain=[base];
+      if(Array.isArray(base.rdates)) base.rdates.forEach(d=>{if(d) plain.push({...base,start:new Date(d),recurrenceId:d.toISOString(),_key:`${base.uid}|${d.toISOString()}`});});
+      if(Array.isArray(base.exdates)&&base.exdates.length) return plain.filter(e=>!base.exdates.some(x=>x?.toISOString?.()===e.start?.toISOString?.()));
+      return plain;
+    }
+    const start=base.start, maxOccurrences=500, windowStart=new Date(Date.now()-90*86400000), windowEnd=new Date(Date.now()+550*86400000);
+    const out=[]; const seen=new Set(); const add=(d)=>{ if(d<windowStart||d>windowEnd) return; const key=d.toISOString(); if(seen.has(key)) return; seen.add(key); const dur=base.end&&base.start?Math.max(0,base.end-base.start):null; out.push({...base,start:d,end:dur!=null?new Date(d.getTime()+dur):null,recurrenceId:key,_key:`${base.uid}|${key}`}); };
+    add(start);
+    const freq=String(rule.FREQ||'').toUpperCase(), interval=Math.max(1,parseInt(rule.INTERVAL||'1',10)||1), count=rule.COUNT?Math.max(1,parseInt(rule.COUNT,10)||1):null;
+    const until=rule.UNTIL ? this.parseDate({value:rule.UNTIL,params:{}}) : null;
+    const byday=this.byDayMap(rule.BYDAY); const bymonthday=String(rule.BYMONTHDAY||'').split(',').map(Number).filter(Boolean); const bymonth=String(rule.BYMONTH||'').split(',').map(Number).filter(Boolean);
+    let produced=1, cursor=new Date(start);
+    // Daily/weekly are the common university calendar cases; monthly/yearly get pragmatic support too.
+    for(let guard=0; guard<3000 && produced<maxOccurrences; guard++){
+      if(freq==='DAILY'){
+        cursor=new Date(cursor.getTime()+interval*86400000);
+        if(until&&cursor>until) break; if(count&&produced>=count) break; add(cursor); produced++; continue;
+      }
+      if(freq==='WEEKLY'){
+        if(byday.length){
+          const weekBase=new Date(cursor.getTime());
+          // Step from the original date's week; each cycle walks the requested weekdays.
+          const currentDay=(weekBase.getDay()+6)%7; const monday=new Date(weekBase); monday.setDate(weekBase.getDate()-currentDay);
+          for(let i=0;i<byday.length&&produced<maxOccurrences;i++){
+            const map={SU:0,MO:1,TU:2,WE:3,TH:4,FR:5,SA:6}; const d=new Date(monday); const target=map[byday[i].day]; const mondayIndex=(target+6)%7; d.setDate(monday.getDate()+mondayIndex); d.setHours(start.getHours(),start.getMinutes(),start.getSeconds(),start.getMilliseconds());
+            if(d<=start) continue; if(until&&d>until) continue; if(count&&produced>=count) break; add(d); produced++;
+          }
+          cursor=new Date(monday.getTime()+interval*7*86400000); continue;
+        }
+        cursor=new Date(cursor.getTime()+interval*7*86400000); if(until&&cursor>until)break; if(count&&produced>=count)break; add(cursor); produced++; continue;
+      }
+      if(freq==='MONTHLY'){
+        let y=cursor.getFullYear(),m=cursor.getMonth()+interval; y+=Math.floor(m/12); m%=12; cursor=new Date(y,m,start.getDate(),start.getHours(),start.getMinutes(),start.getSeconds());
+        const candidates=[];
+        if(bymonthday.length){ bymonthday.forEach(md=>{const last=new Date(y,m+1,0).getDate(); const day=md>0?md:last+md+1; if(day>=1&&day<=last)candidates.push(new Date(y,m,day,start.getHours(),start.getMinutes(),start.getSeconds()));}); }
+        else if(byday.length&&byday.some(x=>x.ord)){ byday.forEach(x=>{const d=this.nthWeekdayOfMonth(y,m+1,x.day,x.ord); if(d){d.setHours(start.getHours(),start.getMinutes(),start.getSeconds()); candidates.push(d);}}); }
+        else candidates.push(cursor);
+        for(const d of candidates){ if(until&&d>until) continue; if(count&&produced>=count) break; if(d>start){add(d);produced++;} }
+        continue;
+      }
+      if(freq==='YEARLY'){
+        cursor=new Date(start.getFullYear()+interval,start.getMonth(),start.getDate(),start.getHours(),start.getMinutes(),start.getSeconds());
+        if(until&&cursor>until)break; if(count&&produced>=count)break; if(!bymonth.length||bymonth.includes(cursor.getMonth()+1)) { add(cursor); produced++; } continue;
+      }
+      break;
+    }
+    // RDATE aggiunge occorrenze esplicite; EXDATE le rimuove a prescindere dalla ricorrenza.
+    if(Array.isArray(base.rdates)){
+      for(const d of base.rdates){ if(d) add(new Date(d)); }
+    }
+    if(Array.isArray(base.exdates)&&base.exdates.length){
+      const excluded=new Set(base.exdates.map(d=>d?.toISOString?.()));
+      for(let i=out.length-1;i>=0;i--){ if(excluded.has(out[i].start?.toISOString?.())) out.splice(i,1); }
+    }
+    return out.length?out:[base];
+  },
+  parse(text,sourceName='Calendario importato'){
+    const events=[]; let cur=null; const push=()=>{ if(!cur)return; if(cur.start){
+      if(!cur.uid) cur.uid='ics-'+calendarHash(`${cur.summary||''}|${cur.start.toISOString()}|${cur.location||''}`);
+      if(cur.end===null && !cur.allDay) cur.end=new Date(cur.start.getTime()+60*60000);
+      const expanded=this.expandRecurring(cur); expanded.forEach(e=>events.push(e));
+    } cur=null; };
+    for(const line of this.unfold(text)){
+      if(line.toUpperCase()==='BEGIN:VEVENT'){cur={sourceName,allDay:false,end:null,categories:[]};continue;}
+      if(line.toUpperCase()==='END:VEVENT'){push();continue;}
+      if(!cur) continue; const p=this.prop(line); if(!p) continue;
+      const v=p.value;
+      switch(p.key){
+        case 'UID': cur.uid=calendarUnescapeICS(v); break;
+        case 'SUMMARY': cur.summary=calendarUnescapeICS(v); break;
+        case 'DESCRIPTION': cur.description=calendarUnescapeICS(v); break;
+        case 'LOCATION': cur.location=calendarUnescapeICS(v); break;
+        case 'URL': cur.url=v; break;
+        case 'STATUS': cur.status=v; break;
+        case 'CATEGORIES': cur.categories=v.split(',').map(calendarUnescapeICS).filter(Boolean); break;
+        case 'DTSTART': cur.start=this.parseDate(p); cur.allDay=p.params.VALUE==='DATE'||/^\d{8}$/.test(v); break;
+        case 'DTEND': cur.end=this.parseDate(p); break;
+        case 'RRULE': cur.rrule=this.parseRRule(v); break;
+        case 'RDATE': cur.rdates=(cur.rdates||[]).concat(v.split(',').map(x=>this.parseDate({value:x,params:p.params})).filter(Boolean)); break;
+        case 'EXDATE': cur.exdates=(cur.exdates||[]).concat(v.split(',').map(x=>this.parseDate({value:x,params:p.params})).filter(Boolean)); break;
+        case 'ORGANIZER': cur.organizer=calendarUnescapeICS(v); break;
+        case 'CLASS': cur.class=v; break;
+        case 'TRANSP': cur.transp=v; break;
+        case 'VALARM': break;
+      }
+    }
+    push();
+    // Aggiunge RDATE ed elimina EXDATE. Le ricorrenze vengono già espanse sopra.
+    const byKey=new Map(events.map(e=>[e._key||`${e.uid}|${e.recurrenceId||calendarDateKey(e.start)}`,e]));
+    return [...byKey.values()].filter(e=>e.start);
+  }
+};
 
+function lessonTokens(s){ return String(s||'').toLowerCase().replace(/[^a-z0-9àèéìòù]+/gi,' ').split(/\s+/).filter(x=>x.length>=3); }
+function calendarLessonMatchScore(lesson,event){
+  if(!lesson?.date||!event?.start) return -1;
+  if(calendarDateKey(lesson.date)!==calendarDateKey(event.start)) return -1;
+  let score=40;
+  const hay=String(`${event.summary||''} ${event.description||''} ${event.location||''}`).toLowerCase();
+  if(hay.includes(String(lesson.subjectName||'').toLowerCase())) score+=30;
+  const subjectTokens=lessonTokens(lesson.subjectName); const titleTokens=lessonTokens(lesson.title);
+  const hitSubject=subjectTokens.filter(t=>hay.includes(t)).length;
+  const hitTitle=titleTokens.filter(t=>hay.includes(t)).length;
+  score+=Math.min(20,hitSubject*7)+Math.min(20,hitTitle*5);
+  const n=Number(lesson.number); if(Number.isFinite(n)&&new RegExp(`(?:lezione|lesson|lecture|\bL)\\s*0*${n}\\b`,'i').test(`${event.summary||''} ${event.description||''}`)) score+=25;
+  return score;
+}
+function findBestLessonForEvent(event){
+  const sameDay=allLessonsFlat().filter(l=>l.date&&calendarDateKey(l.date)===calendarDateKey(event.start));
+  const scored=sameDay.map(l=>({lesson:l,score:calendarLessonMatchScore(l,event)})).filter(x=>x.score>=55).sort((a,b)=>b.score-a.score);
+  if(!scored.length) return null;
+  if(scored.length>1 && scored[0].score===scored[1].score) return null;
+  return scored[0].lesson;
+}
+
+function downloadBlobFile(blob,name){ const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download=name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(url),1000); }
+function calendarEventToICS(event){
+  const lines=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//Uni Notes//Calendar//EN','CALSCALE:GREGORIAN','METHOD:PUBLISH','BEGIN:VEVENT'];
+  lines.push(`UID:${calendarEscapeICS(event.uid||calendarUid())}`); lines.push(`DTSTAMP:${calendarFormatICSDate(new Date())}Z`);
+  if(event.allDay){ lines.push(`DTSTART;VALUE=DATE:${calendarFormatICSDate(event.start,true)}`); if(event.end) lines.push(`DTEND;VALUE=DATE:${calendarFormatICSDate(event.end,true)}`); }
+  else { lines.push(`DTSTART:${calendarFormatICSDate(event.start)}`); if(event.end) lines.push(`DTEND:${calendarFormatICSDate(event.end)}`); }
+  if(event.summary) lines.push(`SUMMARY:${calendarEscapeICS(event.summary)}`); if(event.location) lines.push(`LOCATION:${calendarEscapeICS(event.location)}`); if(event.description) lines.push(`DESCRIPTION:${calendarEscapeICS(event.description)}`); if(event.url) lines.push(`URL:${event.url}`);
+  lines.push('END:VEVENT','END:VCALENDAR'); return lines.join('\r\n')+'\r\n';
+}
+function calendarLessonsToICS(lessons){
+  const lines=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//Uni Notes//Calendar//EN','CALSCALE:GREGORIAN','METHOD:PUBLISH'];
+  for(const l of lessons||[]){ if(!l.date) continue; const start=new Date(l.date); start.setHours(9,0,0,0); const end=new Date(start.getTime()+60*60000); lines.push('BEGIN:VEVENT',`UID:${calendarEscapeICS('lesson-'+l.id)}`,`DTSTAMP:${calendarFormatICSDate(new Date())}Z`,`DTSTART:${calendarFormatICSDate(start)}`,`DTEND:${calendarFormatICSDate(end)}`,`SUMMARY:${calendarEscapeICS(lessonDisplayName(l))}`,`DESCRIPTION:${calendarEscapeICS(`${l.subjectName} — lezione collegata a Uni Notes`)}`,'END:VEVENT'); }
+  lines.push('END:VCALENDAR'); return lines.join('\r\n')+'\r\n';
+}
+
+const CalendarPage = {
+  view:'month',
+  cursor:new Date(),
+  search:'',
+  sourceFilter:'all',
+  showLessons:true,
   render(){
-    TopbarView.render(`<b>Calendario</b>`, `<button class="btn btn-primary btn-sm" id="cal-import-ics">${icon('plus',14)} Importa .ics</button>`);
-    const content = document.getElementById('content');
-    content.innerHTML = `
-      <div class="page">
-        <div class="section-head">
-          <div style="display:flex; align-items:center; gap:14px;">
-            <div class="section-title" id="cal-title"></div>
+    const ctx=getCurrentSemesterContext();
+    const currentSubjectCount=currentSemesterSubjects().length;
+    TopbarView.render(`<b>Calendario</b>`, `<div class="cal-top-actions"><button class="btn btn-sm" id="cal-apple-export">${icon('download',14)} Apple Calendar</button><button class="btn btn-primary btn-sm" id="cal-import-ics">${icon('plus',14)} Importa calendario</button></div>`);
+    const content=document.getElementById('content');
+    const range=this.rangeLabel();
+    content.innerHTML=`
+      <div class="page calendar-page">
+        <div class="calendar-hero">
+          <div class="calendar-title-row">
+            <div><div class="calendar-eyebrow">${semesterLabel(ctx.semester)} · ${esc(ctx.academicYear)}</div><div class="calendar-title" id="cal-title">${esc(range)}</div></div>
+            <div class="calendar-nav-group"><button class="icon-btn" id="cal-prev" title="Precedente">${icon('chevronLeft',16)}</button><button class="calendar-today" id="cal-today">Oggi</button><button class="icon-btn" id="cal-next" title="Successivo">${icon('chevronRight',16)}</button></div>
           </div>
-          <div style="display:flex; gap:6px; align-items:center;">
-            <div class="tabs" style="border:none; margin:0; gap:0;">
-              <div class="tab ${this.view==='month'?'active':''}" data-view="month" style="margin-right:10px;">Mese</div>
-              <div class="tab ${this.view==='week'?'active':''}" data-view="week" style="margin-right:10px;">Settimana</div>
-              <div class="tab ${this.view==='day'?'active':''}" data-view="day" style="margin-right:10px;">Giorno</div>
-            </div>
-            <button class="icon-btn" id="cal-prev">${icon('chevronLeft',16)}</button>
-            <button class="btn btn-sm" id="cal-today">Oggi</button>
-            <button class="icon-btn" id="cal-next">${icon('chevronRight',16)}</button>
+          <div class="calendar-toolbar">
+            <div class="calendar-segmented">${['day','week','month'].map(v=>`<button class="cal-seg ${this.view===v?'active':''}" data-view="${v}">${v==='day'?'Giorno':v==='week'?'Settimana':'Mese'}</button>`).join('')}</div>
+            <div class="calendar-search-wrap">${icon('search',14)}<input id="cal-search" placeholder="Cerca eventi, aule, materie…" value="${esc(this.search)}"></div>
+            <select id="cal-source-filter" class="calendar-filter"><option value="all">Tutti i calendari</option>${CalendarStore.sources.map(s=>`<option value="${esc(s.id)}" ${this.sourceFilter===s.id?'selected':''}>${esc(s.name||'Calendario')}</option>`).join('')}</select>
+            <label class="calendar-check"><input type="checkbox" id="cal-show-lessons" ${this.showLessons?'checked':''}> <span>Lezioni Uni Notes</span></label>
           </div>
         </div>
-        <div id="cal-body"></div>
+        <div class="calendar-layout">
+          <aside class="calendar-side">
+            <section class="calendar-side-card">
+              <div class="calendar-side-kicker">Calendari</div>
+              <div class="calendar-source-list">
+                <div class="calendar-source-item active"><span class="cal-dot accent"></span><span>Lezioni Uni Notes</span><strong>${currentSubjectCount}</strong></div>
+                ${CalendarStore.sources.map(src=>`<div class="calendar-source-item"><span class="cal-dot"></span><span>${esc(src.name||'Calendario')}</span><strong>${CalendarStore.events.filter(e=>e.sourceId===src.id).length}</strong></div>`).join('')}
+              </div>
+            </section>
+            <section class="calendar-side-card apple-card">
+              <div class="calendar-side-icon">${icon('calendar',18)}</div>
+              <div class="calendar-side-kicker">Apple Calendar</div>
+              <div class="calendar-side-title">Importa e porta il tuo calendario su Apple</div>
+              <div class="calendar-side-text">Uni Notes usa .ics come ponte compatibile con Calendario di macOS. Il collegamento diretto bidirezionale richiede un piccolo componente nativo EventKit.</div>
+              <div class="calendar-side-actions"><button class="btn btn-sm" id="cal-apple-export-side">Esporta lezioni</button><button class="btn btn-sm" id="cal-apple-import-side">Importa .ics</button></div>
+            </section>
+            <section class="calendar-side-card">
+              <div class="calendar-side-kicker">Collegamento lezioni</div>
+              <div class="calendar-side-title">${CalendarStore.events.filter(e=>e.lessonLink).length} eventi collegati</div>
+              <div class="calendar-side-text">Quando un evento coincide con una lezione, Uni Notes prova a collegarli automaticamente. Puoi correggere ogni collegamento dal dettaglio dell’evento.</div>
+            </section>
+          </aside>
+          <main class="calendar-main"><div id="cal-body"></div></main>
+        </div>
       </div>
-      <input type="file" id="ics-file-input" accept=".ics" style="display:none;">
-    `;
-    content.querySelectorAll('[data-view]').forEach(t => t.addEventListener('click', () => { this.view = t.dataset.view; this.render(); }));
-    content.querySelector('#cal-prev').onclick = () => { this.step(-1); this.render(); };
-    content.querySelector('#cal-next').onclick = () => { this.step(1); this.render(); };
-    content.querySelector('#cal-today').onclick = () => { this.cursor = new Date(); this.month = this.cursor.getMonth(); this.year = this.cursor.getFullYear(); this.render(); };
-    document.getElementById('cal-import-ics').addEventListener('click', () => document.getElementById('ics-file-input').click());
-    document.getElementById('ics-file-input').addEventListener('change', (e) => this.importIcs(e.target.files[0]));
-
-    if(this.view === 'month') this.renderMonth();
-    else if(this.view === 'week') this.renderWeek();
-    else this.renderDay();
+      <input type="file" id="ics-file-input" accept=".ics,text/calendar" multiple style="display:none;">`;
+    content.querySelectorAll('[data-view]').forEach(b=>b.addEventListener('click',()=>{this.view=b.dataset.view;this.render();}));
+    content.querySelector('#cal-prev').onclick=()=>{this.step(-1);this.render();};
+    content.querySelector('#cal-next').onclick=()=>{this.step(1);this.render();};
+    content.querySelector('#cal-today').onclick=()=>{this.cursor=new Date();this.render();};
+    content.querySelector('#cal-import-ics').onclick=()=>content.querySelector('#ics-file-input').click();
+    content.querySelector('#cal-apple-import-side').onclick=()=>content.querySelector('#ics-file-input').click();
+    content.querySelector('#cal-apple-export').onclick=()=>this.exportLessonsForApple();
+    content.querySelector('#cal-apple-export-side').onclick=()=>this.exportLessonsForApple();
+    content.querySelector('#ics-file-input').addEventListener('change',async e=>{const files=[...(e.target.files||[])];for(const f of files) await this.importIcs(f);e.target.value='';});
+    content.querySelector('#cal-search').addEventListener('input',e=>{this.search=e.target.value;this.renderBody();});
+    content.querySelector('#cal-source-filter').addEventListener('change',e=>{this.sourceFilter=e.target.value;this.renderBody();});
+    content.querySelector('#cal-show-lessons').addEventListener('change',e=>{this.showLessons=e.target.checked;this.renderBody();});
+    const body=content.querySelector('#cal-body');
+    body.addEventListener('dragover',e=>{e.preventDefault();body.classList.add('dragover');}); body.addEventListener('dragleave',()=>body.classList.remove('dragover')); body.addEventListener('drop',e=>{e.preventDefault();body.classList.remove('dragover');const f=[...(e.dataTransfer.files||[])].find(x=>/\.ics$/i.test(x.name)||x.type==='text/calendar');if(f)this.importIcs(f);});
+    this.renderBody();
   },
-
-  step(dir){
-    if(this.view === 'month'){ this.month += dir; if(this.month<0){this.month=11;this.year--;} else if(this.month>11){this.month=0;this.year++;} }
-    else if(this.view === 'week'){ this.cursor = new Date(this.cursor.getTime() + dir*7*86400000); }
-    else { this.cursor = new Date(this.cursor.getTime() + dir*86400000); }
+  rangeLabel(){ if(this.view==='month') return new Intl.DateTimeFormat('it-IT',{month:'long',year:'numeric'}).format(new Date(this.cursor.getFullYear(),this.cursor.getMonth(),1)); if(this.view==='day') return new Intl.DateTimeFormat('it-IT',{weekday:'long',day:'numeric',month:'long',year:'numeric'}).format(this.cursor); const s=this.weekStart(this.cursor), e=new Date(s.getTime()+6*86400000); return `${fmtDateShort(s)} — ${fmtDateShort(e)}`; },
+  weekStart(date){const d=new Date(date);const off=(d.getDay()+6)%7;d.setHours(0,0,0,0);d.setDate(d.getDate()-off);return d;},
+  step(dir){if(this.view==='month'){this.cursor=new Date(this.cursor.getFullYear(),this.cursor.getMonth()+dir,1);}else if(this.view==='week'){this.cursor=new Date(this.cursor.getTime()+dir*7*86400000);}else this.cursor=new Date(this.cursor.getTime()+dir*86400000);},
+  filteredItemsForDate(date){
+    const q=this.search.trim().toLowerCase();
+    let ics=CalendarStore.getForDay(date);
+    if(this.sourceFilter!=='all') ics=ics.filter(e=>e.sourceId===this.sourceFilter);
+    if(q) ics=ics.filter(e=>`${e.summary||''} ${e.location||''} ${e.description||''}`.toLowerCase().includes(q));
+    const events=ics.map(e=>({type:'event',event:e,start:e.start,end:e.end,title:e.summary||'Evento',location:e.location||'',linked:e.lessonLink}));
+    const lessons=this.showLessons?allLessonsFlat().filter(l=>l.date&&calendarDateKey(l.date)===calendarDateKey(date)).filter(l=>!q||`${l.subjectName} ${lessonDisplayName(l)}`.toLowerCase().includes(q)).map(l=>({type:'lesson',lesson:l,start:new Date(l.date.getTime()),end:null,title:lessonDisplayName(l),location:l.subjectName,linked:!!(l.calendarEventIds||[]).length})):[];
+    return [...lessons,...events].sort((a,b)=>(a.start?.getTime?.()||0)-(b.start?.getTime?.()||0));
   },
-
-  eventsForDate(date){
-    const lessons = allLessonsFlat().filter(l => l.date && l.date.toDateString() === date.toDateString())
-      .map(l => ({ type:'lesson', title:`${esc(l.subjectName)} — Lezione ${l.number??''}`, subjectName:l.subjectName, lessonId:l.id, allDay:true }));
-    const ics = CalendarStore.events.filter(e => e.start.toDateString() === date.toDateString())
-      .map(e => ({ type:'ics', title:e.summary, start:e.start, end:e.end, location:e.location }));
-    return [...lessons, ...ics];
+  renderBody(){
+    const body=document.getElementById('cal-body'); if(!body)return;
+    if(this.view==='month') this.renderMonth(body); else if(this.view==='week') this.renderWeek(body); else this.renderDay(body);
   },
-
-  renderMonth(){
-    const mesi = ['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
-    document.getElementById('cal-title').textContent = `${mesi[this.month]} ${this.year}`;
-    const first = new Date(this.year, this.month, 1);
-    const startOffset = (first.getDay()+6)%7;
-    const daysInMonth = new Date(this.year, this.month+1, 0).getDate();
-    let cells = '';
-    for(let i=0;i<startOffset;i++) cells += `<div></div>`;
-    for(let d=1; d<=daysInMonth; d++){
-      const date = new Date(this.year, this.month, d);
-      const items = this.eventsForDate(date);
-      const isToday = date.toDateString() === new Date().toDateString();
-      cells += `<div data-daycell="${date.toISOString()}" style="cursor:pointer; border:1px solid var(--border); border-radius:10px; padding:8px; min-height:76px; ${isToday?'background:var(--accent-soft); border-color:var(--accent);':''}">
-        <div style="font-size:11.5px; font-weight:650; color:${isToday?'var(--accent)':'var(--text-tertiary)'};">${d}</div>
-        ${items.slice(0,2).map(it=>`<div data-open-item='${esc(JSON.stringify(it))}' style="cursor:pointer; margin-top:4px; font-size:10.5px; padding:2px 5px; border-radius:5px; background:${it.type==='ics'?'var(--warning-soft)':'var(--surface-2)'}; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${esc(it.title)}</div>`).join('')}
-        ${items.length>2?`<div class="muted" style="font-size:10px; margin-top:2px;">+${items.length-2} altre</div>`:''}
-      </div>`;
-    }
-    document.getElementById('cal-body').innerHTML = `
-      <div style="display:grid; grid-template-columns:repeat(7,1fr); gap:6px; margin-bottom:6px; font-size:11px; color:var(--text-tertiary); font-weight:650; text-transform:uppercase;">
-        ${['Lun','Mar','Mer','Gio','Ven','Sab','Dom'].map(d=>`<div>${d}</div>`).join('')}
-      </div>
-      <div style="display:grid; grid-template-columns:repeat(7,1fr); gap:6px;">${cells}</div>
-    `;
-    this.bindCells();
-    document.querySelectorAll('[data-daycell]').forEach(cell => {
-      cell.addEventListener('click', (e) => {
-        if(e.target.closest('[data-open-item]')) return;
-        this.cursor = new Date(cell.dataset.daycell);
-        this.view = 'day';
-        this.render();
-      });
-    });
+  renderMonth(body){
+    const year=this.cursor.getFullYear(),month=this.cursor.getMonth(),first=new Date(year,month,1),days=new Date(year,month+1,0).getDate(),offset=(first.getDay()+6)%7;
+    const headers=['Lun','Mar','Mer','Gio','Ven','Sab','Dom']; let html=`<div class="cal-month-grid">${headers.map(h=>`<div class="cal-weekday">${h}</div>`).join('')}`;
+    for(let i=0;i<offset;i++) html+=`<div class="cal-month-cell is-muted"></div>`;
+    for(let d=1;d<=days;d++){const date=new Date(year,month,d),items=this.filteredItemsForDate(date),today=calendarDateKey(date)===calendarDateKey(new Date()); html+=`<div class="cal-month-cell ${today?'today':''}" data-daycell="${date.toISOString()}"><div class="cal-day-number">${d}</div><div class="cal-event-stack">${items.slice(0,4).map(it=>this.itemHtml(it,'month')).join('')}</div>${items.length>4?`<div class="cal-more">+${items.length-4} altri</div>`:''}</div>`;}
+    html+='</div>'; body.innerHTML=html; this.bindBody(body);
   },
-
-  renderWeek(){
-    const start = new Date(this.cursor);
-    const offset = (start.getDay()+6)%7;
-    start.setDate(start.getDate()-offset);
-    const days = Array.from({length:7}, (_,i) => new Date(start.getTime()+i*86400000));
-    document.getElementById('cal-title').textContent = `${fmtDateShort(days[0])} — ${fmtDateShort(days[6])}`;
-    const cols = days.map(date => {
-      const items = this.eventsForDate(date);
-      const isToday = date.toDateString() === new Date().toDateString();
-      return `<div data-daycell="${date.toISOString()}" style="border:1px solid var(--border); border-radius:10px; padding:10px; min-height:280px; cursor:pointer; ${isToday?'background:var(--accent-soft); border-color:var(--accent);':''}">
-        <div style="font-size:11px; font-weight:650; color:${isToday?'var(--accent)':'var(--text-tertiary)'}; text-transform:uppercase; margin-bottom:8px;">${['Lun','Mar','Mer','Gio','Ven','Sab','Dom'][(date.getDay()+6)%7]} ${date.getDate()}</div>
-        ${items.map(it=>`<div data-open-item='${esc(JSON.stringify(it))}' style="cursor:pointer; margin-bottom:6px; font-size:11.5px; padding:5px 7px; border-radius:7px; background:${it.type==='ics'?'var(--warning-soft)':'var(--surface-2)'};">${esc(it.title)}${it.start && !it.allDay?`<div class="muted" style="font-size:10px; margin-top:2px;">${it.start.toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'})}</div>`:''}</div>`).join('') || `<div class="muted" style="font-size:11px;">Nessun evento</div>`}
-      </div>`;
-    }).join('');
-    document.getElementById('cal-body').innerHTML = `<div style="display:grid; grid-template-columns:repeat(7,1fr); gap:8px;">${cols}</div>`;
-    this.bindCells();
-    document.querySelectorAll('[data-daycell]').forEach(cell => {
-      cell.addEventListener('click', (e) => {
-        if(e.target.closest('[data-open-item]')) return;
-        this.cursor = new Date(cell.dataset.daycell);
-        this.view = 'day';
-        this.render();
-      });
-    });
+  renderWeek(body){
+    const start=this.weekStart(this.cursor),days=Array.from({length:7},(_,i)=>new Date(start.getTime()+i*86400000)),hours=Array.from({length:13},(_,i)=>i+8);
+    let html=`<div class="cal-week-grid"><div class="cal-week-corner"></div>${days.map(d=>`<div class="cal-week-head ${calendarDateKey(d)===calendarDateKey(new Date())?'today':''}"><span>${['Lun','Mar','Mer','Gio','Ven','Sab','Dom'][(d.getDay()+6)%7]}</span><strong>${d.getDate()}</strong></div>`).join('')}`;
+    for(const h of hours){html+=`<div class="cal-hour-label">${String(h).padStart(2,'0')}:00</div>${days.map(d=>{const all=this.filteredItemsForDate(d).filter(x=>(x.start?.getHours?.()||8)===h);return `<div class="cal-week-slot" data-daycell="${d.toISOString()}" data-hour="${h}">${all.map(it=>this.itemHtml(it,'week')).join('')}</div>`;}).join('')}`;}
+    html+='</div>';body.innerHTML=html;this.bindBody(body);
   },
-
-  renderDay(){
-    const date = this.cursor;
-    document.getElementById('cal-title').textContent = fmtDate(date);
-    const items = this.eventsForDate(date);
-    const hours = Array.from({length:24}, (_,h) => h);
-    const itemsByHour = {};
-    items.forEach(it => {
-      const h = it.start ? it.start.getHours() : 8;
-      (itemsByHour[h] = itemsByHour[h]||[]).push(it);
-    });
-    document.getElementById('cal-body').innerHTML = `
-      <div class="card" style="padding:0; overflow:hidden;">
-        ${hours.map(h => `
-          <div style="display:flex; border-bottom:1px solid var(--border);">
-            <div style="width:56px; flex-shrink:0; padding:10px; font-size:11px; color:var(--text-tertiary); font-family:var(--mono);">${String(h).padStart(2,'0')}:00</div>
-            <div style="flex:1; padding:8px 10px; min-height:20px;">
-              ${(itemsByHour[h]||[]).map(it => `<div data-open-item='${esc(JSON.stringify(it))}' style="cursor:pointer; margin-bottom:4px; font-size:12.5px; padding:6px 10px; border-radius:8px; background:${it.type==='ics'?'var(--warning-soft)':'var(--accent-soft)'}; color:${it.type==='ics'?'var(--warning)':'var(--accent)'}; font-weight:600;">${esc(it.title)}${it.location?`<div class="muted" style="font-weight:500; font-size:11px; margin-top:2px;">${esc(it.location)}</div>`:''}</div>`).join('')}
-            </div>
-          </div>
-        `).join('')}
-      </div>
-    `;
-    this.bindCells();
+  renderDay(body){
+    const date=this.cursor,hours=Array.from({length:24},(_,h)=>h),items=this.filteredItemsForDate(date); let html=`<div class="cal-day-timeline">`; for(const h of hours){const its=items.filter(x=>(x.start?.getHours?.()||8)===h); html+=`<div class="cal-day-row"><div class="cal-hour-label">${String(h).padStart(2,'0')}:00</div><div class="cal-day-slot">${its.map(it=>this.itemHtml(it,'day')).join('')}</div></div>`;} html+='</div>'; body.innerHTML=html;this.bindBody(body); const cur=new Date(); if(calendarDateKey(cur)===calendarDateKey(date)){ const row=body.querySelector(`.cal-day-row:nth-child(${Math.min(24,cur.getHours()+1)})`); if(row) row.scrollIntoView({block:'center'}); }
   },
-
-  bindCells(){
-    document.querySelectorAll('[data-open-item]').forEach(el => {
-      el.addEventListener('click', (e) => {
-        e.stopPropagation();
-        const it = JSON.parse(el.dataset.openItem);
-        if(it.type === 'lesson') Router.go('lesson', { subjectName: it.subjectName, lessonId: it.lessonId });
-        else Toast.info(it.title);
-      });
-    });
+  itemHtml(item,mode){
+    const e=item.event, l=item.lesson; const linked=!!(item.linked||e?.lessonLink||l?.calendarEventIds?.length); const time=item.start&&!item.lesson?item.start.toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'}):''; return `<button class="cal-item ${item.type==='lesson'?'lesson-item':'event-item'} ${linked?'linked':''}" data-open-event="${item.type==='lesson'?'lesson:'+esc(l.subjectName)+'::'+esc(l.id):esc(e._key||e.uid)}"><span class="cal-item-dot"></span><span class="cal-item-main"><strong>${esc(item.title)}</strong>${time?`<small>${time}${item.location?' · '+esc(item.location):''}</small>`:''}${item.type==='event'&&e?.lessonLink?`<small>↗ ${esc(e.lessonLink.subjectName)} · Lezione collegata</small>`:''}</span></button>`;
   },
-
+  bindBody(body){
+    body.querySelectorAll('[data-open-event]').forEach(el=>el.addEventListener('click',e=>{e.stopPropagation();const raw=el.dataset.openEvent;if(raw.startsWith('lesson:')){const parts=raw.slice(7).split('::');Router.go('lesson',{subjectName:parts[0],lessonId:parts[1]});}else{const ev=CalendarStore.getByKey(raw);if(ev)CalendarEventModal.open(ev);}}));
+    body.querySelectorAll('[data-daycell]').forEach(el=>el.addEventListener('dblclick',()=>{this.cursor=new Date(el.dataset.daycell);this.view='day';this.render();}));
+  },
   async importIcs(file){
-    if(!file) return;
     try{
-      const text = await file.text();
-      const parsed = ICSParser.parse(text);
-      if(!parsed.length){ Toast.error('Nessun evento trovato nel file .ics.'); return; }
-      CalendarStore.add(parsed.map(e => ({ summary: e.summary, start: e.start, end: e.end, location: e.location||'', description: e.description||'' })));
-      Toast.success(`${parsed.length} event${parsed.length===1?'o importato':'i importati'} dal calendario.`);
-      this.render();
-    }catch(err){ console.error(err); Toast.error('Impossibile leggere il file .ics.'); }
+      const text=await file.text(); const parsed=ICSParser.parse(text,file.name); if(!parsed.length){Toast.error('Nessun evento valido trovato nel file .ics.');return;}
+      const source={id:'ics_'+calendarHash(file.name+'|'+file.size+'|'+(file.lastModified||'')),name:file.name.replace(/\.ics$/i,'')||'Calendario importato',type:'ics',fileName:file.name};
+      const events=parsed.filter(e=>{if(e.exdates?.some(d=>calendarDateKey(d)===calendarDateKey(e.start)))return false;return true;}).map(e=>({...e,_key:e._key||`${e.uid}|${e.recurrenceId||calendarDateKey(e.start)}`}));
+      CalendarStore.upsert(events,source);
+      let linked=0; for(const ev of events){const target=findBestLessonForEvent(ev);if(target){const existing=CalendarStore.getByKey(ev._key); if(existing&&!existing.lessonLink){await CalendarStore.linkEvent(existing,target);linked++;}}}
+      Toast.success(`${events.length} eventi importati${linked?` · ${linked} collegati automaticamente alle lezioni`:''}.`); this.render();
+    }catch(err){console.error(err);Toast.error('Impossibile importare questo calendario .ics.');}
+  },
+  exportLessonsForApple(){
+    const ctx=getCurrentSemesterContext();
+    const lessons=allLessonsFlat().filter(l=>l.date && l.semester===ctx.semester && (l.academicYear===ctx.academicYear || !l.academicYear));
+    if(!lessons.length){Toast.error('Non ci sono lezioni del periodo attuale da esportare.');return;}
+    if(AppleCalendarBridge.exportEvents(lessons.map(l=>{const start=new Date(l.date);start.setHours(9,0,0,0);return {uid:'lesson-'+l.id,summary:lessonDisplayName(l),start,end:new Date(start.getTime()+3600000),location:l.subjectName,description:`${l.subjectName} — lezione collegata a Uni Notes`};}))){ Toast.success('Lezioni inviate ad Apple Calendar.'); return; }
+    const ics=calendarLessonsToICS(lessons); downloadBlobFile(new Blob([ics],{type:'text/calendar;charset=utf-8'}),`Uni Notes — ${ctx.academicYear} — lezioni.ics`); Toast.success('File .ics pronto per Apple Calendar.');
+  }
+};
+
+const CalendarEventModal = {
+  open(event){
+    const linked=event.lessonLink?findLesson(event.lessonLink.subjectName,event.lessonLink.lessonId):null;
+    const ctx=getCurrentSemesterContext();
+    const currentSubjects=currentSemesterSubjects();
+    const currentLessons=allLessonsFlat().filter(l=>l.semester===ctx.semester&&(l.academicYear===ctx.academicYear||!l.academicYear));
+    const lessons=currentLessons.filter(l=>l.date&&Math.abs(new Date(l.date).getTime()-new Date(event.start).getTime())<36*3600000);
+    const m=ModalManager.open(`
+      <div class="modal-header"><div class="modal-title">${icon('calendar',16)} Dettagli evento</div><button class="icon-btn" id="m-close">${icon('x',16)}</button></div>
+      <div class="modal-body calendar-event-modal">
+        <div class="calendar-detail-hero"><div class="calendar-detail-date">${fmtDate(event.start)}</div><div class="calendar-detail-title">${esc(event.summary||'Evento')}</div><div class="calendar-detail-meta">${event.allDay?'Tutto il giorno':`${event.start.toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'})}${event.end?' — '+event.end.toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'}):''}`}</div></div>
+        ${event.location?`<div class="calendar-detail-row"><span>${icon('folder',13)}</span><div><small>Luogo</small><strong>${esc(event.location)}</strong></div></div>`:''}
+        ${event.description?`<div class="calendar-detail-row"><span>${icon('notes',13)}</span><div><small>Descrizione</small><strong style="white-space:pre-wrap;font-weight:500;">${esc(event.description)}</strong></div></div>`:''}
+        <div class="calendar-link-panel">
+          <div><div class="calendar-side-kicker">Lezione collegata</div>${linked?`<div class="calendar-linked-lesson">${icon('checkCircle',15)} <div><strong>${esc(lessonDisplayName(linked))}</strong><small>${esc(linked.subjectName)}</small></div></div>`:`<div class="muted" style="font-size:12px;">Nessuna lezione collegata a questo evento.</div>`}</div>
+          ${linked?`<div class="calendar-modal-actions"><button class="btn btn-sm" id="cal-open-linked">Apri lezione</button><button class="btn btn-sm" id="cal-unlink">Scollega</button></div>`:`<div class="field" style="margin-top:10px;"><label>Collega manualmente alle lezioni</label><select id="cal-link-lesson"><option value="">— Seleziona lezione —</option>${(lessons.length?lessons:currentLessons).slice(0,80).map(l=>`<option value="${esc(l.subjectName)}::${esc(l.id)}">${esc(lessonDisplayName(l))} · ${esc(l.subjectName)}</option>`).join('')}</select></div><button class="btn btn-primary btn-sm" id="cal-link-now" style="margin-top:10px;">${icon('link',14)} Collega lezione</button>`}
+        </div>
+        <div class="calendar-detail-source">${esc(event.sourceName||'Calendario')} · UID ${esc(event.uid||'—')}</div>
+      </div>
+      <div class="modal-footer"><button class="btn" id="cal-save-apple">${icon('download',14)} Esporta .ics per Apple Calendar</button><button class="btn" id="m-cancel">Chiudi</button></div>` ,{wide:true});
+    m.querySelector('#m-close').onclick=()=>ModalManager.close();m.querySelector('#m-cancel').onclick=()=>ModalManager.close();
+    m.querySelector('#cal-save-apple').onclick=()=>downloadBlobFile(new Blob([calendarEventToICS(event)],{type:'text/calendar;charset=utf-8'}),`${(event.summary||'Evento').replace(/[^\p{L}\p{N}_ -]+/gu,'').trim()||'Evento'}.ics`);
+    m.querySelector('#cal-open-linked')?.addEventListener('click',()=>{ModalManager.close();if(linked)Router.go('lesson',{subjectName:linked.subjectName,lessonId:linked.id});});
+    m.querySelector('#cal-unlink')?.addEventListener('click',async()=>{await CalendarStore.unlinkEvent(event);ModalManager.close();Toast.success('Evento scollegato dalla lezione.');CalendarPage.render();});
+    m.querySelector('#cal-link-now')?.addEventListener('click',async()=>{const v=m.querySelector('#cal-link-lesson').value;if(!v){Toast.error('Seleziona una lezione.');return;}const [sn,lid]=v.split('::');const l=findLesson(sn,lid);if(!l)return;await CalendarStore.linkEvent(event,l);ModalManager.close();Toast.success('Evento collegato alla lezione.');CalendarPage.render();});
   }
 };
 
@@ -8109,15 +8344,16 @@ const UniNotesAPI = {
       const handle = await FileSystemManager.createSubDir(s.handle, folderName);
       const metaHandle = await FileSystemManager.getOrCreateFile(handle, '.lesson.json');
       const createdAt = new Date().toISOString();
-      const meta = { number:n, date: d.toISOString(), createdAt, title:topic, docente, tags, notes };
+      const meta = { number:n, date: d.toISOString(), createdAt, title:topic, docente, tags, notes, calendarEventIds: [] };
       await FileSystemManager.writeTextFile(metaHandle, JSON.stringify(meta, null, 2));
       const lesson = {
         id: 'lesson_'+subjectName+'_'+folderName, folderName, handle, subjectName,
-        number:n, date:d, createdAt, title:topic, docente, tags, notes, pinned:false, order:null,
+        number:n, date:d, createdAt, title:topic, docente, tags, notes, calendarEventIds:[], pinned:false, order:null,
         files:{}, subfolders:[], mainFile:null, otherRootFiles:[], rawFolderHandle:null
       };
       s.lessons.push(lesson);
       s.lessons.sort((a,b)=>(a.number||0)-(b.number||0));
+      try{ await CalendarStore.autoLinkLesson(lesson); }catch(e){ console.warn('Auto-collegamento calendario lezione AI fallito',e); }
       AppState.logActivity(subjectName, `Lezione "${title||folderName}" creata (AI)`);
       return lesson;
     },
@@ -8137,7 +8373,7 @@ const UniNotesAPI = {
       Object.assign(lesson, c);
       const metaHandle = await FileSystemManager.getOrCreateFile(lesson.handle, '.lesson.json');
       let existing = {}; try{ existing = JSON.parse(await FileSystemManager.readTextFile(metaHandle)); }catch(e){}
-      Object.assign(existing, { number: lesson.number, date: lesson.date ? lesson.date.toISOString() : null, title: lesson.title, docente: lesson.docente, tags: lesson.tags, notes: lesson.notes });
+      Object.assign(existing, { number: lesson.number, date: lesson.date ? lesson.date.toISOString() : null, title: lesson.title, docente: lesson.docente, tags: lesson.tags, notes: lesson.notes, calendarEventIds: Array.isArray(lesson.calendarEventIds) ? lesson.calendarEventIds : [] });
       await FileSystemManager.writeTextFile(metaHandle, JSON.stringify(existing, null, 2));
       AppState.logActivity(subjectName, `Lezione modificata (AI): ${lesson.title||lesson.folderName}`);
       return lesson;
