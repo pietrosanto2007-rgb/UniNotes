@@ -6682,13 +6682,165 @@ const LatexPreview = {
 /* ============================================================
    PROMPT MANAGER
    ============================================================ */
+const LESSON_KNOWLEDGE_PROMPT_DEFAULT = `SEI UN GENERATORE ESTERNO DI LESSON KNOWLEDGE JSON PER UNI NOTES
+
+OBIETTIVO
+Genera una rappresentazione strutturata, ricca e fedele della lezione a partire esclusivamente dal materiale sorgente che ti viene fornito (PDF, appunti, trascrizione e, quando disponibile, il documento LaTeX della stessa lezione).
+
+IMPORTANTE
+- Questo output verrà importato direttamente in Uni Notes.
+- Devi produrre ESCLUSIVAMENTE un singolo oggetto JSON valido.
+- NON usare Markdown e NON racchiudere il JSON in un blocco di codice.
+- NON aggiungere testo prima o dopo il JSON.
+- NON inserire commenti JSON.
+- NON inventare informazioni che non siano supportate dai materiali.
+- Se una sezione non è applicabile o non esiste nel materiale, usa un array vuoto oppure null dove previsto.
+- Mantieni la terminologia della lezione e, quando disponibile, del LaTeX.
+- L'output deve essere autosufficiente e pronto per essere importato senza trasformazioni manuali.
+
+METADATI DELLA LEZIONE
+Sostituisci i placeholder con i dati reali:
+- lesson.id = {{LESSON_ID}}
+- lesson.title = {{LESSON_TITLE}}
+- lesson.course = {{COURSE}}
+- lesson.professor = {{PROFESSOR_OR_NULL}}
+- lesson.date = {{LESSON_DATE_ISO}}
+- lesson.language = {{LANGUAGE_ISO}}
+
+LINGUA
+Tutti i contenuti testuali del JSON devono essere nella lingua indicata da lesson.language. Non alternare lingue senza motivo.
+
+REGOLE DI QUALITÀ
+1. short, medium e detailed devono essere coerenti ma avere profondità diverse.
+2. markdown_summary deve essere pronto per il frontend e supportare titoli, sottotitoli, liste, grassetto, corsivo, formule inline $...$ e formule block $$...$$, oltre ai callout > [!NOTE], > [!WARNING], > [!KEY], > [!TIP], > [!EXAMPLE] quando utili.
+3. table_of_contents deve essere gerarchico e usare ID stabili, level numerico e parent_id quando c'è un genitore.
+4. topics deve contenere argomenti e sottoargomenti reali, con ID stabili e parent_id quando utile.
+5. key_concepts, definitions, formulas, theorems, properties, examples, exercises, common_mistakes e flashcards devono avere ID stabili e topic_id quando possibile.
+6. formulas: latex contiene la formula, mentre variables contiene symbol, name e meaning; unit è opzionale.
+7. theorems: inserisci statement, conditions e proof solo se supportati dal materiale.
+8. examples ed exercises devono derivare realmente dalla lezione oppure essere una riformulazione fedele di esempi/esercizi presenti.
+9. common_mistakes deve contenere errori realmente pertinenti agli argomenti trattati; evita consigli generici.
+10. prerequisites deve descrivere solo conoscenze effettivamente necessarie.
+11. connections deve rappresentare relazioni reali tra elementi della lezione.
+12. Quiz e flashcard devono essere derivati dal contenuto e non duplicarsi inutilmente.
+13. difficulty deve essere easy, medium o hard.
+14. Multiple choice: correct_answer deve coincidere esattamente con l'id di una option.
+15. True/false: correct_answer deve essere booleano true o false.
+16. open_questions, formula_application e conceptual devono avere answer oppure expected_answer.
+17. knowledge_graph.nodes usa id, label, type e description; knowledge_graph.edges usa from, to e relationship e deve riferirsi a nodi esistenti.
+18. study_plan deve proporre un ordine di studio coerente con la lezione; estimated_minutes è un numero oppure null.
+19. exam_relevance può contenere stringhe oppure oggetti con item/topic_id e importance = low, medium, high o critical.
+20. search_keywords e tags devono essere specifici della lezione.
+
+RIFERIMENTI INTERNI
+- topic_id deve puntare a un topic esistente.
+- formula_ids deve puntare a formule esistenti.
+- I riferimenti from/to del knowledge graph devono puntare a nodi esistenti.
+- Non creare ID inesistenti o duplicati nelle rispettive collezioni.
+
+SCHEMA OBBLIGATORIO
+Devi restituire SEMPRE tutti i campi principali seguenti, anche se alcuni array sono vuoti:
+{
+  "schema_version": "1.0",
+  "lesson": {
+    "id": "{{LESSON_ID}}",
+    "title": "{{LESSON_TITLE}}",
+    "course": "{{COURSE}}",
+    "professor": {{PROFESSOR_OR_NULL}},
+    "date": "{{LESSON_DATE_ISO}}",
+    "language": "{{LANGUAGE_ISO}}"
+  },
+  "summary": {
+    "short": "...",
+    "medium": "...",
+    "detailed": "..."
+  },
+  "markdown_summary": "...",
+  "learning_objectives": [],
+  "table_of_contents": [],
+  "topics": [],
+  "key_concepts": [],
+  "definitions": [],
+  "formulas": [],
+  "theorems": [],
+  "properties": [],
+  "examples": [],
+  "exercises": [],
+  "common_mistakes": [],
+  "prerequisites": [],
+  "connections": [],
+  "quiz": {
+    "multiple_choice": [],
+    "true_false": [],
+    "open_questions": [],
+    "formula_application": [],
+    "conceptual": []
+  },
+  "flashcards": [],
+  "knowledge_graph": {
+    "nodes": [],
+    "edges": []
+  },
+  "study_plan": {
+    "recommended_order": [],
+    "revision_points": [],
+    "estimated_minutes": null
+  },
+  "key_takeaways": [],
+  "exam_relevance": [],
+  "search_keywords": [],
+  "tags": []
+}
+
+FORMATO CONSIGLIATO DEGLI ELEMENTI
+- learning_objectives: {"id":"obj_01","text":"..."}
+- table_of_contents: {"id":"toc_01","title":"...","level":1,"parent_id":null}
+- topics: {"id":"topic_01","title":"...","description":"...","parent_id":null,"keywords":["..."]}
+- key_concepts: {"id":"concept_01","name":"...","description":"...","topic_id":"topic_01"}
+- definitions: {"id":"def_01","term":"...","definition":"...","topic_id":"topic_01"}
+- formulas: {"id":"formula_01","name":"...","latex":"...","description":"...","variables":[{"symbol":"x","name":"...","meaning":"...","unit":"..."}],"topic_id":"topic_01"}
+- theorems: {"id":"theorem_01","name":"...","statement":"...","conditions":["..."],"proof":"...","topic_id":"topic_01"}
+- properties: {"id":"property_01","name":"...","statement":"...","explanation":"...","topic_id":"topic_01"}
+- examples: {"id":"example_01","title":"...","description":"...","solution":"...","topic_id":"topic_01"}
+- exercises: {"id":"exercise_01","question":"...","solution":"...","hints":["..."],"difficulty":"medium","topic_id":"topic_01","formula_ids":["formula_01"]}
+- common_mistakes: {"id":"mistake_01","mistake":"...","correction":"...","explanation":"...","topic_id":"topic_01"}
+- prerequisites: {"id":"prereq_01","title":"...","reason":"..."} oppure una stringa.
+- connections: {"id":"conn_01","from_id":"concept_01","to_id":"concept_02","relationship":"depends_on","description":"..."}
+- quiz.multiple_choice: {"id":"mcq_01","question":"...","options":[{"id":"A","text":"..."},{"id":"B","text":"..."},{"id":"C","text":"..."},{"id":"D","text":"..."}],"correct_answer":"B","explanation":"...","difficulty":"medium","topic_id":"topic_01","formula_ids":["formula_01"]}
+- quiz.true_false: {"id":"tf_01","question":"...","correct_answer":true,"explanation":"...","difficulty":"easy","topic_id":"topic_01"}
+- quiz.open_questions / formula_application / conceptual: {"id":"q_01","question":"...","answer":"...","explanation":"...","difficulty":"medium","topic_id":"topic_01","formula_ids":["formula_01"]}
+- flashcards: {"id":"card_01","front":"...","back":"...","difficulty":"medium","topic_id":"topic_01"}
+- knowledge_graph.nodes: {"id":"node_01","label":"...","type":"concept","description":"...","topic_id":"topic_01"}
+- knowledge_graph.edges: {"from":"node_01","to":"node_02","relationship":"depends_on","description":"..."}
+- exam_relevance: una stringa breve oppure {"id":"exam_01","topic_id":"topic_01","importance":"high","item":"..."}
+
+NUMEROSITÀ
+La quantità deve dipendere dalla lezione. Quando il materiale lo permette, punta indicativamente a 4–10 obiettivi, 4–15 topics/concetti rilevanti, tutte le formule importanti, tutti i teoremi/proprietà pertinenti, 3–10 esempi/esercizi significativi, 5–15 flashcard e un set equilibrato di quiz. NON riempire artificialmente le sezioni.
+
+CONTROLLO FINALE OBBLIGATORIO
+Prima di rispondere verifica che:
+- schema_version sia "1.0";
+- tutti i campi principali esistano;
+- il JSON sia sintatticamente valido;
+- non ci sia testo fuori dal JSON;
+- non ci siano ID duplicati nelle rispettive collezioni;
+- topic_id, formula_ids e riferimenti del knowledge graph puntino a elementi esistenti;
+- correct_answer delle multiple choice corrisponda a una option esistente;
+- nessun dato sia inventato o estraneo alla lezione;
+- il testo sia nella lingua richiesta.
+
+ORA RESTITUISCI ESCLUSIVAMENTE IL SOLO LESSON KNOWLEDGE JSON.
+`;
+
 const PromptsPage = {
   types: [
     { key:'principale', label:'Prompt principale' },
     { key:'secondario', label:'Prompt secondario' },
     { key:'riassunti', label:'Prompt per riassunti' },
-    { key:'esercizi', label:'Prompt per esercizi' }
+    { key:'esercizi', label:'Prompt per esercizi' },
+    { key:'lesson-knowledge-json', label:'Lesson Knowledge JSON' }
   ],
+  promptDefaults: { 'lesson-knowledge-json': LESSON_KNOWLEDGE_PROMPT_DEFAULT },
   activeSubject: null,
   activeType: 'principale',
 
@@ -6705,7 +6857,7 @@ const PromptsPage = {
     content.innerHTML = `
       <div class="page">
         <div class="section-head">
-          <div><div class="section-title">Prompt per materia</div><div class="section-sub">Gestisci i prompt usati per generare LaTeX e riassunti.</div></div>
+          <div><div class="section-title">Prompt per materia</div><div class="section-sub">Gestisci i prompt usati per il tuo workflow esterno e per il Lesson Knowledge JSON.</div></div>
           <select id="prompt-subject-select" class="btn btn-sm" style="cursor:pointer;">
             ${subjects.map(s => `<option value="${esc(s.name)}" ${s.name===this.activeSubject?'selected':''}>${esc(s.name)}</option>`).join('')}
           </select>
@@ -6721,24 +6873,38 @@ const PromptsPage = {
     const s = findSubject(subjectName);
     if(!s){ el.innerHTML = `<div class="muted">Materia non trovata.</div>`; return; }
     this.activeType = this.activeType || 'principale';
+    const isKnowledgePrompt = this.activeType === 'lesson-knowledge-json';
+    const auxiliaryButton = isKnowledgePrompt
+      ? `<button class="btn btn-sm" id="prompt-insert-default">↺ Usa modello originale</button>`
+      : `<button class="btn btn-sm" id="prompt-duplicate">${icon('file',14)} Duplica in Prompt secondario</button>`;
     el.innerHTML = `
       <div class="tabs" style="margin-bottom:16px;">
         ${this.types.map(t => `<div class="tab ${this.activeType===t.key?'active':''}" data-ptab="${t.key}">${t.label}</div>`).join('')}
       </div>
+      ${isKnowledgePrompt ? `<div class="card" style="margin-bottom:12px; border:1px solid var(--accent-soft, rgba(99,102,241,.18)); background:linear-gradient(180deg, rgba(99,102,241,.06), transparent);">
+        <div style="display:flex; align-items:flex-start; gap:12px;">
+          <div style="font-size:20px; line-height:1;">🧠</div>
+          <div><b>Prompt Lesson Knowledge JSON</b><div class="muted" style="margin-top:4px; line-height:1.5;">Questo prompt è destinato al tuo sistema AI esterno. Uni Notes non lo esegue: serve a produrre il JSON che poi importerai nella singola lezione.</div></div>
+        </div>
+      </div>` : ''}
       <div class="card">
-        <textarea id="prompt-editor" rows="12" style="width:100%; border:none; background:transparent; resize:vertical; font-family:var(--mono); font-size:13px; line-height:1.6;" placeholder="Scrivi qui il prompt per ${esc(s.name)}…"></textarea>
+        <textarea id="prompt-editor" rows="${isKnowledgePrompt ? 28 : 12}" style="width:100%; border:none; background:transparent; resize:vertical; font-family:var(--mono); font-size:13px; line-height:1.6;" placeholder="Scrivi qui il prompt per ${esc(s.name)}…"></textarea>
       </div>
-      <div style="display:flex; gap:8px; margin-top:12px;">
+      <div style="display:flex; flex-wrap:wrap; gap:8px; margin-top:12px;">
         <button class="btn btn-primary btn-sm" id="prompt-save">${icon('save',14)} Salva</button>
-        <button class="btn btn-sm" id="prompt-copy">${icon('copy',14)} Copia</button>
-        <button class="btn btn-sm" id="prompt-duplicate">${icon('file',14)} Duplica in Prompt secondario</button>
-        <button class="btn btn-sm btn-danger" id="prompt-reset">${icon('trash',14)} Reset</button>
+        <button class="btn btn-sm" id="prompt-copy">${icon('copy',14)} Copia${isKnowledgePrompt?' prompt':''}</button>
+        ${auxiliaryButton}
+        <button class="btn btn-sm btn-danger" id="prompt-reset">${icon('trash',14)} ${isKnowledgePrompt?'Ripristina modello':'Reset'}</button>
       </div>
     `;
     el.querySelectorAll('[data-ptab]').forEach(t => t.addEventListener('click', () => { this.activeType = t.dataset.ptab; this.renderInline(el, subjectName); }));
 
-    this.loadPrompt(s, this.activeType).then(text => { el.querySelector('#prompt-editor').value = text; });
+    this.loadPrompt(s, this.activeType).then(text => { const editor=el.querySelector('#prompt-editor'); if(editor) editor.value = text; });
 
+    el.querySelector('#prompt-insert-default')?.addEventListener('click', () => {
+      const editor=el.querySelector('#prompt-editor'); if(editor) editor.value = this.promptDefaults['lesson-knowledge-json'] || '';
+      Toast.info('Modello originale ripristinato nell’editor. Premi Salva per conservarlo per questa materia.');
+    });
     el.querySelector('#prompt-save').addEventListener('click', async () => {
       const text = el.querySelector('#prompt-editor').value;
       await this.savePrompt(s, this.activeType, text);
@@ -6747,27 +6913,38 @@ const PromptsPage = {
     el.querySelector('#prompt-copy').addEventListener('click', () => {
       Clipboard.copy(el.querySelector('#prompt-editor').value);
     });
-    el.querySelector('#prompt-duplicate').addEventListener('click', async () => {
+    el.querySelector('#prompt-duplicate')?.addEventListener('click', async () => {
       const text = el.querySelector('#prompt-editor').value;
       await this.savePrompt(s, 'secondario', text);
       Toast.success('Copiato in Prompt secondario');
     });
     el.querySelector('#prompt-reset').addEventListener('click', async () => {
+      if(this.activeType === 'lesson-knowledge-json'){
+        const def = this.promptDefaults['lesson-knowledge-json'] || '';
+        el.querySelector('#prompt-editor').value = def;
+        await this.savePrompt(s, this.activeType, def);
+        Toast.success('Modello Lesson Knowledge ripristinato');
+        return;
+      }
       el.querySelector('#prompt-editor').value = '';
       await this.savePrompt(s, this.activeType, '');
       Toast.info('Prompt azzerato');
     });
   },
 
-  async promptFileName(type){ return `prompt-${type}.txt`; },
+  async promptFileName(type){ return type==='lesson-knowledge-json' ? 'prompt-lesson-knowledge-json.txt' : `prompt-${type}.txt`; },
 
   async loadPrompt(subject, type){
     try{
       const configDir = await this.getPromptDir(subject);
       const fname = await this.promptFileName(type);
       const fh = await configDir.getFileHandle(fname, { create:true });
-      return await FileSystemManager.readTextFile(fh);
-    }catch(err){ return ''; }
+      const text = await FileSystemManager.readTextFile(fh);
+      if(text || !this.promptDefaults[type]) return text;
+      return this.promptDefaults[type];
+    }catch(err){
+      return this.promptDefaults[type] || '';
+    }
   },
   async savePrompt(subject, type, text){
     try{
