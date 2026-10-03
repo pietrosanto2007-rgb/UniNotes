@@ -4495,8 +4495,10 @@ const LessonFormModal = {
       Toast.error(`Non ci sono materie nel periodo attuale (${semesterLabel(ctx.semester)} · ${ctx.academicYear}).`);
       return;
     }
-    const initialSubject = subjects.find(s => s.name===preselectSubject) || subjects[0];
-    // Numero lezione proposto automaticamente (max numero esistente + 1 nella materia), ma resta modificabile a mano.
+    const todayValue = new Date().toISOString().slice(0,10);
+    const today = new Date(todayValue+'T00:00:00');
+    const recommended = preselectSubject ? {subject:subjects.find(s=>s.name===preselectSubject)||subjects[0],event:null,sequence:[]} : calendarRecommendedLessonSubject(today,subjects);
+    const initialSubject = recommended.subject || subjects[0];
     const suggestNumber = (s) => {
       if(!s || !s.lessons.length) return 1;
       const maxNum = s.lessons.reduce((mx,l) => Math.max(mx, l.number||0), 0);
@@ -4506,11 +4508,12 @@ const LessonFormModal = {
       <div class="modal-header"><div class="modal-title">Nuova lezione</div><button class="icon-btn" id="m-close">${icon('x',16)}</button></div>
       <div class="modal-body">
         <div class="field"><label>Materia <span class="muted" style="font-weight:500;">(${esc(semesterLabel(getCurrentSemesterContext().semester))})</span></label>
-          <select id="f-subject">${subjects.map(s=>`<option value="${esc(s.name)}" ${s.name===preselectSubject?'selected':''}>${esc(s.name)}</option>`).join('')}</select>
+          <select id="f-subject">${subjects.map(s=>`<option value="${esc(s.name)}" ${s.name===initialSubject.name?'selected':''}>${esc(s.name)}</option>`).join('')}</select>
+          <div class="field-hint" id="f-calendar-hint"></div>
         </div>
         <div class="field-row">
           <div class="field"><label>Numero <span class="muted" style="font-weight:500;">(automatico, modificabile)</span></label><input id="f-number" type="number" min="1" value="${suggestNumber(initialSubject)}"></div>
-          <div class="field"><label>Data</label><input id="f-date" type="date" value="${new Date().toISOString().slice(0,10)}"></div>
+          <div class="field"><label>Data</label><input id="f-date" type="date" value="${todayValue}"></div>
         </div>
         <div class="field"><label>Argomento <span style="color:var(--danger,#c4361f);">*</span></label><input id="f-title" required placeholder="Es. Derivate e applicazioni"><div class="muted" style="font-size:11px;margin-top:5px;">Il nome verrà creato automaticamente come <b>Lezione X - argomento</b>.</div></div>
         <div class="field-row">
@@ -4527,14 +4530,42 @@ const LessonFormModal = {
     m.querySelector('#m-close').onclick = () => ModalManager.close();
     m.querySelector('#m-cancel').onclick = () => ModalManager.close();
     const subjectSel = m.querySelector('#f-subject');
+    const dateInput = m.querySelector('#f-date');
     const numberInput = m.querySelector('#f-number');
+    const hint = m.querySelector('#f-calendar-hint');
     let numberTouchedManually = false;
-    numberInput.addEventListener('input', () => { numberTouchedManually = true; });
+    let subjectTouchedManually = !!preselectSubject;
+    const applyCalendarSuggestion = () => {
+      const dateVal=dateInput.value;
+      const date=dateVal ? new Date(dateVal+'T00:00:00') : new Date();
+      const rec=calendarRecommendedLessonSubject(date,subjects);
+      const event=rec.event;
+      if(!subjectTouchedManually && rec.subject){
+        subjectSel.value=rec.subject.name;
+        if(!numberTouchedManually) numberInput.value=suggestNumber(rec.subject);
+      }
+      m.dataset.calendarSuggestedEvent = event ? (event._key || event.uid || '') : '';
+      const dayEvents=rec.sequence||[];
+      if(event){
+        const time=event.start ? event.start.toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'}) : '';
+        hint.innerHTML=`${icon('calendar',12)} <b>${esc(event.summary||'Lezione da calendario')}</b>${time?` · ${time}`:''} · materia proposta automaticamente`;
+      } else if(dayEvents.length){
+        hint.textContent='Le materie del calendario di questo giorno sono già state assegnate a lezioni: viene proposta la prima materia disponibile.';
+      } else {
+        hint.textContent='Nessun evento calendario riconosciuto per una delle materie del periodo attuale in questo giorno.';
+      }
+    };
     subjectSel.addEventListener('change', () => {
-      // Riaggiorna il numero suggerito solo se l'utente non lo ha già modificato a mano.
+      subjectTouchedManually = true;
       if(numberTouchedManually) return;
       numberInput.value = suggestNumber(findSubject(subjectSel.value));
     });
+    numberInput.addEventListener('input', () => { numberTouchedManually = true; });
+    dateInput.addEventListener('change', () => {
+      subjectTouchedManually = false;
+      applyCalendarSuggestion();
+    });
+    applyCalendarSuggestion();
     numberInput.focus();
     numberInput.select();
     m.querySelector('#m-create').onclick = () => this.create(m);
@@ -4565,7 +4596,15 @@ const LessonFormModal = {
       const lesson = { id: 'lesson_'+subjectName+'_'+folderName, folderName, handle, subjectName, number, date, createdAt, title, docente, tags, notes, semester, academicYear, calendarEventIds: [], files: {}, subfolders: [], mainFile: null, otherRootFiles: [], rawFolderHandle: null };
       s.lessons.push(lesson);
       s.lessons.sort((a,b)=>(a.number||0)-(b.number||0));
-      try{ await CalendarStore.autoLinkLesson(lesson); }catch(e){ console.warn('Auto-collegamento calendario nuova lezione fallito',e); }
+      try{
+        const suggestedKey=m.dataset.calendarSuggestedEvent||'';
+        const suggestedEvent=suggestedKey ? CalendarStore.getByKey(suggestedKey) : null;
+        if(suggestedEvent && calendarDateKey(suggestedEvent.start)===calendarDateKey(date) && calendarSubjectForEvent(suggestedEvent,currentSemesterSubjects())?.name===subjectName){
+          await CalendarStore.linkEvent(suggestedEvent,lesson);
+        } else {
+          await CalendarStore.autoLinkLesson(lesson);
+        }
+      }catch(e){ console.warn('Auto-collegamento calendario nuova lezione fallito',e); }
       AppState.logActivity(subjectName, `Lezione "${title||folderName}" creata`);
       ModalManager.close();
       Toast.success('Lezione creata');
@@ -6940,6 +6979,49 @@ const ICSParser = {
 };
 
 function lessonTokens(s){ return String(s||'').toLowerCase().replace(/[^a-z0-9àèéìòù]+/gi,' ').split(/\s+/).filter(x=>x.length>=3); }
+function calendarNormalizedText(v){
+  return String(v||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,' ').trim();
+}
+function calendarSubjectForEvent(event, subjects=currentSemesterSubjects()){
+  if(!event) return null;
+  const explicit=String(event.subjectName||event.courseName||event.course||'').trim();
+  const hay=calendarNormalizedText(`${explicit} ${event.summary||''} ${event.description||''} ${event.location||''}`);
+  let best=null, bestScore=0;
+  for(const subject of subjects||[]){
+    const name=String(subject?.name||'').trim(); if(!name) continue;
+    const n=calendarNormalizedText(name); if(!n) continue;
+    let score=0;
+    if(explicit && calendarNormalizedText(explicit)===n) score=100;
+    else if(hay.includes(n)) score=92;
+    else {
+      const tokens=n.split(/\s+/).filter(t=>t.length>=3);
+      const hits=tokens.filter(t=>hay.includes(t)).length;
+      score=tokens.length ? Math.round((hits/tokens.length)*70) : 0;
+    }
+    if(score>bestScore){ bestScore=score; best=subject; }
+  }
+  return bestScore>=55 ? best : null;
+}
+function calendarSubjectSequenceForDay(date, subjects=currentSemesterSubjects()){
+  const key=calendarDateKey(date); if(!key) return [];
+  const seen=new Set();
+  return CalendarStore.getForDay(date).slice().sort((a,b)=>(a.start?.getTime?.()||0)-(b.start?.getTime?.()||0)).map(event=>({event,subject:calendarSubjectForEvent(event,subjects)})).filter(x=>{
+    if(!x.subject) return false;
+    const k=String(x.subject.name||'');
+    if(seen.has(k)) return false;
+    seen.add(k); return true;
+  });
+}
+function calendarRecommendedLessonSubject(date, subjects=currentSemesterSubjects()){
+  const list=Array.isArray(subjects)?subjects:[]; if(!list.length) return {subject:null,event:null,sequence:[]};
+  const sequence=calendarSubjectSequenceForDay(date,list);
+  const createdNames=new Set(allLessonsFlat().filter(l=>l?.date&&calendarDateKey(l.date)===calendarDateKey(date)).map(l=>String(l.subjectName||'')));
+  const next=sequence.find(x=>!createdNames.has(String(x.subject?.name||'')));
+  if(next) return {subject:next.subject,event:next.event,sequence};
+  const firstUnused=list.find(s=>!createdNames.has(String(s?.name||'')));
+  return {subject:firstUnused||list[0]||null,event:null,sequence};
+}
+
 function calendarLessonMatchScore(lesson,event){
   if(!lesson?.date||!event?.start) return -1;
   if(calendarDateKey(lesson.date)!==calendarDateKey(event.start)) return -1;
@@ -7032,10 +7114,12 @@ const CalendarPage = {
     content.querySelector('#cal-prev').onclick=()=>{this.step(-1);this.render();};
     content.querySelector('#cal-next').onclick=()=>{this.step(1);this.render();};
     content.querySelector('#cal-today').onclick=()=>{this.cursor=new Date();this.render();};
-    content.querySelector('#cal-import-ics').onclick=()=>content.querySelector('#ics-file-input').click();
-    content.querySelector('#cal-apple-import-side').onclick=()=>content.querySelector('#ics-file-input').click();
-    content.querySelector('#cal-apple-export').onclick=()=>this.exportLessonsForApple();
-    content.querySelector('#cal-apple-export-side').onclick=()=>this.exportLessonsForApple();
+    const topImportIcs=document.getElementById('cal-import-ics');
+    const topAppleExport=document.getElementById('cal-apple-export');
+    topImportIcs?.addEventListener('click',()=>content.querySelector('#ics-file-input')?.click());
+    topAppleExport?.addEventListener('click',()=>this.exportLessonsForApple());
+    content.querySelector('#cal-apple-import-side')?.addEventListener('click',()=>content.querySelector('#ics-file-input')?.click());
+    content.querySelector('#cal-apple-export-side')?.addEventListener('click',()=>this.exportLessonsForApple());
     content.querySelector('#ics-file-input').addEventListener('change',async e=>{const files=[...(e.target.files||[])];for(const f of files) await this.importIcs(f);e.target.value='';});
     content.querySelector('#cal-search').addEventListener('input',e=>{this.search=e.target.value;this.renderBody();});
     content.querySelector('#cal-source-filter').addEventListener('change',e=>{this.sourceFilter=e.target.value;this.renderBody();});
